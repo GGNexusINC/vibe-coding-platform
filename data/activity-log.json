@@ -1,0 +1,43 @@
+[
+  {
+    "id": "55fd0aeb-ea19-46e7-9f5f-efe8563de9d6",
+    "createdAt": "2026-04-16T22:14:23.209Z",
+    "type": "purchase_intent",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "details": "Started purchase flow for Construction Package ($5)."
+  },
+  {
+    "id": "9b0e4979-e16e-44df-b20d-fc1d38ed3540",
+    "createdAt": "2026-04-16T21:22:27.368Z",
+    "type": "purchase_intent",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "details": "Started purchase flow for Construction Package ($5)."
+  },
+  {
+    "id": "5ae38987-d9ab-4a92-b342-63a46223061e",
+    "createdAt": "2026-04-16T21:12:10.462Z",
+    "type": "admin_broadcast",
+    "username": "Admin",
+    "details": "Broadcast sent for general-chat: Appreciation Message (By the team)"
+  },
+  {
+    "id": "3f5bc84e-582f-48eb-8953-280ffaccb7d3",
+    "createdAt": "2026-04-16T21:04:42.539Z",
+    "type": "admin_broadcast",
+    "username": "Admin",
+    "details": "Broadcast sent for ban-page: Cheating (User KONA Banned)"
+  },
+  {
+    "id": "da2adf66-806c-4bfd-90da-8f7da8bb1298",
+    "createdAt": "2026-04-16T20:58:48.459Z",
+    "type": "purchase_intent",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "details": "Started purchase flow for Defense Package ($5)."
+  }
+]

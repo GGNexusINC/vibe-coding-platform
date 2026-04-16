@@ -1,0 +1,793 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type ActivityEntry = {
+  id: string;
+  type: string;
+  createdAt: string;
+  username?: string;
+  discordId?: string;
+  avatarUrl?: string;
+  globalName?: string | null;
+  discriminator?: string | null;
+  profile?: Record<string, unknown>;
+  details: string;
+};
+
+type MemberSummary = {
+  discordId: string;
+  username: string;
+  globalName?: string | null;
+  discriminator?: string | null;
+  avatarUrl?: string;
+  profile?: Record<string, unknown>;
+  lastActiveAt: string;
+  activeDays: number;
+  events: number;
+  activeNow: boolean;
+};
+
+type StatsResponse = {
+  ok: boolean;
+  activeWindowMinutes: number;
+  summary: {
+    totalMembersTracked: number;
+    activeNowCount: number;
+    totalEvents: number;
+    activeDaysObserved: number;
+    members: MemberSummary[];
+  };
+  recent: ActivityEntry[];
+  error?: string;
+};
+
+const pageOptions = [
+  { value: "general-chat", label: "General Chat", note: "Public updates and major server posts." },
+  { value: "ban-page", label: "Ban Page", note: "Punishments, warnings, and moderation notices." },
+];
+
+const broadcastPresets = [
+  {
+    label: "General update",
+    target: "general-chat",
+    audienceLabel: "main page",
+    title: "Server Update",
+    message: "A new update is live. Check the site for the latest information and active events.",
+    color: "#22c55e",
+  },
+  {
+    label: "Staff alert",
+    target: "general-chat",
+    audienceLabel: "staff chat",
+    title: "Staff Attention Needed",
+    message: "Please review the latest activity and respond to pending issues as soon as possible.",
+    color: "#f59e0b",
+  },
+  {
+    label: "Ban notice",
+    target: "ban-page",
+    audienceLabel: "ban page",
+    title: "Enforcement Notice",
+    message: "A new enforcement action has been recorded. Please review the rules and appeal process if needed.",
+    color: "#ef4444",
+  },
+];
+
+function formatEventType(type: string) {
+  return type.replaceAll("_", " ");
+}
+
+function getMemberName(member: MemberSummary) {
+  return member.globalName || member.username;
+}
+
+export function AdminPanelClient() {
+  const [password, setPassword] = useState("");
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [statsError, setStatsError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState("");
+
+  const [target, setTarget] = useState("general-chat");
+  const [audienceLabel, setAudienceLabel] = useState("");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [color, setColor] = useState("#22c55e");
+  const [imageUrl, setImageUrl] = useState("");
+  const [broadcastStatus, setBroadcastStatus] = useState("");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+
+  const [eventFilter, setEventFilter] = useState("all");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedMemberId, setSelectedMemberId] = useState("");
+
+  const filteredMembers = useMemo(() => {
+    return (stats?.summary.members ?? []).filter((member) => {
+      const needle = memberSearch.trim().toLowerCase();
+      if (!needle) return true;
+      return (
+        member.username.toLowerCase().includes(needle) ||
+        member.globalName?.toLowerCase().includes(needle) ||
+        member.discordId.toLowerCase().includes(needle)
+      );
+    });
+  }, [memberSearch, stats?.summary.members]);
+
+  const filteredRecent = useMemo(() => {
+    return (stats?.recent ?? []).filter((entry) => {
+      if (eventFilter === "all") return true;
+      return entry.type === eventFilter;
+    });
+  }, [eventFilter, stats?.recent]);
+
+  const eventTotals = useMemo(() => {
+    return (stats?.recent ?? []).reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.type] = (acc[entry.type] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [stats?.recent]);
+
+  const selectedMember =
+    filteredMembers.find((member) => member.discordId === selectedMemberId) ??
+    filteredMembers[0] ??
+    null;
+
+  const selectedMemberProfileJson = selectedMember?.profile
+    ? JSON.stringify(selectedMember.profile, null, 2)
+    : "";
+
+  async function loadStats() {
+    setRefreshing(true);
+    setStatsError("");
+
+    const res = await fetch("/api/admin/stats", { cache: "no-store" });
+    const data = (await res.json().catch(() => null)) as StatsResponse | null;
+
+    if (!res.ok || !data?.ok) {
+      const error = data?.error || "Could not load admin stats.";
+      setStats(null);
+      setStatsError(error);
+      if (res.status === 401) {
+        setIsAuthed(false);
+      }
+      setRefreshing(false);
+      return;
+    }
+
+    setStats(data);
+    setIsAuthed(true);
+    setLastSyncAt(new Date().toISOString());
+    setSelectedMemberId((current) => {
+      if (current && data.summary.members.some((member) => member.discordId === current)) {
+        return current;
+      }
+      return data.summary.members[0]?.discordId ?? "";
+    });
+    setRefreshing(false);
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadStats();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthed) return;
+
+    const timer = window.setInterval(() => {
+      void loadStats();
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [isAuthed]);
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setAuthError(data?.error || "Login failed.");
+      setAuthLoading(false);
+      return;
+    }
+
+    setPassword("");
+    setIsAuthed(true);
+    setAuthLoading(false);
+    await loadStats();
+  }
+
+  async function handleLogout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    setIsAuthed(false);
+    setStats(null);
+    setStatsError("");
+    setSelectedMemberId("");
+  }
+
+  async function handleBroadcast(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBroadcastLoading(true);
+    setBroadcastStatus("");
+
+    const res = await fetch("/api/admin/broadcast", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setBroadcastStatus(data?.error || "Could not send Discord message.");
+      setBroadcastLoading(false);
+      return;
+    }
+
+    setTitle("");
+    setMessage("");
+    setImageUrl("");
+    setBroadcastStatus("Discord message sent successfully.");
+    setBroadcastLoading(false);
+    await loadStats();
+  }
+
+  function applyPreset(preset: (typeof broadcastPresets)[number]) {
+    setTarget(preset.target);
+    setAudienceLabel(preset.audienceLabel);
+    setTitle(preset.title);
+    setMessage(preset.message);
+    setColor(preset.color);
+    setBroadcastStatus(`Preset loaded: ${preset.label}`);
+  }
+
+  return (
+    <div className="grid gap-6">
+      {!isAuthed ? (
+        <section className="rz-surface rz-panel-border max-w-xl rounded-[2rem] p-6">
+          <div className="rz-chip">Locked Access</div>
+          <h2 className="mt-4 text-2xl font-semibold text-white">Enter admin password</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            This panel uses a secure HTTP-only admin session cookie.
+          </p>
+          <form className="mt-6 grid gap-4" onSubmit={handleLogin}>
+            <input
+              type="password"
+              className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+              placeholder="Admin password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="h-12 rounded-2xl bg-[linear-gradient(135deg,#67e8f9,#22c55e)] px-5 text-sm font-semibold text-slate-950 transition hover:scale-[1.01] disabled:opacity-70"
+            >
+              {authLoading ? "Unlocking..." : "Unlock Admin Panel"}
+            </button>
+            {authError || statsError ? (
+              <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {authError || statsError}
+              </div>
+            ) : null}
+          </form>
+        </section>
+      ) : (
+        <>
+          <section className="grid gap-4 xl:grid-cols-5">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Now</div>
+              <div className="mt-3 text-4xl font-semibold text-white">
+                {stats?.summary.activeNowCount ?? 0}
+              </div>
+              <div className="mt-2 text-sm text-slate-300">
+                Members active in the last {stats?.activeWindowMinutes ?? 15} minutes.
+              </div>
+            </div>
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">
+                Members Tracked
+              </div>
+              <div className="mt-3 text-4xl font-semibold text-white">
+                {stats?.summary.totalMembersTracked ?? 0}
+              </div>
+              <div className="mt-2 text-sm text-slate-300">Unique members in the activity log.</div>
+            </div>
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Days</div>
+              <div className="mt-3 text-4xl font-semibold text-white">
+                {stats?.summary.activeDaysObserved ?? 0}
+              </div>
+              <div className="mt-2 text-sm text-slate-300">Distinct days with tracked activity.</div>
+            </div>
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Event Feed</div>
+              <div className="mt-3 text-4xl font-semibold text-white">
+                {stats?.summary.totalEvents ?? 0}
+              </div>
+              <div className="mt-2 text-sm text-slate-300">Live events powering the tracker.</div>
+            </div>
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Last Sync</div>
+              <div className="mt-3 text-xl font-semibold text-white">
+                {lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : "Waiting"}
+              </div>
+              <div className="mt-2 text-sm text-slate-300">
+                Refreshes automatically every 15 seconds.
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="grid gap-6">
+              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="rz-chip">Discord Broadcast</div>
+                    <h2 className="mt-3 text-2xl font-semibold text-white">
+                      Send a custom message
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
+                  >
+                    Log out
+                  </button>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  {pageOptions.map((option) => (
+                    <div
+                      key={option.value}
+                      className={`rounded-[1.5rem] border px-4 py-4 ${
+                        target === option.value
+                          ? "border-cyan-300/30 bg-cyan-400/10"
+                          : "border-white/8 bg-slate-950/55"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-white">{option.label}</div>
+                      <div className="mt-1 text-sm text-slate-300">{option.note}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5">
+                  <div className="text-sm font-semibold text-white">Quick presets</div>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {broadcastPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <form className="mt-6 grid gap-4" onSubmit={handleBroadcast}>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Target route</span>
+                    <select
+                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                    >
+                      {pageOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Custom audience label</span>
+                    <input
+                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={audienceLabel}
+                      onChange={(e) => setAudienceLabel(e.target.value)}
+                      placeholder="staff chat, main page, bans, alerts..."
+                      maxLength={80}
+                    />
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Message title</span>
+                    <input
+                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Maintenance, promotion, outage, reminder..."
+                      maxLength={80}
+                      required
+                    />
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Embed color</span>
+                    <div className="flex gap-3">
+                      <input
+                        type="color"
+                        className="h-12 w-16 rounded-2xl border border-white/10 bg-slate-950/70 p-1"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                      />
+                      <input
+                        className="h-12 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        placeholder="#22c55e"
+                        maxLength={7}
+                      />
+                    </div>
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Image URL</span>
+                    <input
+                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://example.com/banner.png"
+                      maxLength={500}
+                    />
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Discord message</span>
+                    <textarea
+                      className="min-h-40 rounded-[1.5rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Write the exact message you want posted to Discord."
+                      maxLength={1500}
+                      required
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={broadcastLoading}
+                    className="h-12 rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#67e8f9)] px-5 text-sm font-semibold text-slate-950 transition hover:scale-[1.01] disabled:opacity-70"
+                  >
+                    {broadcastLoading ? "Sending..." : "Send to Discord"}
+                  </button>
+
+                  {broadcastStatus ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100">
+                      {broadcastStatus}
+                    </div>
+                  ) : null}
+                </form>
+
+                <div className="mt-6 rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
+                  <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                    Message Preview
+                  </div>
+                  <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-white/8 bg-[#111827]">
+                    <div className="h-1.5 w-full" style={{ backgroundColor: color || "#22c55e" }} />
+                    <div className="p-4">
+                      <div className="text-sm font-semibold text-white">
+                        {title || "Your title will appear here"}
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-300">
+                        {message || "Your Discord message preview will appear here."}
+                      </div>
+                      <div className="mt-3 text-xs text-slate-400">
+                        Route: {pageOptions.find((option) => option.value === target)?.label || target}
+                        {" | "}
+                        Label: {audienceLabel || "Default"}
+                      </div>
+                      {imageUrl ? (
+                        <div className="mt-4">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrl}
+                            alt="Discord embed preview"
+                            className="max-h-48 w-full rounded-xl border border-white/8 object-cover"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="rz-chip">Recent Events</div>
+                    <h2 className="mt-3 text-2xl font-semibold text-white">Activity stream</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void loadStats()}
+                    disabled={refreshing}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-70"
+                  >
+                    {refreshing ? "Refreshing..." : "Refresh now"}
+                  </button>
+                </div>
+
+                <div className="mt-5 grid gap-3 lg:grid-cols-5">
+                  <button
+                    type="button"
+                    onClick={() => setEventFilter("all")}
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm ${
+                      eventFilter === "all"
+                        ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
+                        : "border-white/8 bg-slate-950/55 text-slate-300"
+                    }`}
+                  >
+                    All events
+                    <div className="mt-1 text-xs opacity-80">{stats?.recent.length ?? 0}</div>
+                  </button>
+                  {["login", "support_ticket", "purchase_intent", "admin_broadcast"].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setEventFilter(type)}
+                      className={`rounded-2xl border px-4 py-3 text-left text-sm ${
+                        eventFilter === type
+                          ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
+                          : "border-white/8 bg-slate-950/55 text-slate-300"
+                      }`}
+                    >
+                      {formatEventType(type)}
+                      <div className="mt-1 text-xs opacity-80">{eventTotals[type] ?? 0}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-5 grid gap-3">
+                  {filteredRecent.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex flex-col gap-2 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center gap-3">
+                          {entry.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={entry.avatarUrl}
+                              alt={entry.username || "User avatar"}
+                              className="h-10 w-10 rounded-full border border-white/10 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-slate-300">
+                              {(entry.username || "G").slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-semibold text-white">
+                              {entry.username || "Guest"} | {formatEventType(entry.type)}
+                            </div>
+                            {entry.globalName ? (
+                              <div className="mt-1 text-xs text-cyan-200/80">
+                                Display name: {entry.globalName}
+                              </div>
+                            ) : null}
+                            <div className="mt-1 text-xs text-slate-400">
+                              {entry.discordId ? `Discord ID: ${entry.discordId}` : "No Discord ID recorded"}
+                              {entry.discriminator ? ` | Tag: ${entry.discriminator}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">{entry.details}</div>
+                        {entry.profile ? (
+                          <div className="mt-2 text-xs text-slate-400">
+                            Locale: {String(entry.profile.locale ?? "N/A")} | Verified:{" "}
+                            {String(entry.profile.verified ?? "Unknown")}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="grid gap-6">
+              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+                <div className="rz-chip">Member Tracker</div>
+                <h2 className="mt-3 text-2xl font-semibold text-white">Live member activity</h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Search members, see who is active now, and open their Discord profile data.
+                </p>
+                <div className="mt-4">
+                  <input
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder="Search by username, display name, or Discord ID"
+                  />
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {filteredMembers.length ? (
+                    filteredMembers.map((member) => (
+                      <button
+                        key={member.discordId}
+                        type="button"
+                        onClick={() => setSelectedMemberId(member.discordId)}
+                        className={`rounded-[1.5rem] border px-4 py-4 text-left ${
+                          selectedMember?.discordId === member.discordId
+                            ? "border-cyan-300/30 bg-cyan-400/10"
+                            : "border-white/8 bg-slate-950/65"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            {member.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={member.avatarUrl}
+                                alt={member.username}
+                                className="h-12 w-12 rounded-full border border-white/10 object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
+                                {member.username.slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <div className="text-base font-semibold text-white">
+                                {getMemberName(member)}
+                              </div>
+                              {member.globalName ? (
+                                <div className="mt-1 text-xs text-slate-300">@{member.username}</div>
+                              ) : null}
+                              <div className="mt-1 text-xs text-slate-400">
+                                Discord ID: {member.discordId}
+                                {member.discriminator ? ` | Tag: ${member.discriminator}` : ""}
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              member.activeNow
+                                ? "bg-emerald-500/15 text-emerald-200"
+                                : "bg-white/8 text-slate-300"
+                            }`}
+                          >
+                            {member.activeNow ? "Live" : "Idle"}
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <div className="text-slate-500">Events</div>
+                            <div className="mt-1 font-semibold text-white">{member.events}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500">Days active</div>
+                            <div className="mt-1 font-semibold text-white">{member.activeDays}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500">Last seen</div>
+                            <div className="mt-1 font-semibold text-white">
+                              {new Date(member.lastActiveAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
+                      No member activity has been logged yet.
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+                <div className="rz-chip">Profile Details</div>
+                <h2 className="mt-3 text-2xl font-semibold text-white">Selected member</h2>
+                {selectedMember ? (
+                  <>
+                    <div className="mt-5 flex items-center gap-4">
+                      {selectedMember.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selectedMember.avatarUrl}
+                          alt={selectedMember.username}
+                          className="h-16 w-16 rounded-full border border-white/10 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg font-semibold text-slate-300">
+                          {selectedMember.username.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-xl font-semibold text-white">
+                          {getMemberName(selectedMember)}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">@{selectedMember.username}</div>
+                        <div className="mt-1 text-xs text-slate-400">
+                          Discord ID: {selectedMember.discordId}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
+                        <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                          Presence
+                        </div>
+                        <div className="mt-3 text-sm text-slate-300">
+                          Status: {selectedMember.activeNow ? "Live now" : "Idle"}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Last seen: {new Date(selectedMember.lastActiveAt).toLocaleString()}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Active days: {selectedMember.activeDays}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Total events: {selectedMember.events}
+                        </div>
+                      </div>
+                      <div className="rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
+                        <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                          Discord Data
+                        </div>
+                        <div className="mt-3 text-sm text-slate-300">
+                          Locale: {String(selectedMember.profile?.locale ?? "Not provided")}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Verified: {String(selectedMember.profile?.verified ?? "Unknown")}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Banner color: {String(selectedMember.profile?.banner_color ?? "None")}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Accent color: {String(selectedMember.profile?.accent_color ?? "None")}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
+                      <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                        Raw Discord Profile
+                      </div>
+                      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-slate-300">
+                        {selectedMemberProfileJson || "No raw Discord profile saved yet."}
+                      </pre>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4 rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
+                    Pick a member from the tracker to view full Discord details.
+                  </div>
+                )}
+              </section>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
