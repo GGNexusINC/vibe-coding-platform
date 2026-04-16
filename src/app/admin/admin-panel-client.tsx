@@ -326,7 +326,7 @@ export function AdminPanelClient() {
         </section>
       ) : (
         <>
-          <section className="grid gap-4 xl:grid-cols-5">
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
               <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Now</div>
               <div className="mt-3 text-4xl font-semibold text-white">
@@ -370,7 +370,7 @@ export function AdminPanelClient() {
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="grid gap-6">
               <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">

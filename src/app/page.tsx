@@ -31,7 +31,7 @@ export default function Home() {
       <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-amber-300/8 blur-3xl" />
 
       <section className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:py-24">
-        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
             <div className="rz-chip rz-float">NewHopeGGN</div>
 

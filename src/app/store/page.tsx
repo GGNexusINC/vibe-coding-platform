@@ -78,7 +78,7 @@ export default async function StorePage() {
 
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rz-surface rz-panel-border relative overflow-hidden rounded-[2rem] p-7 sm:p-9">
           <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.15),transparent_56%)]" />
           <div className="relative">
@@ -167,13 +167,11 @@ export default async function StorePage() {
         </div>
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-12">
+      <section className="mt-8 grid gap-6 md:grid-cols-2">
         {products.map((product) => (
           <article
             key={product.slug}
-            className={`rz-neon-border rz-pop-card group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(11,22,33,0.92),rgba(6,14,21,0.86))] p-6 ${
-              product.featured ? "lg:col-span-6" : "lg:col-span-3"
-            }`}
+            className="rz-neon-border rz-pop-card group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(11,22,33,0.92),rgba(6,14,21,0.86))] p-6"
           >
             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
               <div className="absolute -top-20 right-[-3rem] h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />

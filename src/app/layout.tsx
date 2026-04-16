@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { MobileNav } from "@/app/_components/mobile-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -55,7 +56,7 @@ export default function RootLayout({
                 </div>
               </Link>
 
-              <nav className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1 sm:flex">
+              <nav className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1 lg:flex">
                 <Link
                   className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
                   href="/about"
@@ -97,16 +98,17 @@ export default function RootLayout({
               <div className="flex items-center gap-2">
                 <Link
                   href="/dashboard"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/10"
+                  className="hidden h-10 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/10 sm:inline-flex"
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/store"
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#67e8f9,#facc15)] px-5 text-sm font-bold text-slate-950 transition hover:scale-[1.03]"
+                  className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#67e8f9,#facc15)] px-5 text-sm font-bold text-slate-950 transition hover:scale-[1.03] sm:inline-flex"
                 >
-                  View Store
+                  Store
                 </Link>
+                <MobileNav />
               </div>
             </div>
           </header>
