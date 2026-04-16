@@ -2,7 +2,7 @@ import { requireEnv } from "@/lib/env";
 
 const DISCORD_API = "https://discord.com/api";
 const PROD_FALLBACK_REDIRECT_URI =
-  "https://newhopeggn-ggnexusteam.vercel.app/auth/discord/callback";
+  "https://newhopeggn.vercel.app/auth/discord/callback";
 
 function getDiscordRedirectUri(origin: string, adminCallback = false) {
   const isLocal =
