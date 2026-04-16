@@ -172,6 +172,25 @@ export function AdminPanelClient() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const auth = params.get("auth");
+    const msg = params.get("msg");
+
+    if (auth === "unauthorized") {
+      setAuthError(msg || "Your Discord account is not authorized as an admin.");
+    } else if (auth === "error") {
+      setAuthError(msg || "Discord sign in failed. Try again.");
+    } else if (auth === "missing_code") {
+      setAuthError("Discord did not return an authorization code. Try again.");
+    }
+
+    if (auth) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("auth");
+      clean.searchParams.delete("msg");
+      window.history.replaceState({}, "", clean.toString());
+    }
+
     const timer = window.setTimeout(() => {
       void loadStats();
     }, 0);
@@ -261,11 +280,28 @@ export function AdminPanelClient() {
       {!isAuthed ? (
         <section className="rz-surface rz-panel-border max-w-xl rounded-[2rem] p-6">
           <div className="rz-chip">Locked Access</div>
-          <h2 className="mt-4 text-2xl font-semibold text-white">Enter admin password</h2>
+          <h2 className="mt-4 text-2xl font-semibold text-white">Admin sign in</h2>
           <p className="mt-2 text-sm text-slate-300">
-            This panel uses a secure HTTP-only admin session cookie.
+            Sign in with your Discord account. Only authorized admins can access this panel.
           </p>
-          <form className="mt-6 grid gap-4" onSubmit={handleLogin}>
+
+          <a
+            href="/auth/admin/start"
+            className="mt-6 flex h-12 items-center justify-center gap-3 rounded-2xl bg-[#5865F2] px-5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:bg-[#4752c4]"
+          >
+            <svg width="20" height="20" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 10.6 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4c.4-.3.7-.6 1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36.2 36.2 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.7-9 .2.2 0 0 0 .1-.2c1.5-14.9-2.5-27.8-10.5-39.2a.2.2 0 0 0-.1 0ZM23.7 36.2c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z" fill="currentColor"/>
+            </svg>
+            Sign in with Discord
+          </a>
+
+          <div className="mt-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-slate-500">or use password</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
+          <form className="mt-4 grid gap-4" onSubmit={handleLogin}>
             <input
               type="password"
               className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
@@ -277,9 +313,9 @@ export function AdminPanelClient() {
             <button
               type="submit"
               disabled={authLoading}
-              className="h-12 rounded-2xl bg-[linear-gradient(135deg,#67e8f9,#22c55e)] px-5 text-sm font-semibold text-slate-950 transition hover:scale-[1.01] disabled:opacity-70"
+              className="h-12 rounded-2xl bg-white/8 border border-white/10 px-5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:bg-white/12 disabled:opacity-70"
             >
-              {authLoading ? "Unlocking..." : "Unlock Admin Panel"}
+              {authLoading ? "Unlocking..." : "Unlock with password"}
             </button>
             {authError || statsError ? (
               <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">

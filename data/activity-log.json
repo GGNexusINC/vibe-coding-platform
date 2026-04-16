@@ -1,5 +1,14 @@
 [
   {
+    "id": "b70f3108-3a4f-490a-9a64-e84df035dfa0",
+    "createdAt": "2026-04-16T22:34:18.625Z",
+    "type": "purchase_intent",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "details": "Started purchase flow for Construction Package ($5)."
+  },
+  {
     "id": "55fd0aeb-ea19-46e7-9f5f-efe8563de9d6",
     "createdAt": "2026-04-16T22:14:23.209Z",
     "type": "purchase_intent",

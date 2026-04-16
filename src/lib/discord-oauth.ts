@@ -4,11 +4,16 @@ const DISCORD_API = "https://discord.com/api";
 const PROD_FALLBACK_REDIRECT_URI =
   "https://newhopeggn-ggnexusteam.vercel.app/auth/discord/callback";
 
-function getDiscordRedirectUri(origin: string) {
-  const configured = process.env.DISCORD_REDIRECT_URI?.trim();
+function getDiscordRedirectUri(origin: string, adminCallback = false) {
   const isLocal =
     origin.startsWith("http://localhost:") ||
     origin.startsWith("http://127.0.0.1:");
+
+  if (adminCallback) {
+    return `${origin}/auth/admin/callback`;
+  }
+
+  const configured = process.env.DISCORD_REDIRECT_URI?.trim();
 
   // Local dev should always use the local callback.
   if (isLocal) {
@@ -59,10 +64,11 @@ export function getDiscordAuthorizeUrl(params: {
 export async function exchangeDiscordCodeForToken(params: {
   origin: string;
   code: string;
+  adminCallback?: boolean;
 }) {
   const clientId = requireEnv("DISCORD_CLIENT_ID");
   const clientSecret = requireEnv("DISCORD_CLIENT_SECRET");
-  const redirectUri = getDiscordRedirectUri(params.origin);
+  const redirectUri = getDiscordRedirectUri(params.origin, params.adminCallback);
 
   const body = new URLSearchParams();
   body.set("client_id", clientId);

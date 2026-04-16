@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "@/lib/env";
 
 const ADMIN_COOKIE_NAME = "nh_admin_session";
 const ADMIN_PASSWORD_FALLBACK = "Hopeggnx762738";
@@ -7,6 +8,8 @@ const ACTIVE_WINDOW_MINUTES = 15;
 
 type AdminSessionPayload = {
   role: "admin";
+  discord_id?: string;
+  username?: string;
 };
 
 function getAdminSecret() {
@@ -21,8 +24,14 @@ export function getAdminPassword() {
   return process.env.ADMIN_PANEL_PASSWORD?.trim() || ADMIN_PASSWORD_FALLBACK;
 }
 
-export async function setAdminSession() {
-  const token = await new SignJWT({ role: "admin" satisfies AdminSessionPayload["role"] })
+export function isAdminDiscordId(discordId: string): boolean {
+  const ids = env.adminDiscordIds();
+  return ids.size > 0 && ids.has(discordId);
+}
+
+export async function setAdminSession(opts?: { discord_id?: string; username?: string }) {
+  const payload: AdminSessionPayload = { role: "admin", ...opts };
+  const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("12h")

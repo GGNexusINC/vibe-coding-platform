@@ -14,6 +14,15 @@ export const env = {
   supabaseUrl: () => requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: () => requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   adminDiscordId: () => getEnv("ADMIN_DISCORD_ID") ?? "",
+  adminDiscordIds: (): Set<string> => {
+    const raw = getEnv("ADMIN_DISCORD_IDS") ?? getEnv("ADMIN_DISCORD_ID") ?? "";
+    return new Set(
+      raw
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    );
+  },
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
     const pageMap: Record<string, string> = {
