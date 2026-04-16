@@ -116,10 +116,16 @@ export async function appendActivityEntry(entry: ActivityLogEntry, maxLogs: numb
     }
   }
 
-  const store = readActivityEntriesFromFile();
-  store.unshift(entry);
-  if (store.length > maxLogs) {
-    store.length = maxLogs;
+  try {
+    const store = readActivityEntriesFromFile();
+    store.unshift(entry);
+    if (store.length > maxLogs) {
+      store.length = maxLogs;
+    }
+    writeActivityEntriesToFile(store);
+  } catch {
+    // Filesystem is read-only in serverless environments (e.g. Vercel).
+    // Log is skipped but execution continues so webhooks still fire.
+    console.warn("activity-store: filesystem write skipped (read-only environment)");
   }
-  writeActivityEntriesToFile(store);
 }
