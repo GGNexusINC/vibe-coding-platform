@@ -494,7 +494,7 @@ export function AdminPanelClient() {
     { id: "broadcast" as const, label: "Broadcast",  icon: "◎" },
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
     { id: "lottery"   as const, label: "Lottery",    icon: "◆" },
-    ...(isOwner ? [{ id: "modlog" as const, label: "Mod Log", icon: "⚑" }] : []),
+    { id: "modlog" as const, label: "Mod Log", icon: "⚑" },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
   ] as const;
 
@@ -737,13 +737,11 @@ export function AdminPanelClient() {
                   <h1 className="text-xl font-bold text-white tracking-tight">Members <span className="text-slate-600 font-normal text-base">({filteredMembers.length})</span></h1>
                   <p className="mt-0.5 text-sm text-slate-500">All Discord server members.</p>
                 </div>
-                {isOwner && (
-                  <button type="button" onClick={() => { setShowModModal(true); setModTargetId(selectedMember?.discordId ?? ""); }}
+                <button type="button" onClick={() => { setShowModModal(true); setModTargetId(selectedMember?.discordId ?? ""); }}
                     className="flex items-center gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-300 hover:bg-rose-500/18 transition">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     Moderate Member
                   </button>
-                )}
               </div>
 
               <input
@@ -784,12 +782,10 @@ export function AdminPanelClient() {
                         ))}
                       </div>
                     </div>
-                    {isOwner && (
-                      <button type="button" onClick={() => { setModTargetId(selectedMember.discordId); setShowModModal(true); }}
+                    <button type="button" onClick={() => { setModTargetId(selectedMember.discordId); setShowModModal(true); }}
                         className="shrink-0 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/15 transition">
                         ⚑ Action
                       </button>
-                    )}
                   </div>
                 </div>
               )}
@@ -1052,7 +1048,7 @@ export function AdminPanelClient() {
           )}
 
           {/* ════ MOD LOG ════ */}
-          {activeTab === "modlog" && isOwner && (
+          {activeTab === "modlog" && (
             <div className="grid gap-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1180,7 +1176,7 @@ export function AdminPanelClient() {
       )}
 
       {/* ════ MODERATION MODAL ════ */}
-      {showModModal && isOwner && (
+      {showModModal && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 bg-black/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowModModal(false); }}>
           <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/8 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60">
             <div className="h-0.5 w-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-400" />

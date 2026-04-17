@@ -24,10 +24,6 @@ export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
 
-  if (!isOwnerSession(admin.discord_id)) {
-    return NextResponse.json({ ok: false, error: "Only owners can perform moderation actions." }, { status: 403 });
-  }
-
   if (!BOT_TOKEN) {
     return NextResponse.json({ ok: false, error: "Bot token not configured on server." }, { status: 500 });
   }
