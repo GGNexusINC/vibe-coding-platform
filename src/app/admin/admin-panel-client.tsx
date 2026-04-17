@@ -330,6 +330,7 @@ export function AdminPanelClient() {
 
   async function handleRosterAction(discordId: string, status: "approved" | "denied" | "pending") {
     setRosterActionLoading(discordId + status);
+    setRosterError("");
     const res = await fetch("/api/admin/roster", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -338,6 +339,8 @@ export function AdminPanelClient() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setRosterError(data?.error || "Action failed.");
+    } else if (data.roster) {
+      setRoster(data.roster as AdminEntry[]);
     } else {
       await loadRoster();
     }

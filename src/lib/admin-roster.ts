@@ -126,11 +126,24 @@ export async function updateAdminStatus(discordId: string, status: AdminStatus):
   const sb = getSupabase();
 
   if (sb) {
-    const { error } = await sb
+    const { data, error } = await sb
       .from(TABLE)
       .update({ status, updated_at: now })
-      .eq("discord_id", discordId);
-    if (!error) return true;
+      .eq("discord_id", discordId)
+      .select("id");
+    if (!error && data && data.length > 0) return true;
+    if (!error && data && data.length === 0) {
+      // Row doesn't exist yet — insert it as a placeholder
+      const { error: insertErr } = await sb.from(TABLE).insert({
+        discord_id: discordId,
+        username: discordId,
+        status,
+        added_at: now,
+        updated_at: now,
+      });
+      return !insertErr;
+    }
+    if (error) console.error("admin-roster updateAdminStatus Supabase error", error);
   }
 
   const roster = readFile();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getRoster, updateAdminStatus } from "@/lib/admin-roster";
+import { getRoster, updateAdminStatus, getAdminByDiscordId } from "@/lib/admin-roster";
+import { sendDiscordWebhook } from "@/lib/discord";
 import type { AdminStatus } from "@/lib/admin-roster";
 
 export async function GET() {
@@ -30,10 +31,47 @@ export async function POST(req: Request) {
     );
   }
 
+  const entry = await getAdminByDiscordId(discordId);
   const ok = await updateAdminStatus(discordId, status);
   if (!ok) {
-    return NextResponse.json({ ok: false, error: "Admin not found." }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "Admin not found in roster." }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true });
+  const username = entry?.username ?? discordId;
+  const actingAdmin = admin.username ?? admin.discord_id ?? "An admin";
+  const now = new Date().toISOString();
+
+  try {
+    if (status === "approved") {
+      await sendDiscordWebhook({
+        content:
+          `✅ **Admin Approved**\n` +
+          `**${username}** (ID: \`${discordId}\`) has been approved as admin by **${actingAdmin}**.\n` +
+          `They can now sign in with Discord to access the panel.\n` +
+          `Time (UTC): \`${now}\``,
+        username: "NewHopeGGN Admin Gate",
+      });
+    } else if (status === "denied") {
+      await sendDiscordWebhook({
+        content:
+          `❌ **Admin Denied**\n` +
+          `**${username}** (ID: \`${discordId}\`) was denied admin access by **${actingAdmin}**.\n` +
+          `Time (UTC): \`${now}\``,
+        username: "NewHopeGGN Admin Gate",
+      });
+    } else if (status === "pending") {
+      await sendDiscordWebhook({
+        content:
+          `🔄 **Admin Revoked**\n` +
+          `**${username}** (ID: \`${discordId}\`) had their admin access revoked by **${actingAdmin}**.\n` +
+          `Time (UTC): \`${now}\``,
+        username: "NewHopeGGN Admin Gate",
+      });
+    }
+  } catch {
+    // webhook failure is non-fatal
+  }
+
+  const roster = await getRoster();
+  return NextResponse.json({ ok: true, roster });
 }
