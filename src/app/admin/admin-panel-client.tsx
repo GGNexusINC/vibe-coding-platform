@@ -128,7 +128,11 @@ export function AdminPanelClient() {
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe">("dashboard");
+  const [wipeAt, setWipeAt] = useState("");
+  const [wipeLabel, setWipeLabel] = useState("Server Wipe");
+  const [wipeSaving, setWipeSaving] = useState(false);
+  const [wipeStatus, setWipeStatus] = useState("");
   const [modActions, setModActions] = useState<ModAction[]>([]);
   const [modLoading, setModLoading] = useState(false);
   const [modTargetId, setModTargetId] = useState("");
@@ -471,6 +475,7 @@ export function AdminPanelClient() {
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
     { id: "lottery"   as const, label: "Lottery",    icon: "◆" },
     ...(isOwner ? [{ id: "modlog" as const, label: "Mod Log", icon: "⚑" }] : []),
+    { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
   ] as const;
 
   type TabId = (typeof tabs)[number]["id"];
@@ -481,6 +486,14 @@ export function AdminPanelClient() {
     if (id === "streamers") void loadStreamers();
     if (id === "lottery") void loadLottery();
     if (id === "modlog")  void loadModLog();
+    if (id === "wipe") {
+      fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
+        if (d.ok) {
+          setWipeAt(d.wipeAt ? new Date(d.wipeAt).toISOString().slice(0, 16) : "");
+          setWipeLabel(d.label ?? "Server Wipe");
+        }
+      }).catch(() => {});
+    }
   }
 
   const actionColor: Record<string, string> = {
@@ -1011,6 +1024,84 @@ export function AdminPanelClient() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ════ WIPE TIMER ════ */}
+          {activeTab === "wipe" && (
+            <div className="grid gap-5 max-w-md">
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight">Wipe Timer</h1>
+                <p className="mt-0.5 text-sm text-slate-500">Set a countdown shown on the Community page.</p>
+              </div>
+              <div className="rz-surface rz-panel-border rounded-2xl p-5 grid gap-4">
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Label</label>
+                  <input
+                    className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                    value={wipeLabel}
+                    onChange={e => setWipeLabel(e.target.value)}
+                    placeholder="e.g. Next Server Wipe"
+                    maxLength={80}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Wipe Date &amp; Time</label>
+                  <input
+                    type="datetime-local"
+                    className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
+                    value={wipeAt}
+                    onChange={e => setWipeAt(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={wipeSaving || !wipeAt}
+                    onClick={async () => {
+                      setWipeSaving(true); setWipeStatus("");
+                      const res = await fetch("/api/admin/wipe-timer", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ wipeAt: new Date(wipeAt).toISOString(), label: wipeLabel }),
+                      });
+                      setWipeSaving(false);
+                      setWipeStatus(res.ok ? "✓ Wipe timer saved. Community page updated." : "Failed to save.");
+                    }}
+                    className="h-11 flex-1 rounded-2xl bg-amber-400/15 text-sm font-bold text-amber-300 hover:bg-amber-400/25 disabled:opacity-50 transition"
+                  >
+                    {wipeSaving ? "Saving…" : "Set Timer"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={wipeSaving}
+                    onClick={async () => {
+                      setWipeSaving(true); setWipeStatus("");
+                      const res = await fetch("/api/admin/wipe-timer", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ wipeAt: null, label: wipeLabel }),
+                      });
+                      setWipeSaving(false);
+                      setWipeAt("");
+                      setWipeStatus(res.ok ? "✓ Timer cleared." : "Failed to clear.");
+                    }}
+                    className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50 transition"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {wipeStatus && (
+                  <div className="rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-slate-200">{wipeStatus}</div>
+                )}
+              </div>
+              {wipeAt && (
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 px-5 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Preview</div>
+                  <div className="text-sm text-amber-300 font-semibold">{wipeLabel}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{new Date(wipeAt).toLocaleString()}</div>
+                </div>
+              )}
             </div>
           )}
 
