@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { MobileNav } from "@/app/_components/mobile-nav";
+import { Heartbeat } from "@/app/_components/heartbeat";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="rz-corporate-shell min-h-full flex flex-col bg-[#041018]">
+        <Heartbeat />
         <div className="relative z-10 min-h-screen flex flex-col">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-[#07131c]/75 backdrop-blur-2xl">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">

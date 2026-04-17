@@ -224,12 +224,28 @@ export function AdminPanelClient() {
   useEffect(() => {
     if (!isAuthed) return;
 
-    const timer = window.setInterval(() => {
+    const statsTimer = window.setInterval(() => {
       void loadStats();
     }, 15000);
 
-    return () => window.clearInterval(timer);
+    // Heartbeat so the admin shows as active
+    const beat = () => void fetch("/api/heartbeat", { method: "POST" }).catch(() => null);
+    beat();
+    const heartbeatTimer = window.setInterval(beat, 3 * 60 * 1000);
+
+    return () => {
+      window.clearInterval(statsTimer);
+      window.clearInterval(heartbeatTimer);
+    };
   }, [isAuthed]);
+
+  useEffect(() => {
+    if (!isAuthed || activeTab !== "roster") return;
+    const timer = window.setInterval(() => {
+      void loadRoster();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [isAuthed, activeTab]);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

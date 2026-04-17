@@ -78,34 +78,51 @@ export async function upsertAdmin(entry: Omit<AdminEntry, "id" | "addedAt" | "up
   const sb = getSupabase();
 
   if (sb) {
-    const { data, error } = await sb
+    // Check if row already exists so we don't overwrite an admin-set status
+    const { data: existing } = await sb
       .from(TABLE)
-      .upsert(
-        {
+      .select("*")
+      .eq("discord_id", entry.discordId)
+      .single();
+
+    if (existing) {
+      // Only update username/avatar — never downgrade a status set by an admin
+      const { data, error } = await sb
+        .from(TABLE)
+        .update({
+          username: entry.username,
+          avatar_url: entry.avatarUrl ?? null,
+          updated_at: now,
+        })
+        .eq("discord_id", entry.discordId)
+        .select()
+        .single();
+      if (!error && data) return mapRow(data as Record<string, unknown>);
+    } else {
+      const { data, error } = await sb
+        .from(TABLE)
+        .insert({
           discord_id: entry.discordId,
           username: entry.username,
           avatar_url: entry.avatarUrl ?? null,
           status: entry.status,
           added_at: now,
           updated_at: now,
-        },
-        { onConflict: "discord_id" },
-      )
-      .select()
-      .single();
-
-    if (!error && data) return mapRow(data as Record<string, unknown>);
+        })
+        .select()
+        .single();
+      if (!error && data) return mapRow(data as Record<string, unknown>);
+    }
   }
 
   const roster = readFile();
-  const existing = roster.find((e) => e.discordId === entry.discordId);
-  if (existing) {
-    existing.username = entry.username;
-    existing.avatarUrl = entry.avatarUrl;
-    existing.status = entry.status;
-    existing.updatedAt = now;
+  const existingFile = roster.find((e) => e.discordId === entry.discordId);
+  if (existingFile) {
+    existingFile.username = entry.username;
+    existingFile.avatarUrl = entry.avatarUrl;
+    existingFile.updatedAt = now;
     writeFile(roster);
-    return existing;
+    return existingFile;
   }
   const newEntry: AdminEntry = {
     id: crypto.randomUUID(),
