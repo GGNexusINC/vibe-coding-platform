@@ -2,6 +2,46 @@
 
 import { useEffect, useState } from "react";
 
+const GUILD_ID = "1419522458075005023";
+const INVITE = "https://discord.gg/5Fcw9XSEeZ";
+const WIDGET_URL = `https://discord.com/api/guilds/${GUILD_ID}/widget.json`;
+
+// Static text channels to display (Discord widget doesn't expose text channels)
+const TEXT_CHANNELS = [
+  { emoji: "📢", name: "announcements",            desc: "Server news & updates" },
+  { emoji: "💬", name: "general-chat",              desc: "Main community chat" },
+  { emoji: "🤝", name: "equipos-teams",             desc: "Find teammates" },
+  { emoji: "😂", name: "memes",                     desc: "Community memes" },
+  { emoji: "📷", name: "fotos-photos",              desc: "Share screenshots" },
+  { emoji: "🎬", name: "videos",                    desc: "Clips & highlights" },
+  { emoji: "💡", name: "sugerencias-suggestions",   desc: "Ideas & feedback" },
+  { emoji: "💵", name: "subscriptions",             desc: "Store & VIP info" },
+  { emoji: "📖", name: "guias-guides",              desc: "Game guides" },
+];
+
+type WidgetMember = {
+  id: string;
+  username: string;
+  avatar_url: string;
+  status: string;
+  channel_id?: string;
+};
+
+type WidgetChannel = {
+  id: string;
+  name: string;
+  position: number;
+};
+
+type Widget = {
+  id: string;
+  name: string;
+  instant_invite: string | null;
+  presence_count: number;
+  members: WidgetMember[];
+  channels: WidgetChannel[];
+};
+
 type ActivityEntry = {
   id: string;
   type: string;
@@ -11,35 +51,6 @@ type ActivityEntry = {
   createdAt: string;
   details: string;
 };
-
-type MemberSummary = {
-  discordId: string;
-  username: string;
-  globalName?: string | null;
-  avatarUrl?: string;
-  activeNow: boolean;
-  lastActiveAt: string;
-  events: number;
-};
-
-const CHANNELS = [
-  { emoji: "💬", name: "General-Chat", desc: "Main community chat" },
-  { emoji: "🤝", name: "Equipos-Teams", desc: "Find teammates" },
-  { emoji: "😂", name: "Memes", desc: "Community memes" },
-  { emoji: "📷", name: "Fotos-Photos", desc: "Share screenshots" },
-  { emoji: "🎬", name: "Videos", desc: "Clips & highlights" },
-  { emoji: "💡", name: "Sugerencias-Suggestions", desc: "Ideas & feedback" },
-  { emoji: "💵", name: "subscriptions", desc: "Store & VIP info" },
-  { emoji: "📖", name: "Guias-Guides", desc: "Game guides" },
-  { emoji: "😴", name: "AFK", desc: "Away from keyboard" },
-];
-
-const SUPPORT_CHANNELS = [
-  { emoji: "🔧", name: "SoporteSupport-1", vc: false },
-  { emoji: "🔧", name: "SoporteSupport-2", vc: false },
-  { emoji: "🔊", name: "Soporte/Support-1", vc: true },
-  { emoji: "🔊", name: "Soporte/Support-2", vc: true },
-];
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -51,187 +62,333 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function CommunityPage() {
-  const [members, setMembers] = useState<MemberSummary[]>([]);
-  const [feed, setFeed] = useState<ActivityEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+function DiscordIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 71 55" fill="currentColor">
+      <path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 10.6 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4c.4-.3.7-.6 1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36.2 36.2 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.7-9 .2.2 0 0 0 .1-.2c1.5-14.9-2.5-27.8-10.5-39.2a.2.2 0 0 0-.1 0ZM23.7 36.2c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z" />
+    </svg>
+  );
+}
 
-  async function load() {
+export default function CommunityPage() {
+  const [widget, setWidget] = useState<Widget | null>(null);
+  const [widgetError, setWidgetError] = useState(false);
+  const [feed, setFeed] = useState<ActivityEntry[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  async function loadWidget() {
+    try {
+      const res = await fetch(WIDGET_URL);
+      if (!res.ok) { setWidgetError(true); return; }
+      const data: Widget = await res.json();
+      setWidget(data);
+      setWidgetError(false);
+      setLastRefresh(new Date());
+    } catch {
+      setWidgetError(true);
+    }
+  }
+
+  async function loadFeed() {
     const res = await fetch("/api/admin/stats").catch(() => null);
-    if (!res?.ok) { setLoading(false); return; }
+    if (!res?.ok) { setFeedLoading(false); return; }
     const data = await res.json().catch(() => null);
-    if (!data?.ok) { setLoading(false); return; }
-    setMembers(data.summary?.members ?? []);
-    setFeed((data.recent ?? []).slice(0, 30));
-    setLoading(false);
+    if (data?.ok) setFeed((data.recent ?? []).slice(0, 25));
+    setFeedLoading(false);
   }
 
   useEffect(() => {
-    void load();
-    const t = window.setInterval(() => void load(), 15000);
-    return () => window.clearInterval(t);
+    void loadWidget();
+    void loadFeed();
+    const wt = window.setInterval(() => void loadWidget(), 30000);
+    const ft = window.setInterval(() => void loadFeed(), 15000);
+    return () => { window.clearInterval(wt); window.clearInterval(ft); };
   }, []);
 
-  const activeMembers = members.filter((m) => m.activeNow);
-  const recentLogins = feed.filter((e) => e.type === "login").slice(0, 10);
+  // Group voice members by channel
+  const voiceChannels = widget?.channels
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((ch) => ({
+      ...ch,
+      members: (widget.members ?? []).filter((m) => m.channel_id === ch.id),
+    })) ?? [];
+
+  // Online members not in voice
+  const onlineNotInVoice = (widget?.members ?? []).filter((m) => !m.channel_id);
+
+  const presenceCount = widget?.presence_count ?? 0;
 
   return (
     <div className="relative mx-auto w-full max-w-6xl px-4 py-12">
+      {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(88,101,242,0.12),transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(88,101,242,0.06),transparent_50%)]" />
 
-      <div className="rz-chip mb-4">🎮 Community Hub</div>
-      <h1 className="text-4xl font-bold text-white">NewHopeGGN <span className="text-[#5865F2]">Discord</span></h1>
-      <p className="mt-2 text-slate-400">Live activity from our Discord community. Join us!</p>
+      <div className="relative">
+        {/* Header */}
+        <div className="rz-chip mb-4">🎮 Community Hub</div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-white leading-tight">
+              NewHopeGGN <span className="text-[#5865F2]">Discord</span>
+            </h1>
+            <p className="mt-1 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
+          </div>
 
-      <a
-        href="https://discord.gg/newhopeggn"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-[#5865F2] px-6 text-sm font-semibold text-white hover:bg-[#4752c4] transition"
-      >
-        <svg width="18" height="18" viewBox="0 0 71 55" fill="currentColor"><path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 10.6 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4c.4-.3.7-.6 1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36.2 36.2 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.7-9 .2.2 0 0 0 .1-.2c1.5-14.9-2.5-27.8-10.5-39.2a.2.2 0 0 0-.1 0ZM23.7 36.2c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z"/></svg>
-        Join Discord
-      </a>
+          {/* Live stats pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-sm font-bold text-emerald-300">{presenceCount} Online</span>
+            </div>
+            {lastRefresh && (
+              <div className="text-xs text-slate-500">
+                Updated {timeAgo(lastRefresh.toISOString())}
+              </div>
+            )}
+          </div>
+        </div>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[280px_1fr_280px]">
+        {/* Join button */}
+        <a
+          href={INVITE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex h-12 items-center gap-2.5 rounded-2xl bg-[#5865F2] px-7 text-sm font-bold text-white hover:bg-[#4752c4] active:scale-95 transition-all shadow-[0_0_30px_rgba(88,101,242,0.4)]"
+        >
+          <DiscordIcon />
+          Join Our Discord
+        </a>
 
-        {/* Left — Channel list */}
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-          <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3"># Channels</div>
-          <div className="space-y-1">
-            {CHANNELS.map((ch) => (
-              <div key={ch.name} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-white/5 transition cursor-default group">
-                <span className="text-base w-5 text-center">{ch.emoji}</span>
-                <div>
-                  <div className="text-sm text-slate-200 group-hover:text-white">{ch.name}</div>
-                  <div className="text-xs text-slate-500">{ch.desc}</div>
+        {/* Widget disabled notice */}
+        {widgetError && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
+            ⚠️ Live voice data unavailable — enable Server Widget in Discord Server Settings → Widget
+          </div>
+        )}
+
+        <div className="mt-8 grid gap-5 lg:grid-cols-[260px_1fr_260px]">
+
+          {/* ── Left: Text Channels ── */}
+          <div className="space-y-4">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 flex items-center gap-2">
+                <span className="text-[#5865F2]">#</span> Text Channels
+              </div>
+              <div className="space-y-0.5">
+                {TEXT_CHANNELS.map((ch) => (
+                  <a
+                    key={ch.name}
+                    href={INVITE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 hover:bg-white/5 transition group cursor-pointer"
+                  >
+                    <span className="text-base w-5 text-center shrink-0">{ch.emoji}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm text-slate-300 group-hover:text-white truncate">#{ch.name}</div>
+                      <div className="text-[10px] text-slate-600 truncate">{ch.desc}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Center: Voice Channels (live) + Activity Feed ── */}
+          <div className="space-y-5">
+
+            {/* Voice Channels */}
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+                  <span className="text-emerald-400">🔊</span> Voice Channels
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-emerald-400 font-semibold">LIVE</span>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="mt-4 pt-4 border-t border-white/8">
-            <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">🛠️ Soporte-Support</div>
-            <div className="space-y-1">
-              {SUPPORT_CHANNELS.map((ch) => (
-                <div key={ch.name} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-white/5 transition cursor-default">
-                  <span className="text-sm">{ch.vc ? "🔊" : "#"}</span>
-                  <span className="text-sm text-slate-300">{ch.name}</span>
-                  {ch.vc && <span className="ml-auto text-xs text-slate-500">VC</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+              {!widget && !widgetError && (
+                <div className="text-xs text-slate-500 animate-pulse">Loading voice channels...</div>
+              )}
 
-        {/* Center — Live Feed */}
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Live Activity Feed</div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-emerald-400">Live</span>
-            </div>
-          </div>
+              {widgetError && (
+                <div className="text-xs text-slate-500 italic">Voice data unavailable. Enable Discord Server Widget to see live members.</div>
+              )}
 
-          {loading ? (
-            <div className="text-sm text-slate-400">Loading...</div>
-          ) : feed.length === 0 ? (
-            <div className="text-sm text-slate-500">No recent activity.</div>
-          ) : (
-            <div className="space-y-2 overflow-y-auto max-h-[520px] pr-1">
-              {feed.map((entry) => (
-                <div key={entry.id} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-slate-950/50 px-3 py-2.5">
-                  {entry.avatarUrl ? (
-                    <img src={entry.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0 mt-0.5" />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-300 shrink-0 mt-0.5">
-                      {(entry.globalName || entry.username || "?")[0]?.toUpperCase()}
+              {widget && voiceChannels.length === 0 && (
+                <div className="text-xs text-slate-500">No voice channels found in widget data.</div>
+              )}
+
+              <div className="space-y-2">
+                {voiceChannels.map((ch) => (
+                  <div key={ch.id} className={`rounded-2xl border px-3 py-2.5 transition-all ${
+                    ch.members.length > 0
+                      ? "border-emerald-500/25 bg-emerald-500/5"
+                      : "border-white/6 bg-slate-950/30"
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`text-sm ${ch.members.length > 0 ? "text-emerald-400" : "text-slate-500"}`}>🔊</span>
+                      <span className={`text-sm font-semibold ${ch.members.length > 0 ? "text-white" : "text-slate-400"}`}>{ch.name}</span>
+                      {ch.members.length > 0 && (
+                        <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/15 rounded-full px-2 py-0.5">
+                          {ch.members.length} in call
+                        </span>
+                      )}
+                      {ch.members.length === 0 && (
+                        <span className="ml-auto text-[10px] text-slate-600">empty</span>
+                      )}
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white truncate">{entry.globalName || entry.username}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        entry.type === "login" ? "bg-emerald-500/15 text-emerald-300" :
-                        entry.type === "logout" ? "bg-slate-500/15 text-slate-300" :
-                        entry.type === "support_ticket" ? "bg-amber-500/15 text-amber-300" :
-                        entry.type === "purchase_intent" ? "bg-cyan-500/15 text-cyan-300" :
-                        "bg-violet-500/15 text-violet-300"
-                      }`}>
-                        {entry.type.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5 truncate">{entry.details}</div>
-                  </div>
-                  <div className="text-xs text-slate-500 shrink-0">{timeAgo(entry.createdAt)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right — Who's Online */}
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-          <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-            Online — {activeMembers.length}
-          </div>
-
-          {activeMembers.length === 0 ? (
-            <div className="text-xs text-slate-500">No one active right now.</div>
-          ) : (
-            <div className="space-y-2">
-              {activeMembers.map((m) => (
-                <div key={m.discordId} className="flex items-center gap-2.5">
-                  <div className="relative shrink-0">
-                    {m.avatarUrl ? (
-                      <img src={m.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs text-emerald-300 font-bold">
-                        {(m.globalName || m.username)[0]?.toUpperCase()}
+                    {ch.members.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {ch.members.map((mem) => (
+                          <div key={mem.id} className="flex items-center gap-1.5 rounded-full bg-black/30 border border-white/8 px-2 py-1">
+                            <img
+                              src={mem.avatar_url}
+                              alt={mem.username}
+                              className="h-5 w-5 rounded-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                            <span className="text-[11px] text-slate-200 font-medium">{mem.username}</span>
+                            <span className={`h-1.5 w-1.5 rounded-full ${
+                              mem.status === "online" ? "bg-emerald-400" :
+                              mem.status === "idle"   ? "bg-amber-400"   :
+                              mem.status === "dnd"    ? "bg-rose-500"    : "bg-slate-500"
+                            }`} />
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-slate-950" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm text-white truncate">{m.globalName || m.username}</div>
-                    <div className="text-xs text-slate-500">Active now</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
 
-          <div className="mt-5 pt-4 border-t border-white/8">
-            <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Recent Logins</div>
-            <div className="space-y-2">
-              {recentLogins.map((e) => (
-                <div key={e.id} className="flex items-center gap-2">
-                  {e.avatarUrl ? (
-                    <img src={e.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
-                  ) : (
-                    <div className="h-6 w-6 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-300">
-                      {(e.globalName || e.username || "?")[0]?.toUpperCase()}
+            {/* Activity Feed */}
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Site Activity Feed</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#5865F2] animate-pulse" />
+                  <span className="text-[10px] text-[#5865F2] font-semibold">LIVE</span>
+                </div>
+              </div>
+
+              {feedLoading ? (
+                <div className="text-xs text-slate-500 animate-pulse">Loading activity...</div>
+              ) : feed.length === 0 ? (
+                <div className="text-xs text-slate-500">No recent activity.</div>
+              ) : (
+                <div className="space-y-2 overflow-y-auto max-h-[320px] pr-1">
+                  {feed.map((entry) => (
+                    <div key={entry.id} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-slate-950/50 px-3 py-2.5">
+                      {entry.avatarUrl ? (
+                        <img src={entry.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0 mt-0.5" />
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-300 shrink-0 mt-0.5">
+                          {(entry.globalName || entry.username || "?")[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-white truncate">{entry.globalName || entry.username}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            entry.type === "login"            ? "bg-emerald-500/15 text-emerald-300" :
+                            entry.type === "logout"           ? "bg-slate-500/15 text-slate-400"    :
+                            entry.type === "support_ticket"   ? "bg-amber-500/15 text-amber-300"    :
+                            entry.type === "purchase_intent"  ? "bg-cyan-500/15 text-cyan-300"      :
+                            "bg-violet-500/15 text-violet-300"
+                          }`}>{entry.type.replace(/_/g, " ")}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 truncate">{entry.details}</div>
+                      </div>
+                      <div className="text-[10px] text-slate-600 shrink-0">{timeAgo(entry.createdAt)}</div>
                     </div>
-                  )}
-                  <span className="text-xs text-slate-300 truncate">{e.globalName || e.username}</span>
-                  <span className="ml-auto text-xs text-slate-500">{timeAgo(e.createdAt)}</span>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="mt-5 pt-4 border-t border-white/8 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/8 bg-slate-950/50 px-3 py-2 text-center">
-              <div className="text-xl font-bold text-emerald-400">{activeMembers.length}</div>
-              <div className="text-xs text-slate-400">Online</div>
-            </div>
-            <div className="rounded-2xl border border-white/8 bg-slate-950/50 px-3 py-2 text-center">
-              <div className="text-xl font-bold text-cyan-400">{members.length}</div>
-              <div className="text-xs text-slate-400">Members</div>
+          {/* ── Right: Online members ── */}
+          <div className="space-y-4">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">
+                Members Online — <span className="text-emerald-400">{presenceCount}</span>
+              </div>
+
+              {!widget && !widgetError && (
+                <div className="text-xs text-slate-500 animate-pulse">Loading...</div>
+              )}
+
+              {onlineNotInVoice.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {onlineNotInVoice.map((m) => (
+                    <div key={m.id} className="flex items-center gap-2.5">
+                      <div className="relative shrink-0">
+                        <img
+                          src={m.avatar_url}
+                          alt={m.username}
+                          className="h-8 w-8 rounded-full object-cover"
+                          onError={(e) => {
+                            const el = e.target as HTMLImageElement;
+                            el.style.display = "none";
+                          }}
+                        />
+                        <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-slate-950 ${
+                          m.status === "online" ? "bg-emerald-400" :
+                          m.status === "idle"   ? "bg-amber-400"   :
+                          m.status === "dnd"    ? "bg-rose-500"    : "bg-slate-500"
+                        }`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-white truncate">{m.username}</div>
+                        <div className={`text-[10px] capitalize ${
+                          m.status === "online" ? "text-emerald-400" :
+                          m.status === "idle"   ? "text-amber-400"   :
+                          m.status === "dnd"    ? "text-rose-400"    : "text-slate-500"
+                        }`}>{m.status ?? "online"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {widget && onlineNotInVoice.length === 0 && (
+                <div className="text-xs text-slate-500 mb-4">
+                  {presenceCount > 0 ? `${presenceCount} members online (in voice channels)` : "No members online right now."}
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="pt-4 border-t border-white/8 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl border border-white/8 bg-slate-950/50 px-3 py-2.5 text-center">
+                  <div className="text-xl font-black text-emerald-400">{presenceCount}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Online Now</div>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-slate-950/50 px-3 py-2.5 text-center">
+                  <div className="text-xl font-black text-[#5865F2]">{voiceChannels.filter(c => c.members.length > 0).length}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Active VCs</div>
+                </div>
+              </div>
+
+              {/* Join CTA */}
+              <a
+                href={INVITE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex items-center justify-center gap-2 w-full rounded-2xl border border-[#5865F2]/40 bg-[#5865F2]/10 px-4 py-2.5 text-sm font-semibold text-[#7289da] hover:bg-[#5865F2]/20 transition"
+              >
+                <DiscordIcon />
+                Join Server
+              </a>
             </div>
           </div>
+
         </div>
       </div>
     </div>
