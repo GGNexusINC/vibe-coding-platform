@@ -13,8 +13,9 @@ async function getGuildMembers() {
   const sb = createClient(url, key, { auth: { persistSession: false } });
   const { data } = await sb
     .from("guild_members")
-    .select("discord_id, username, display_name, avatar_url, roles, joined_at, last_synced")
-    .eq("is_bot", false);
+    .select("discord_id, username, display_name, avatar_url, roles, joined_at, last_synced, is_bot")
+    .order("is_bot", { ascending: true })
+    .order("display_name", { ascending: true });
   return data ?? [];
 }
 
@@ -77,6 +78,7 @@ export async function GET() {
         events:       0,
         activeNow:    presence?.activeNow ?? false,
         isAdmin:      adminIds.has(gm.discord_id),
+        isBot:        gm.is_bot,
       });
     }
   }

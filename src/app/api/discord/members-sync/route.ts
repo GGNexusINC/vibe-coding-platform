@@ -71,7 +71,7 @@ export async function GET(req: Request) {
   const { data, error } = await sb
     .from("guild_members")
     .select("*")
-    .eq("is_bot", false)
+    .order("is_bot", { ascending: true })
     .order("display_name", { ascending: true });
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });

@@ -27,6 +27,7 @@ type MemberSummary = {
   events: number;
   activeNow: boolean;
   isAdmin?: boolean;
+  isBot?: boolean;
 };
 
 type StatsResponse = {
@@ -827,6 +828,7 @@ export function AdminPanelClient() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`text-base font-bold ${selectedMember.isAdmin ? "text-amber-200" : "text-white"}`}>{getMemberName(selectedMember)}</span>
+                        {selectedMember.isBot && <span className="rounded-full border border-purple-400/25 bg-purple-400/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-300">🤖 Bot</span>}
                         {selectedMember.isAdmin && <span className="rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">Admin</span>}
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${selectedMember.activeNow ? "bg-emerald-500/15 text-emerald-300" : "bg-white/6 text-slate-500"}`}>{selectedMember.activeNow ? "● Live" : "Offline"}</span>
                       </div>
@@ -874,12 +876,13 @@ export function AdminPanelClient() {
                         {member.isAdmin && <span className="absolute -top-1 -right-1 text-[9px]">👑</span>}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className={`truncate text-sm font-semibold ${member.isAdmin ? "text-amber-200" : "text-slate-100"}`}>
+                        <div className={`truncate text-sm font-semibold ${member.isAdmin ? "text-amber-200" : member.isBot ? "text-purple-200" : "text-slate-100"}`}>
                           {getMemberName(member)}
+                          {member.isBot && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-widest text-purple-400/80">🤖 Bot</span>}
                           {member.isAdmin && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">Admin</span>}
                         </div>
                         <div className="text-[11px] text-slate-600">
-                          {member.events > 0 ? `${member.events} events · ${member.activeDays}d active` : "Discord member"}
+                          {member.isBot ? "Discord Bot" : member.events > 0 ? `${member.events} events · ${member.activeDays}d active` : "Discord member"}
                         </div>
                       </div>
                       <div className="shrink-0 text-[11px] text-slate-600">{new Date(member.lastActiveAt).toLocaleDateString()}</div>
