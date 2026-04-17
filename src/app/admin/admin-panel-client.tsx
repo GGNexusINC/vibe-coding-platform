@@ -109,9 +109,8 @@ export function AdminPanelClient() {
   const [message, setMessage] = useState("");
   const [color, setColor] = useState("#22c55e");
   const [imageUrl, setImageUrl] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState("");
-  const [imageFileName, setImageFileName] = useState("");
-  const [imageUploading, setImageUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
@@ -267,11 +266,25 @@ export function AdminPanelClient() {
     setBroadcastLoading(true);
     setBroadcastStatus("");
 
-    const res = await fetch("/api/admin/broadcast", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl, imageDataUrl }),
-    });
+    let fetchInit: RequestInit;
+    if (imageFile) {
+      const fd = new FormData();
+      fd.append("target", target);
+      fd.append("audienceLabel", audienceLabel);
+      fd.append("title", title);
+      fd.append("message", message);
+      fd.append("color", color);
+      fd.append("imageUrl", imageUrl);
+      fd.append("imageFile", imageFile);
+      fetchInit = { method: "POST", body: fd };
+    } else {
+      fetchInit = {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl }),
+      };
+    }
+    const res = await fetch("/api/admin/broadcast", fetchInit);
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -283,32 +296,22 @@ export function AdminPanelClient() {
     setTitle("");
     setMessage("");
     setImageUrl("");
-    setImageDataUrl("");
-    setImageFileName("");
+    setImageFile(null);
+    setImagePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setBroadcastStatus("Discord message sent successfully.");
     setBroadcastLoading(false);
     await loadStats();
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageUploading(true);
-    setImageDataUrl("");
-    setImageFileName("");
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setBroadcastStatus(data?.error || "Image upload failed.");
-      setImageUploading(false);
-      return;
-    }
-    setImageDataUrl(data.dataUrl);
-    setImageFileName(data.name);
+    setImageFile(file);
     setImageUrl("");
-    setImageUploading(false);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(String(ev.target?.result ?? ""));
+    reader.readAsDataURL(file);
   }
 
   async function loadRoster() {
@@ -671,9 +674,9 @@ export function AdminPanelClient() {
                         className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-slate-950/55 px-4 py-4 transition hover:border-cyan-300/40"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        {imageDataUrl ? (
+                        {imagePreview ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={imageDataUrl} alt="preview" className="h-12 w-12 rounded-xl object-cover border border-white/10" />
+                          <img src={imagePreview} alt="preview" className="h-12 w-12 rounded-xl object-cover border border-white/10" />
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -681,15 +684,15 @@ export function AdminPanelClient() {
                         )}
                         <div>
                           <div className="text-sm font-semibold text-white">
-                            {imageUploading ? "Uploading..." : imageFileName || "Upload an image"}
+                            {imageFile ? imageFile.name : "Upload an image"}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-400">JPEG, PNG, GIF, WebP · max 8 MB</div>
                         </div>
-                        {imageDataUrl && (
+                        {imageFile && (
                           <button
                             type="button"
                             className="ml-auto text-xs text-slate-400 hover:text-red-300"
-                            onClick={(ev) => { ev.stopPropagation(); setImageDataUrl(""); setImageFileName(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                            onClick={(ev) => { ev.stopPropagation(); setImageFile(null); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                           >
                             Remove
                           </button>
@@ -701,7 +704,6 @@ export function AdminPanelClient() {
                         accept="image/jpeg,image/png,image/gif,image/webp"
                         className="hidden"
                         onChange={handleImageUpload}
-                        disabled={imageUploading}
                       />
                       <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-white/10" />
@@ -711,10 +713,10 @@ export function AdminPanelClient() {
                       <input
                         className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
                         value={imageUrl}
-                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageDataUrl(""); setImageFileName(""); } }}
+                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(""); } }}
                         placeholder="https://example.com/banner.png"
                         maxLength={500}
-                        disabled={!!imageDataUrl}
+                        disabled={!!imageFile}
                       />
                     </div>
                   </div>

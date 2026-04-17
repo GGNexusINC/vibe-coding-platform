@@ -22,14 +22,30 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
-  const target = String(body?.target ?? "").trim();
-  const audienceLabel = String(body?.audienceLabel ?? "").trim();
-  const title = String(body?.title ?? "").trim();
-  const message = String(body?.message ?? "").trim();
-  const color = String(body?.color ?? "").trim();
-  const imageUrl = String(body?.imageUrl ?? "").trim();
-  const imageDataUrl = String(body?.imageDataUrl ?? "").trim();
+  const contentType = req.headers.get("content-type") ?? "";
+  let target = "", audienceLabel = "", title = "", message = "", color = "", imageUrl = "";
+  let imageFile: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData().catch(() => null);
+    if (!form) return NextResponse.json({ ok: false, error: "Invalid form data." }, { status: 400 });
+    target = String(form.get("target") ?? "").trim();
+    audienceLabel = String(form.get("audienceLabel") ?? "").trim();
+    title = String(form.get("title") ?? "").trim();
+    message = String(form.get("message") ?? "").trim();
+    color = String(form.get("color") ?? "").trim();
+    imageUrl = String(form.get("imageUrl") ?? "").trim();
+    const f = form.get("imageFile");
+    if (f && typeof f !== "string") imageFile = f as File;
+  } else {
+    const body = await req.json().catch(() => ({}));
+    target = String(body?.target ?? "").trim();
+    audienceLabel = String(body?.audienceLabel ?? "").trim();
+    title = String(body?.title ?? "").trim();
+    message = String(body?.message ?? "").trim();
+    color = String(body?.color ?? "").trim();
+    imageUrl = String(body?.imageUrl ?? "").trim();
+  }
 
   if (!allowedTargets.includes(target)) {
     return NextResponse.json(
@@ -99,7 +115,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const embedImageUrl = imageUrl || (imageDataUrl ? "attachment://broadcast.png" : undefined);
+    const hasFile = imageFile && imageFile.size > 0;
+    const ext = imageFile ? (imageFile.type.split("/")[1] ?? "png") : "png";
+    const attachmentName = `broadcast.${ext}`;
+    const embedImageUrl = imageUrl || (hasFile ? `attachment://${attachmentName}` : undefined);
 
     const payload: DiscordWebhookPayload = {
       username: "NewHopeGGN Admin",
@@ -123,22 +142,16 @@ export async function POST(req: Request) {
       ],
     };
 
-    if (imageDataUrl && imageDataUrl.startsWith("data:")) {
-      const [meta, b64] = imageDataUrl.split(",");
-      const mimeMatch = meta.match(/data:([^;]+);/);
-      const mime = mimeMatch?.[1] ?? "image/png";
-      const ext = mime.split("/")[1] ?? "png";
-      const buffer = Buffer.from(b64, "base64");
-
-      const form = new FormData();
-      form.append("payload_json", JSON.stringify(payload));
-      form.append(
+    if (hasFile && imageFile) {
+      const buffer = await imageFile.arrayBuffer();
+      const discordForm = new FormData();
+      discordForm.append("payload_json", JSON.stringify(payload));
+      discordForm.append(
         "files[0]",
-        new Blob([buffer], { type: mime }),
-        `broadcast.${ext}`,
+        new Blob([buffer], { type: imageFile.type }),
+        attachmentName,
       );
-
-      const res = await fetch(webhookUrl, { method: "POST", body: form });
+      const res = await fetch(webhookUrl, { method: "POST", body: discordForm });
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`Discord webhook failed: ${res.status} ${txt}`);
