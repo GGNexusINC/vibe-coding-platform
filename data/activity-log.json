@@ -1,5 +1,75 @@
 [
   {
+    "id": "f8630e04-c5c5-4efc-9a67-20ca7faee7e4",
+    "createdAt": "2026-04-17T02:57:04.501Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": null,
+    "details": "Heartbeat — user active on site."
+  },
+  {
+    "id": "9944d2aa-c2fa-40dd-8a99-18499316f0f9",
+    "createdAt": "2026-04-17T02:54:04.163Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": null,
+    "details": "Heartbeat — user active on site."
+  },
+  {
+    "id": "8a43a2af-d49b-4fc0-b704-dec112e1c0b1",
+    "createdAt": "2026-04-17T02:54:03.132Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": "0",
+    "profile": {
+      "id": "940804710267486249",
+      "username": "rigobuzzworthy",
+      "avatar": "d189a026e2bd2df560592b3a62bb9dd6",
+      "discriminator": "0",
+      "public_flags": 256,
+      "flags": 256,
+      "banner": null,
+      "accent_color": 16725760,
+      "global_name": "Buzzworthy (Dream Big)",
+      "avatar_decoration_data": null,
+      "collectibles": {
+        "nameplate": {
+          "sku_id": "1377377712028516443",
+          "asset": "nameplates/nameplates_v2/spirit_moon/",
+          "label": "COLLECTIBLES_NAMEPLATES_V2_SPIRIT_MOON_A11Y",
+          "palette": "violet"
+        }
+      },
+      "display_name_styles": null,
+      "banner_color": "#ff3700",
+      "clan": {
+        "identity_guild_id": "1419522458075005023",
+        "identity_enabled": true,
+        "tag": "XONE",
+        "badge": "afef8e1d14121535e46a4a27cefda396"
+      },
+      "primary_guild": {
+        "identity_guild_id": "1419522458075005023",
+        "identity_enabled": true,
+        "tag": "XONE",
+        "badge": "afef8e1d14121535e46a4a27cefda396"
+      },
+      "mfa_enabled": true,
+      "locale": "en-US",
+      "premium_type": 0
+    },
+    "details": "User signed in via Discord OAuth."
+  },
+  {
     "id": "b70f3108-3a4f-490a-9a64-e84df035dfa0",
     "createdAt": "2026-04-16T22:34:18.625Z",
     "type": "purchase_intent",
