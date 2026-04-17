@@ -38,13 +38,29 @@ client.once("clientReady", () => {
 });
 
 client.on("messageCreate", async (msg) => {
-  // Skip bots and empty messages
+  // Skip bots
   if (msg.author.bot) return;
-  if (!msg.content?.trim()) return;
 
   const channelName = msg.channel.name ?? "";
 
-  console.log(`[bot] Message in #${channelName} from ${msg.author.username}: ${msg.content.slice(0, 50)}`);
+  // Collect attachment URLs (images, gifs)
+  const attachmentUrls = [...msg.attachments.values()]
+    .filter(a => a.url)
+    .map(a => a.url);
+
+  // Collect embed image/gif URLs (Tenor, Giphy, etc)
+  const embedUrls = msg.embeds
+    .map(e => e.url ?? e.image?.url ?? e.thumbnail?.url)
+    .filter(Boolean);
+
+  // Build full content: text + any media URLs
+  const mediaUrls = [...new Set([...attachmentUrls, ...embedUrls])];
+  const fullContent = [msg.content?.trim(), ...mediaUrls].filter(Boolean).join(" ");
+
+  // Skip if truly nothing
+  if (!fullContent) return;
+
+  console.log(`[bot] Message in #${channelName} from ${msg.author.username}: ${fullContent.slice(0, 80)}`);
 
   // Filter by whitelist if set
   if (CHANNEL_WHITELIST.length > 0 && !CHANNEL_WHITELIST.includes(channelName)) {
@@ -60,7 +76,7 @@ client.on("messageCreate", async (msg) => {
     author_id: msg.author.id,
     author_username: msg.author.displayName ?? msg.author.username,
     author_avatar: msg.author.displayAvatarURL({ size: 64 }),
-    content: msg.content,
+    content: fullContent,
     created_at: msg.createdAt.toISOString(),
   };
 

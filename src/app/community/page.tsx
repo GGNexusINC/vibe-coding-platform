@@ -62,15 +62,18 @@ type DiscordMessage = {
 };
 
 
-const IMAGE_RE = /https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)(\?\S*)?/gi;
-const TENOR_RE = /https?:\/\/(?:tenor\.com|media\.tenor\.com|c\.tenor\.com)\S+/gi;
-const GIPHY_RE = /https?:\/\/(?:giphy\.com|media\.giphy\.com|i\.giphy\.com)\S+/gi;
-const DISCORD_CDN_RE = /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\S+/gi;
+function makeMediaRegexes() {
+  return [
+    /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\S+/gi,
+    /https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)(?:\?\S*)?/gi,
+    /https?:\/\/(?:tenor\.com|media\.tenor\.com|c\.tenor\.com)\S+/gi,
+    /https?:\/\/(?:giphy\.com|media\.giphy\.com|i\.giphy\.com)\S+/gi,
+  ];
+}
 
 function extractMediaUrls(text: string): string[] {
   const all: string[] = [];
-  for (const re of [IMAGE_RE, TENOR_RE, GIPHY_RE, DISCORD_CDN_RE]) {
-    re.lastIndex = 0;
+  for (const re of makeMediaRegexes()) {
     let m;
     while ((m = re.exec(text)) !== null) all.push(m[0]);
   }
@@ -79,12 +82,11 @@ function extractMediaUrls(text: string): string[] {
 
 function renderContent(content: string) {
   const mediaUrls = extractMediaUrls(content);
-  const textOnly = content
-    .replace(IMAGE_RE, "")
-    .replace(TENOR_RE, "")
-    .replace(GIPHY_RE, "")
-    .replace(DISCORD_CDN_RE, "")
-    .trim();
+  let textOnly = content;
+  for (const re of makeMediaRegexes()) {
+    textOnly = textOnly.replace(re, "");
+  }
+  textOnly = textOnly.trim();
   return (
     <>
       {textOnly && (
@@ -95,7 +97,7 @@ function renderContent(content: string) {
           key={url}
           src={url}
           alt="media"
-          className="mt-1.5 max-w-[280px] max-h-[200px] rounded-xl object-cover border border-white/8"
+          className="mt-1.5 max-w-[280px] max-h-[220px] rounded-xl object-contain border border-white/8 bg-black/20"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       ))}

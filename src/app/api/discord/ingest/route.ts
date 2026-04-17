@@ -26,8 +26,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400 });
   }
 
-  // Skip bot messages or empty content
-  if (!content.trim()) return NextResponse.json({ ok: true });
+  // Skip truly empty content
+  if (!content?.trim()) return NextResponse.json({ ok: true });
 
   const sb = getClient();
   if (!sb) return NextResponse.json({ ok: false, error: "No DB" }, { status: 500 });

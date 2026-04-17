@@ -22,8 +22,12 @@ export default async function DashboardPage({
 
   return (
     <div className="relative mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(249,115,22,0.08),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(132,204,22,0.06),transparent_40%)]" />
-      <div className="pointer-events-none absolute inset-0 rz-grid opacity-10" />
+      {/* Futuristic HUD background */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(249,115,22,0.10),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(132,204,22,0.07),transparent_40%)]" />
+      <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
+      <div className="pointer-events-none absolute inset-0" style={{backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)",backgroundSize:"100% 4px"}} />
+      <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/60 to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-lime-500/40 to-transparent" />
 
       <div className="relative">
         {/* ── Header ── */}
@@ -76,14 +80,18 @@ export default async function DashboardPage({
         {user && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
             {[
-              { label: "Status",      value: "Active",   color: "text-emerald-400", icon: "🟢" },
-              { label: "Server",      value: "Once Human", color: "text-orange-300", icon: "🎮" },
-              { label: "Account",     value: "Linked",   color: "text-blue-300",   icon: "🔗" },
-              { label: "Wipe Access", value: "Open",     color: "text-lime-300",   icon: "⚡" },
+              { label: "SYS STATUS",  value: "ONLINE",     color: "text-emerald-400", glow: "shadow-[0_0_16px_rgba(52,211,153,0.2)]",  border: "border-emerald-500/30", dot: "bg-emerald-400" },
+              { label: "SERVER",      value: "ONCE HUMAN", color: "text-orange-300",  glow: "shadow-[0_0_16px_rgba(249,115,22,0.2)]",  border: "border-orange-500/30",  dot: "bg-orange-400" },
+              { label: "ACCOUNT",     value: "LINKED",     color: "text-sky-300",    glow: "shadow-[0_0_16px_rgba(56,189,248,0.2)]",  border: "border-sky-500/30",     dot: "bg-sky-400" },
+              { label: "WIPE ACCESS", value: "OPEN",       color: "text-lime-300",   glow: "shadow-[0_0_16px_rgba(163,230,53,0.2)]",  border: "border-lime-500/30",    dot: "bg-lime-400" },
             ].map((stat) => (
-              <div key={stat.label} className="rz-surface rz-panel-border rounded-2xl px-4 py-4 flex flex-col gap-1">
-                <div className="text-xs text-stone-500 uppercase tracking-widest">{stat.icon} {stat.label}</div>
-                <div className={`text-lg font-black ${stat.color}`}>{stat.value}</div>
+              <div key={stat.label} className={`relative rounded-2xl border ${stat.border} bg-black/40 backdrop-blur px-4 py-4 flex flex-col gap-2 ${stat.glow} overflow-hidden`}>
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <div className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${stat.dot} animate-pulse`} />
+                  <div className="text-[9px] font-mono font-bold text-stone-500 uppercase tracking-[0.2em]">{stat.label}</div>
+                </div>
+                <div className={`text-base font-black font-mono tracking-wider ${stat.color}`}>{stat.value}</div>
               </div>
             ))}
           </div>
@@ -92,7 +100,11 @@ export default async function DashboardPage({
         {/* ── Account + UID ── */}
         <div className="grid gap-4 lg:grid-cols-2 mb-8">
           {/* Account card */}
-          <div className="rz-surface rz-panel-border rounded-2xl p-6">
+          <div className="relative rz-surface rounded-2xl p-6 border border-orange-500/20 shadow-[0_0_30px_rgba(249,115,22,0.06)] overflow-hidden">
+            <div className="pointer-events-none absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-orange-400/50 rounded-tl-2xl" />
+            <div className="pointer-events-none absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-orange-400/50 rounded-tr-2xl" />
+            <div className="pointer-events-none absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-orange-400/30 rounded-bl-2xl" />
+            <div className="pointer-events-none absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-orange-400/30 rounded-br-2xl" />
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-full bg-[#5865F2]/20 flex items-center justify-center text-lg">👤</div>
               <div>
@@ -120,7 +132,11 @@ export default async function DashboardPage({
           </div>
 
           {/* UID card */}
-          <div className="rz-surface rz-panel-border rounded-2xl p-6">
+          <div className="relative rz-surface rounded-2xl p-6 border border-lime-500/20 shadow-[0_0_30px_rgba(132,204,22,0.05)] overflow-hidden">
+            <div className="pointer-events-none absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-lime-400/50 rounded-tl-2xl" />
+            <div className="pointer-events-none absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-lime-400/50 rounded-tr-2xl" />
+            <div className="pointer-events-none absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-lime-400/30 rounded-bl-2xl" />
+            <div className="pointer-events-none absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-lime-400/30 rounded-br-2xl" />
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-full bg-orange-400/20 flex items-center justify-center text-lg">🆔</div>
               <div>
@@ -149,8 +165,9 @@ export default async function DashboardPage({
         </div>
 
         {/* ── Quick access ── */}
-        <div className="rz-surface rz-panel-border rounded-2xl p-6">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">🚀 Quick Access</div>
+        <div className="relative rz-surface rounded-2xl p-6 border border-white/8 overflow-hidden">
+          <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+          <div className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">▶ SYS::QUICK_ACCESS</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {quickLinks.map((item) => (
               <Link
