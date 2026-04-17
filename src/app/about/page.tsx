@@ -1,3 +1,5 @@
+"use client";
+
 const gameScreenshots = [
   {
     src: "https://cdn.akamai.steamstatic.com/steam/apps/2139460/ss_1.jpg",

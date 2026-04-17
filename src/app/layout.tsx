@@ -6,9 +6,16 @@ import { Heartbeat } from "@/app/_components/heartbeat";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NewHopeGGN | Once Human Server Hub",
+  title: "NewHopeGGN | Once Human Community",
   description:
-    "NewHopeGGN — the #1 Once Human community server. Store, support, rules, and live Discord feed.",
+    "NewHopeGGN — your Once Human private server community. Wipe packs, VIP perks, live Discord feed, support tickets, and more.",
+  icons: {
+    icon: "/raidzone-bg.png",
+    apple: "/raidzone-bg.png",
+  },
+  themeColor: "#0a0d06",
+  applicationName: "NewHopeGGN",
+  keywords: ["Once Human", "server", "community", "wipe packs", "VIP", "Discord"],
 };
 
 export default function RootLayout({
