@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 
-type DiscordWebhookPayload = {
+export type DiscordWebhookPayload = {
   content?: string;
   username?: string;
   avatar_url?: string;

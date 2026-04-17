@@ -7,6 +7,7 @@ import {
 import { setAdminSession, isAdminDiscordId } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { logActivity } from "@/lib/activity-log";
+import { upsertAdmin, getAdminByDiscordId } from "@/lib/admin-roster";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -24,12 +25,55 @@ export async function GET(req: Request) {
     const avatarUrl = getDiscordAvatarUrl(u);
     const username = u.global_name || u.username;
 
-    if (!isAdminDiscordId(u.id)) {
+    // Owners listed in ADMIN_DISCORD_IDS env var are auto-approved always
+    const isOwner = isAdminDiscordId(u.id);
+
+    // Check roster for existing record
+    const existing = await getAdminByDiscordId(u.id);
+
+    // Determine effective status
+    let status: "approved" | "pending" | "denied" = "pending";
+    if (isOwner) {
+      status = "approved";
+    } else if (existing) {
+      status = existing.status;
+    }
+
+    // Upsert into roster (keeps username/avatar up to date)
+    await upsertAdmin({
+      discordId: u.id,
+      username,
+      avatarUrl: avatarUrl ?? undefined,
+      status,
+    });
+
+    if (status === "denied") {
       return NextResponse.redirect(
-        `${origin}/admin?auth=unauthorized&msg=${encodeURIComponent("Your Discord account is not authorized as an admin.")}`,
+        `${origin}/admin?auth=unauthorized&msg=${encodeURIComponent("Your admin access has been denied.")}`,
       );
     }
 
+    if (status === "pending") {
+      // Notify existing admins via webhook that someone is waiting
+      try {
+        await sendDiscordWebhook({
+          content:
+            `⏳ **Admin Access Request**\n` +
+            `**${username}** (ID: \`${u.id}\`) requested admin access.\n` +
+            `Go to the Admin Roster panel to approve or deny.\n` +
+            `Time (UTC): \`${now}\``,
+          username: "NewHopeGGN Admin Gate",
+          avatar_url: avatarUrl ?? undefined,
+        });
+      } catch {
+        // non-fatal
+      }
+      return NextResponse.redirect(
+        `${origin}/admin?auth=pending&msg=${encodeURIComponent("Your request is pending approval by an existing admin.")}`,
+      );
+    }
+
+    // Approved — grant session
     await setAdminSession({ discord_id: u.id, username });
 
     try {
@@ -45,10 +89,10 @@ export async function GET(req: Request) {
       });
       await sendDiscordWebhook({
         content:
-          `🔐 **Admin Login / Acceso Admin**\n` +
+          `🔐 **Admin Login**\n` +
           `Admin: **${username}**\n` +
           `Discord ID: \`${u.id}\`\n` +
-          `Time / Hora (UTC): \`${now}\`\n` +
+          `Time (UTC): \`${now}\`\n` +
           `Origin: \`${origin}\``,
         username: "NewHopeGGN Logs",
         avatar_url: avatarUrl ?? undefined,

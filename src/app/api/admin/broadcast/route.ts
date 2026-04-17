@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { sendDiscordWebhook } from "@/lib/discord";
 import { logActivity } from "@/lib/activity-log";
 import { env } from "@/lib/env";
+import type { DiscordWebhookPayload } from "@/lib/discord";
 
 const allowedTargets = ["ban-page", "general-chat"];
 
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
   const message = String(body?.message ?? "").trim();
   const color = String(body?.color ?? "").trim();
   const imageUrl = String(body?.imageUrl ?? "").trim();
+  const imageDataUrl = String(body?.imageDataUrl ?? "").trim();
 
   if (!allowedTargets.includes(target)) {
     return NextResponse.json(
@@ -98,40 +99,61 @@ export async function POST(req: Request) {
       );
     }
 
-    await sendDiscordWebhook(
-      {
-        username: "NewHopeGGN Admin",
-        content:
-          `Admin Site Broadcast\n` +
-          `Target route: ${target}\n` +
-          `Audience label: ${audienceLabel || "Default"}\n` +
-          `Title: ${title}\n\n` +
-          `${message}`,
-        embeds: [
-          {
-            title,
-            description: message,
-            color: embedColor ?? undefined,
-            image: imageUrl ? { url: imageUrl } : undefined,
-            fields: [
-              {
-                name: "Target",
-                value: target,
-                inline: true,
-              },
-              {
-                name: "Label",
-                value: audienceLabel || "Default",
-                inline: true,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        webhookUrl,
-      },
-    );
+    const embedImageUrl = imageUrl || (imageDataUrl ? "attachment://broadcast.png" : undefined);
+
+    const payload: DiscordWebhookPayload = {
+      username: "NewHopeGGN Admin",
+      content:
+        `Admin Site Broadcast\n` +
+        `Target route: ${target}\n` +
+        `Audience label: ${audienceLabel || "Default"}\n` +
+        `Title: ${title}\n\n` +
+        `${message}`,
+      embeds: [
+        {
+          title,
+          description: message,
+          color: embedColor ?? undefined,
+          image: embedImageUrl ? { url: embedImageUrl } : undefined,
+          fields: [
+            { name: "Target", value: target, inline: true },
+            { name: "Label", value: audienceLabel || "Default", inline: true },
+          ],
+        },
+      ],
+    };
+
+    if (imageDataUrl && imageDataUrl.startsWith("data:")) {
+      const [meta, b64] = imageDataUrl.split(",");
+      const mimeMatch = meta.match(/data:([^;]+);/);
+      const mime = mimeMatch?.[1] ?? "image/png";
+      const ext = mime.split("/")[1] ?? "png";
+      const buffer = Buffer.from(b64, "base64");
+
+      const form = new FormData();
+      form.append("payload_json", JSON.stringify(payload));
+      form.append(
+        "files[0]",
+        new Blob([buffer], { type: mime }),
+        `broadcast.${ext}`,
+      );
+
+      const res = await fetch(webhookUrl, { method: "POST", body: form });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Discord webhook failed: ${res.status} ${txt}`);
+      }
+    } else {
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Discord webhook failed: ${res.status} ${txt}`);
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown error";
     return NextResponse.json(

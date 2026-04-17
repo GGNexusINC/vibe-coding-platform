@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ActivityEntry = {
   id: string;
@@ -40,6 +40,16 @@ type StatsResponse = {
   };
   recent: ActivityEntry[];
   error?: string;
+};
+
+type AdminEntry = {
+  id: string;
+  discordId: string;
+  username: string;
+  avatarUrl?: string;
+  status: "approved" | "pending" | "denied";
+  addedAt: string;
+  updatedAt: string;
 };
 
 const pageOptions = [
@@ -99,8 +109,18 @@ export function AdminPanelClient() {
   const [message, setMessage] = useState("");
   const [color, setColor] = useState("#22c55e");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const [imageFileName, setImageFileName] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster">("dashboard");
+  const [roster, setRoster] = useState<AdminEntry[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState("");
+  const [rosterActionLoading, setRosterActionLoading] = useState<string | null>(null);
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -178,6 +198,8 @@ export function AdminPanelClient() {
 
     if (auth === "unauthorized") {
       setAuthError(msg || "Your Discord account is not authorized as an admin.");
+    } else if (auth === "pending") {
+      setAuthError(msg || "Your request is pending approval by an existing admin.");
     } else if (auth === "error") {
       setAuthError(msg || "Discord sign in failed. Try again.");
     } else if (auth === "missing_code") {
@@ -248,7 +270,7 @@ export function AdminPanelClient() {
     const res = await fetch("/api/admin/broadcast", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl }),
+      body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl, imageDataUrl }),
     });
     const data = await res.json().catch(() => ({}));
 
@@ -261,9 +283,62 @@ export function AdminPanelClient() {
     setTitle("");
     setMessage("");
     setImageUrl("");
+    setImageDataUrl("");
+    setImageFileName("");
     setBroadcastStatus("Discord message sent successfully.");
     setBroadcastLoading(false);
     await loadStats();
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    setImageDataUrl("");
+    setImageFileName("");
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setBroadcastStatus(data?.error || "Image upload failed.");
+      setImageUploading(false);
+      return;
+    }
+    setImageDataUrl(data.dataUrl);
+    setImageFileName(data.name);
+    setImageUrl("");
+    setImageUploading(false);
+  }
+
+  async function loadRoster() {
+    setRosterLoading(true);
+    setRosterError("");
+    const res = await fetch("/api/admin/roster", { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.ok) {
+      setRosterError(data?.error || "Could not load roster.");
+      setRosterLoading(false);
+      return;
+    }
+    setRoster(data.roster as AdminEntry[]);
+    setRosterLoading(false);
+  }
+
+  async function handleRosterAction(discordId: string, status: "approved" | "denied" | "pending") {
+    setRosterActionLoading(discordId + status);
+    const res = await fetch("/api/admin/roster", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ discordId, status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setRosterError(data?.error || "Action failed.");
+    } else {
+      await loadRoster();
+    }
+    setRosterActionLoading(null);
   }
 
   function applyPreset(preset: (typeof broadcastPresets)[number]) {
@@ -326,7 +401,117 @@ export function AdminPanelClient() {
         </section>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("dashboard")}
+              className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
+                activeTab === "dashboard"
+                  ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
+                  : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab("roster"); void loadRoster(); }}
+              className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
+                activeTab === "roster"
+                  ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
+                  : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              }`}
+            >
+              Admin Roster
+              {roster.filter((a) => a.status === "pending").length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-slate-950">
+                  {roster.filter((a) => a.status === "pending").length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {activeTab === "roster" ? (
+            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+              <div className="rz-chip">Admin Roster</div>
+              <h2 className="mt-3 text-2xl font-semibold text-white">Manage admin access</h2>
+              <p className="mt-2 text-sm text-slate-300">
+                Approve or deny Discord accounts that have requested admin access. Owners (in ADMIN_DISCORD_IDS) are always approved.
+              </p>
+              <div className="mt-6 grid gap-3">
+                {rosterLoading ? (
+                  <div className="text-sm text-slate-400">Loading...</div>
+                ) : rosterError ? (
+                  <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{rosterError}</div>
+                ) : roster.length === 0 ? (
+                  <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
+                    No admins have attempted login yet.
+                  </div>
+                ) : (
+                  roster.map((entry) => (
+                    <div key={entry.id} className="flex flex-col gap-3 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        {entry.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.avatarUrl} alt={entry.username} className="h-10 w-10 rounded-full border border-white/10 object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
+                            {entry.username.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-semibold text-white">{entry.username}</div>
+                          <div className="mt-0.5 text-xs text-slate-400">Discord ID: {entry.discordId}</div>
+                          <div className="mt-0.5 text-xs text-slate-500">Requested: {new Date(entry.addedAt).toLocaleString()}</div>
+                        </div>
+                        <span className={`ml-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                          entry.status === "approved" ? "bg-emerald-500/15 text-emerald-200"
+                          : entry.status === "denied" ? "bg-rose-500/15 text-rose-200"
+                          : "bg-amber-400/15 text-amber-200"
+                        }`}>
+                          {entry.status}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        {entry.status !== "approved" && (
+                          <button
+                            type="button"
+                            disabled={rosterActionLoading === entry.discordId + "approved"}
+                            onClick={() => void handleRosterAction(entry.discordId, "approved")}
+                            className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {entry.status !== "denied" && (
+                          <button
+                            type="button"
+                            disabled={rosterActionLoading === entry.discordId + "denied"}
+                            onClick={() => void handleRosterAction(entry.discordId, "denied")}
+                            className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-50"
+                          >
+                            Deny
+                          </button>
+                        )}
+                        {entry.status === "approved" && (
+                          <button
+                            type="button"
+                            disabled={rosterActionLoading === entry.discordId + "pending"}
+                            onClick={() => void handleRosterAction(entry.discordId, "pending")}
+                            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : null}
+
+          {activeTab === "dashboard" ? (<><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
               <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Now</div>
               <div className="mt-3 text-4xl font-semibold text-white">
@@ -479,16 +664,60 @@ export function AdminPanelClient() {
                     </div>
                   </label>
 
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Image URL</span>
-                    <input
-                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://example.com/banner.png"
-                      maxLength={500}
-                    />
-                  </label>
+                  <div className="grid gap-2">
+                    <span className="text-sm font-semibold text-white">Embed image</span>
+                    <div className="grid gap-2">
+                      <div
+                        className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-slate-950/55 px-4 py-4 transition hover:border-cyan-300/40"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {imageDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={imageDataUrl} alt="preview" className="h-12 w-12 rounded-xl object-cover border border-white/10" />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-semibold text-white">
+                            {imageUploading ? "Uploading..." : imageFileName || "Upload an image"}
+                          </div>
+                          <div className="mt-0.5 text-xs text-slate-400">JPEG, PNG, GIF, WebP · max 8 MB</div>
+                        </div>
+                        {imageDataUrl && (
+                          <button
+                            type="button"
+                            className="ml-auto text-xs text-slate-400 hover:text-red-300"
+                            onClick={(ev) => { ev.stopPropagation(); setImageDataUrl(""); setImageFileName(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={imageUploading}
+                      />
+                      <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-xs text-slate-500">or paste URL</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+                      <input
+                        className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                        value={imageUrl}
+                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageDataUrl(""); setImageFileName(""); } }}
+                        placeholder="https://example.com/banner.png"
+                        maxLength={500}
+                        disabled={!!imageDataUrl}
+                      />
+                    </div>
+                  </div>
 
                   <label className="grid gap-2">
                     <span className="text-sm font-semibold text-white">Discord message</span>
@@ -822,6 +1051,7 @@ export function AdminPanelClient() {
               </section>
             </div>
           </section>
+        </>) : null}
         </>
       )}
     </div>
