@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const CURRENT_PRIZE = "Once Human Supply Pack (Rare Gear + Resources)";
 
@@ -11,12 +11,25 @@ export default function LotteryPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [draws, setDraws] = useState<{ winnerUsername: string; prize: string; drawnAt: string }[]>([]);
+  const [lastUpdated, setLastUpdated] = useState("");
+
+  const fetchLiveData = useCallback(async () => {
+    const [entriesRes, drawsRes] = await Promise.all([
+      fetch("/api/lottery/enter", { cache: "no-store" }),
+      fetch("/api/lottery/draw/public", { cache: "no-store" }),
+    ]);
+    const entriesData = await entriesRes.json().catch(() => null);
+    const drawsData = await drawsRes.json().catch(() => null);
+    if (entriesData?.ok) setTotalEntries(entriesData.totalEntries);
+    if (drawsData?.ok) setDraws(drawsData.draws ?? []);
+    setLastUpdated(new Date().toLocaleTimeString());
+  }, []);
 
   useEffect(() => {
-    void fetch("/api/lottery/enter")
-      .then((r) => r.json())
-      .then((d) => { if (d.ok) setTotalEntries(d.totalEntries); });
-  }, []);
+    void fetchLiveData();
+    const t = window.setInterval(() => void fetchLiveData(), 5000);
+    return () => window.clearInterval(t);
+  }, [fetchLiveData]);
 
   async function handleEnter() {
     setLoading(true);
@@ -58,7 +71,13 @@ export default function LotteryPage() {
 
             <div className="mt-6 flex items-center gap-3">
               <div className="text-3xl font-bold text-white">{totalEntries ?? "—"}</div>
-              <div className="text-sm text-slate-400">entries so far</div>
+              <div>
+                <div className="text-sm text-slate-400">entries so far</div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs text-slate-500">Live{lastUpdated ? ` · ${lastUpdated}` : ""}</span>
+                </div>
+              </div>
             </div>
 
             {entered ? (
@@ -107,24 +126,34 @@ export default function LotteryPage() {
           </div>
         </div>
 
-        {/* Past Winners */}
-        {draws.length > 0 && (
-          <div className="mt-10">
-            <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Past Winners</div>
+        {/* Past Winners — always shown, live updates */}
+        <div className="mt-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Past Winners</div>
+            <div className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-slate-500">Live</span>
+            </div>
+          </div>
+          {draws.length === 0 ? (
+            <div className="rounded-[2rem] border border-dashed border-white/10 bg-slate-950/40 p-8 text-center text-sm text-slate-500">
+              No winners drawn yet. Be the first to enter!
+            </div>
+          ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {draws.map((d, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-slate-950/60 px-4 py-3">
+                <div key={i} className="flex items-center gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3">
                   <span className="text-2xl">🏆</span>
                   <div>
                     <div className="text-sm font-semibold text-white">{d.winnerUsername}</div>
-                    <div className="text-xs text-slate-400">{d.prize}</div>
-                    <div className="text-xs text-slate-500">{new Date(d.drawnAt).toLocaleDateString()}</div>
+                    <div className="text-xs text-amber-300">{d.prize}</div>
+                    <div className="text-xs text-slate-500">{new Date(d.drawnAt).toLocaleString()}</div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
