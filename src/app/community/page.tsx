@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const GUILD_ID = "1419522458075005023";
 const INVITE = "https://discord.gg/5Fcw9XSEeZ";
@@ -52,6 +52,25 @@ type ActivityEntry = {
   details: string;
 };
 
+type DiscordMessage = {
+  id: string;
+  channel_name: string;
+  author_username: string;
+  author_avatar: string | null;
+  content: string;
+  created_at: string;
+};
+
+const MSG_CHANNELS = [
+  "general-chat",
+  "announcements",
+  "memes",
+  "fotos-photos",
+  "videos",
+  "guias-guides",
+  "sugerencias-suggestions",
+];
+
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
@@ -77,6 +96,13 @@ export default function CommunityPage() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
+  // Discord messages
+  const [activeChannel, setActiveChannel] = useState(MSG_CHANNELS[0]);
+  const [messages, setMessages] = useState<DiscordMessage[]>([]);
+  const [msgLoading, setMsgLoading] = useState(true);
+  const [noBotYet, setNoBotYet] = useState(false);
+  const msgBottomRef = useRef<HTMLDivElement>(null);
+
   async function loadWidget() {
     try {
       const res = await fetch(WIDGET_URL);
@@ -98,13 +124,35 @@ export default function CommunityPage() {
     setFeedLoading(false);
   }
 
+  async function loadMessages(channel: string) {
+    const res = await fetch(`/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`).catch(() => null);
+    if (!res?.ok) { setMsgLoading(false); return; }
+    const data = await res.json().catch(() => null);
+    const msgs: DiscordMessage[] = data?.messages ?? [];
+    setMessages(msgs);
+    setNoBotYet(msgs.length === 0);
+    setMsgLoading(false);
+    setTimeout(() => msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  }
+
   useEffect(() => {
     void loadWidget();
     void loadFeed();
+    void loadMessages(activeChannel);
     const wt = window.setInterval(() => void loadWidget(), 30000);
     const ft = window.setInterval(() => void loadFeed(), 15000);
-    return () => { window.clearInterval(wt); window.clearInterval(ft); };
+    const mt = window.setInterval(() => void loadMessages(activeChannel), 10000);
+    return () => { window.clearInterval(wt); window.clearInterval(ft); window.clearInterval(mt); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reload messages when channel tab changes
+  useEffect(() => {
+    setMsgLoading(true);
+    setMessages([]);
+    void loadMessages(activeChannel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChannel]);
 
   // Group voice members by channel
   const voiceChannels = widget?.channels
@@ -197,7 +245,7 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* ── Center: Voice Channels (live) + Activity Feed ── */}
+          {/* ── Center: Voice Channels (live) + Discord Messages + Activity Feed ── */}
           <div className="space-y-5">
 
             {/* Voice Channels */}
@@ -268,49 +316,73 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            {/* Activity Feed */}
+            {/* Discord Messages */}
             <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Site Activity Feed</div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#5865F2] font-bold text-base">#</span>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Discord Messages</div>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#5865F2] animate-pulse" />
                   <span className="text-[10px] text-[#5865F2] font-semibold">LIVE</span>
                 </div>
               </div>
 
-              {feedLoading ? (
-                <div className="text-xs text-slate-500 animate-pulse">Loading activity...</div>
-              ) : feed.length === 0 ? (
-                <div className="text-xs text-slate-500">No recent activity.</div>
-              ) : (
-                <div className="space-y-2 overflow-y-auto max-h-[320px] pr-1">
-                  {feed.map((entry) => (
-                    <div key={entry.id} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-slate-950/50 px-3 py-2.5">
-                      {entry.avatarUrl ? (
-                        <img src={entry.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0 mt-0.5" />
-                      ) : (
-                        <div className="h-7 w-7 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-300 shrink-0 mt-0.5">
-                          {(entry.globalName || entry.username || "?")[0]?.toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold text-white truncate">{entry.globalName || entry.username}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            entry.type === "login"            ? "bg-emerald-500/15 text-emerald-300" :
-                            entry.type === "logout"           ? "bg-slate-500/15 text-slate-400"    :
-                            entry.type === "support_ticket"   ? "bg-amber-500/15 text-amber-300"    :
-                            entry.type === "purchase_intent"  ? "bg-cyan-500/15 text-cyan-300"      :
-                            "bg-violet-500/15 text-violet-300"
-                          }`}>{entry.type.replace(/_/g, " ")}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5 truncate">{entry.details}</div>
+              {/* Channel tabs */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {MSG_CHANNELS.map((ch) => (
+                  <button
+                    key={ch}
+                    onClick={() => setActiveChannel(ch)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                      activeChannel === ch
+                        ? "bg-[#5865F2] text-white"
+                        : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    #{ch}
+                  </button>
+                ))}
+              </div>
+
+              {/* Message list */}
+              <div className="overflow-y-auto max-h-[420px] space-y-2 pr-1">
+                {msgLoading && (
+                  <div className="text-xs text-slate-500 animate-pulse py-4 text-center">Loading messages...</div>
+                )}
+                {!msgLoading && noBotYet && (
+                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-5 text-center">
+                    <div className="text-2xl mb-2">🤖</div>
+                    <div className="text-xs font-semibold text-amber-300 mb-1">Bot not connected yet</div>
+                    <div className="text-[11px] text-slate-500">Once the Discord bot is running, messages from #{activeChannel} will appear here live.</div>
+                  </div>
+                )}
+                {!msgLoading && messages.map((msg) => (
+                  <div key={msg.id} className="flex items-start gap-2.5 group hover:bg-white/[0.02] rounded-xl px-2 py-1.5 transition">
+                    {msg.author_avatar ? (
+                      <img
+                        src={msg.author_avatar}
+                        alt={msg.author_username}
+                        className="h-8 w-8 rounded-full object-cover shrink-0 mt-0.5"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-[#5865F2]/20 flex items-center justify-center text-xs font-bold text-[#7289da] shrink-0 mt-0.5">
+                        {msg.author_username[0]?.toUpperCase()}
                       </div>
-                      <div className="text-[10px] text-slate-600 shrink-0">{timeAgo(entry.createdAt)}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-bold text-white">{msg.author_username}</span>
+                        <span className="text-[10px] text-slate-600">{timeAgo(msg.created_at)}</span>
+                      </div>
+                      <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{msg.content}</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+                <div ref={msgBottomRef} />
+              </div>
             </div>
           </div>
 

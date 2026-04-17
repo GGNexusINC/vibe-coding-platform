@@ -1,0 +1,12 @@
+{
+  "name": "newhopeggn-discord-bot",
+  "version": "1.0.0",
+  "description": "Relays Discord messages to NewHopeGGN site",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.17.3"
+  }
+}
