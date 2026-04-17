@@ -28,14 +28,14 @@ const RARITY_STYLE: Record<string, { text: string; border: string; bg: string; g
 };
 
 function scoreToPrize(score: number) {
-  if (score >= 30) return { name: "Minigun",            rarity: "legendary", emoji: "⚙️" };
-  if (score >= 24) return { name: "Flamethrower",       rarity: "legendary", emoji: "🔥" };
-  if (score >= 18) return { name: "Sniper Rifle (AWM)", rarity: "epic",      emoji: "🎯" };
-  if (score >= 14) return { name: "M4A1 Assault Rifle", rarity: "rare",      emoji: "🔫" };
-  if (score >= 10) return { name: "AK-47 Assault Rifle",rarity: "rare",      emoji: "🔫" };
-  if (score >= 7)  return { name: "SPAS-12 Shotgun",    rarity: "uncommon",  emoji: "💥" };
-  if (score >= 4)  return { name: "MP5 SMG",            rarity: "uncommon",  emoji: "🔫" };
-  if (score >= 1)  return { name: "Desert Eagle",       rarity: "common",    emoji: "🔫" };
+  if (score >= 60) return { name: "Minigun",            rarity: "legendary", emoji: "⚙️" };
+  if (score >= 48) return { name: "Flamethrower",       rarity: "legendary", emoji: "🔥" };
+  if (score >= 36) return { name: "Sniper Rifle (AWM)", rarity: "epic",      emoji: "🎯" };
+  if (score >= 28) return { name: "M4A1 Assault Rifle", rarity: "rare",      emoji: "🔫" };
+  if (score >= 20) return { name: "AK-47 Assault Rifle",rarity: "rare",      emoji: "🔫" };
+  if (score >= 14) return { name: "SPAS-12 Shotgun",    rarity: "uncommon",  emoji: "💥" };
+  if (score >= 8)  return { name: "MP5 SMG",            rarity: "uncommon",  emoji: "🔫" };
+  if (score >= 2)  return { name: "Desert Eagle",       rarity: "common",    emoji: "🔫" };
   return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️" };
 }
 

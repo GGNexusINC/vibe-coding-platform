@@ -52,7 +52,6 @@ export default function AboutPage() {
               src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/header.jpg"
               alt="Once Human"
               className="absolute inset-0 w-full h-full object-cover opacity-40"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
             <div className="absolute bottom-0 left-0 p-6 sm:p-8">
@@ -78,11 +77,6 @@ export default function AboutPage() {
                     src={shot.src}
                     alt={shot.label}
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      if (img.src !== shot.fallback) img.src = shot.fallback;
-                      else img.style.display = "none";
-                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                   <div className="absolute bottom-2 left-3 text-xs font-bold text-orange-300">{shot.label}</div>
