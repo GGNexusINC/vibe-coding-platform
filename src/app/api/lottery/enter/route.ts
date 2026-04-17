@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { enterLottery, getLotteryEntries } from "@/lib/lottery-store";
+import { env } from "@/lib/env";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -26,7 +27,35 @@ export async function POST(req: Request) {
   }
 
   const entries = await getLotteryEntries();
-  return NextResponse.json({ ok: true, totalEntries: entries.length });
+  const total = entries.length;
+
+  // Notify Discord when someone enters
+  const webhookUrl = env.discordWebhookUrlForPage("script-hook");
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        username: "NewHopeGGN 🎰 Lottery",
+        embeds: [{
+          title: "🎫 New Lottery Entry!",
+          description: `**${session.username}** just entered the lottery!`,
+          color: 0xfacc15,
+          fields: [
+            { name: "Player", value: session.username, inline: true },
+            { name: "Prize", value: prize, inline: true },
+            { name: "Total Entries", value: `${total}`, inline: true },
+            { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
+          ],
+          thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
+          footer: { text: "NewHopeGGN Lottery" },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => null);
+  }
+
+  return NextResponse.json({ ok: true, totalEntries: total });
 }
 
 export async function GET() {

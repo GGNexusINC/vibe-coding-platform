@@ -3,29 +3,18 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
-const PRIZES = [
-  { name: "M4A1 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 },
-  { name: "AK-47 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 },
-  { name: "Sniper Rifle (AWM)", rarity: "epic", emoji: "🎯", color: 0x8b5cf6 },
-  { name: "SPAS-12 Shotgun", rarity: "uncommon", emoji: "💥", color: 0x22c55e },
-  { name: "MP5 Submachine Gun", rarity: "uncommon", emoji: "🔫", color: 0x22c55e },
-  { name: "Desert Eagle Pistol", rarity: "common", emoji: "🔫", color: 0x94a3b8 },
-  { name: "Crossbow", rarity: "common", emoji: "🏹", color: 0x94a3b8 },
-  { name: "Flamethrower", rarity: "legendary", emoji: "🔥", color: 0xf97316 },
-  { name: "Minigun", rarity: "legendary", emoji: "⚙️", color: 0xef4444 },
-  { name: "Better Luck Next Time", rarity: "none", emoji: "😔", color: 0x475569 },
-];
+type Prize = { name: string; rarity: string; emoji: string; color: number };
 
-const WEIGHTS = [12, 12, 6, 15, 15, 20, 20, 2, 1, 30];
-
-function pickPrize() {
-  const total = WEIGHTS.reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (let i = 0; i < PRIZES.length; i++) {
-    r -= WEIGHTS[i];
-    if (r <= 0) return PRIZES[i];
-  }
-  return PRIZES[PRIZES.length - 1];
+function scoreToPrize(score: number): Prize {
+  if (score >= 30) return { name: "Minigun", rarity: "legendary", emoji: "⚙️", color: 0xef4444 };
+  if (score >= 25) return { name: "Flamethrower", rarity: "legendary", emoji: "�", color: 0xf97316 };
+  if (score >= 20) return { name: "Sniper Rifle (AWM)", rarity: "epic", emoji: "🎯", color: 0x8b5cf6 };
+  if (score >= 15) return { name: "M4A1 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
+  if (score >= 10) return { name: "AK-47 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
+  if (score >= 7)  return { name: "SPAS-12 Shotgun", rarity: "uncommon", emoji: "💥", color: 0x22c55e };
+  if (score >= 4)  return { name: "MP5 Submachine Gun", rarity: "uncommon", emoji: "�", color: 0x22c55e };
+  if (score >= 1)  return { name: "Desert Eagle Pistol", rarity: "common", emoji: "🔫", color: 0x94a3b8 };
+  return { name: "Better Luck Next Time", rarity: "none", emoji: "😔", color: 0x475569 };
 }
 
 function getSupabase() {
@@ -35,11 +24,13 @@ function getSupabase() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await getSession();
   if (!session?.discord_id) {
     return NextResponse.json({ ok: false, error: "Sign in with Discord to play." }, { status: 401 });
   }
+  const body = await req.json().catch(() => ({}));
+  const score = typeof body?.score === "number" ? Math.max(0, Math.floor(body.score)) : 0;
 
   const sb = getSupabase();
 
@@ -70,7 +61,7 @@ export async function POST() {
     }
   }
 
-  const prize = pickPrize();
+  const prize = scoreToPrize(score);
   const now = new Date().toISOString();
 
   if (sb) {
@@ -80,37 +71,49 @@ export async function POST() {
       avatar_url: session.avatar_url ?? null,
       prize_name: prize.name,
       prize_rarity: prize.rarity,
+      score,
       spun_at: now,
     });
   }
 
-  // Send to Discord script-hook webhook
+  // Always send to Discord script-hook webhook
   const webhookUrl = env.discordWebhookUrlForPage("script-hook");
-  if (webhookUrl && prize.rarity !== "none") {
+  if (webhookUrl) {
+    const rarityBar: Record<string, string> = {
+      legendary: "🟠🟠🟠🟠🟠",
+      epic: "🟣🟣🟣🟣⬛",
+      rare: "🔵🔵🔵⬛⬛",
+      uncommon: "🟢🟢⬛⬛⬛",
+      common: "⬜⬜⬛⬛⬛",
+      none: "⬛⬛⬛⬛⬛",
+    };
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        username: "NewHopeGGN Mini-Game",
+        username: "NewHopeGGN 🐹 Whack-a-Mole",
         embeds: [{
-          title: `${prize.emoji} Weekly Spin Result`,
-          description: `**${session.username}** won a prize from the weekly spin!`,
+          title: prize.rarity === "none" ? `${prize.emoji} No prize this week` : `${prize.emoji} Whack-a-Mole Winner!`,
+          description: prize.rarity !== "none"
+            ? `**${session.username}** earned a weapon reward!`
+            : `**${session.username}** played but didn't score high enough. Better luck next week!`,
           color: prize.color,
           fields: [
             { name: "Player", value: session.username, inline: true },
-            { name: "Prize", value: `${prize.emoji} ${prize.name}`, inline: true },
-            { name: "Rarity", value: prize.rarity.toUpperCase(), inline: true },
+            { name: "Score", value: `**${score} hits**`, inline: true },
+            { name: "Prize", value: prize.rarity !== "none" ? `${prize.emoji} ${prize.name}` : "No prize", inline: true },
+            { name: "Rarity", value: `${rarityBar[prize.rarity] ?? ""} ${prize.rarity.toUpperCase()}`, inline: false },
             { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
           ],
           thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
-          footer: { text: "NewHopeGGN Weekly Gun Spin" },
+          footer: { text: "NewHopeGGN Whack-a-Mole • Once per week" },
           timestamp: now,
         }],
       }),
     }).catch(() => null);
   }
 
-  return NextResponse.json({ ok: true, prize, spunAt: now });
+  return NextResponse.json({ ok: true, prize, score, spunAt: now });
 }
 
 export async function GET() {
