@@ -101,10 +101,15 @@ export async function POST(req: Request) {
           },
           body: JSON.stringify({
             embeds: [{
-              title: "⚠️ Official Warning — NewHopeGGN",
-              description: reason,
+              author: { name: "NewHopeGGN · Official Warning" },
+              title: "⚠️ You have received a warning",
+              description: `> ${reason}`,
               color: 0xf59e0b,
-              footer: { text: `Warning issued by ${actorName} via admin panel` },
+              fields: [
+                { name: "Issued By", value: actorName, inline: true },
+                { name: "Server", value: "NewHopeGGN", inline: true },
+              ],
+              footer: { text: "Please review our server rules to avoid further action." },
               timestamp: new Date().toISOString(),
             }],
           }),
@@ -136,20 +141,30 @@ export async function POST(req: Request) {
   // Post to moderation webhook
   const embedColor = action === "warn" ? 0xf59e0b : action === "ban" ? 0xef4444 : 0x22c55e;
   const embedTitle = action === "warn" ? "⚠️ Warning Issued" : action === "ban" ? "🔨 Member Banned" : "✅ Member Unbanned";
+  const embedDesc = action === "warn"
+    ? "A formal warning has been issued to this member."
+    : action === "ban"
+    ? "This member has been banned from the server."
+    : "This member's ban has been lifted.";
+
   await fetch(MOD_WEBHOOK, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      username: "NewHopeGGN Moderation",
       embeds: [{
+        author: { name: "NewHopeGGN · Moderation Log" },
         title: embedTitle,
+        description: embedDesc,
         color: embedColor,
         fields: [
-          { name: "Target", value: `<@${targetDiscordId}> (${targetDiscordId})`, inline: true },
-          { name: "Action by", value: `${actorName}`, inline: true },
-          { name: "Reason", value: reason },
+          { name: "👤 Member", value: `<@${targetDiscordId}>\n\`${targetDiscordId}\``, inline: true },
+          { name: "🛡️ Actioned By", value: actorName, inline: true },
+          { name: "\u200b", value: "\u200b", inline: true },
+          { name: "📋 Reason", value: reason },
         ],
-        timestamp: new Date().toISOString(),
         footer: { text: "NewHopeGGN Admin Panel" },
+        timestamp: new Date().toISOString(),
       }],
     }),
   }).catch(() => { /* webhook failure is non-fatal */ });

@@ -120,24 +120,29 @@ export async function POST(req: Request) {
     const attachmentName = `broadcast.${ext}`;
     const embedImageUrl = imageUrl || (hasFile ? `attachment://${attachmentName}` : undefined);
 
+    const targetLabel: Record<string, string> = {
+      "general-chat": "💬 General Chat",
+      "ban-page": "🔨 Ban Page",
+    };
+
     const payload: DiscordWebhookPayload = {
-      username: "NewHopeGGN Admin",
-      content:
-        `Admin Site Broadcast\n` +
-        `Target route: ${target}\n` +
-        `Audience label: ${audienceLabel || "Default"}\n` +
-        `Title: ${title}\n\n` +
-        `${message}`,
+      username: "NewHopeGGN",
+      avatar_url: "https://cdn.discordapp.com/icons/1419522458075005023/a_placeholder.png",
       embeds: [
         {
+          author: {
+            name: audienceLabel ? `📣 Admin Broadcast · ${audienceLabel}` : "📣 Admin Broadcast",
+          },
           title,
           description: message,
-          color: embedColor ?? undefined,
+          color: embedColor ?? 0x22c55e,
           image: embedImageUrl ? { url: embedImageUrl } : undefined,
           fields: [
-            { name: "Target", value: target, inline: true },
-            { name: "Label", value: audienceLabel || "Default", inline: true },
+            { name: "Channel", value: targetLabel[target] ?? target, inline: true },
+            ...(audienceLabel ? [{ name: "Audience", value: audienceLabel, inline: true }] : []),
           ],
+          footer: { text: "NewHopeGGN Admin Panel" },
+          timestamp: new Date().toISOString(),
         },
       ],
     };

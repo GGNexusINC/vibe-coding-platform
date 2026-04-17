@@ -1,4 +1,3 @@
--- site_settings: generic key/value store for admin-configurable site settings
 create table if not exists public.site_settings (
   key        text primary key,
   value      jsonb not null default '{}'::jsonb,
