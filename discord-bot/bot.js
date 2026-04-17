@@ -37,59 +37,37 @@ client.once("clientReady", () => {
   console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
 });
 
-client.on("messageCreate", async (msg) => {
-  // Skip bots
-  if (msg.author.bot) return;
+async function relayMessage(msg) {
+  if (msg.author?.bot) return;
 
-  const channelName = msg.channel.name ?? "";
+  const channelName = msg.channel?.name ?? "";
 
-  // Collect attachment URLs (images, gifs)
-  const attachmentUrls = [...msg.attachments.values()]
+  // Filter by whitelist if set
+  if (CHANNEL_WHITELIST.length > 0 && !CHANNEL_WHITELIST.includes(channelName)) return;
+
+  // Collect direct attachment URLs (uploaded images/gifs)
+  const attachmentUrls = [...(msg.attachments?.values() ?? [])]
     .filter(a => a.url)
     .map(a => a.url);
 
-  // Debug: log full embed data so we can see what fields Discord provides
-  if (msg.embeds.length > 0) {
-    msg.embeds.forEach((e, i) => {
-      console.log(`[bot] embed[${i}]:`, JSON.stringify({
-        type: e.type,
-        url: e.url,
-        image: e.image,
-        thumbnail: e.thumbnail,
-        video: e.video,
-        provider: e.provider?.name,
-      }));
-    });
-  }
-
-  // Collect embed image/gif URLs (Tenor, Giphy, etc)
-  // Discord Tenor GIFs: thumbnail.proxyURL has the actual gif CDN URL
-  const embedUrls = msg.embeds.flatMap(e => {
+  // Collect embed media URLs
+  // NOTE: Discord sends Tenor/Giphy embeds via messageUpdate after the initial messageCreate
+  const embedUrls = (msg.embeds ?? []).flatMap(e => {
     const candidates = [
       e.image?.proxyURL,
       e.image?.url,
       e.thumbnail?.proxyURL,
       e.thumbnail?.url,
-      e.video?.proxyURL,
-      e.video?.url,
     ];
     return candidates.filter(Boolean);
   });
 
-  // Build full content: text + any media URLs
   const mediaUrls = [...new Set([...attachmentUrls, ...embedUrls])];
   const fullContent = [msg.content?.trim(), ...mediaUrls].filter(Boolean).join(" ");
 
-  // Skip if truly nothing
   if (!fullContent) return;
 
-  console.log(`[bot] Message in #${channelName} from ${msg.author.username}: ${fullContent.slice(0, 80)}`);
-
-  // Filter by whitelist if set
-  if (CHANNEL_WHITELIST.length > 0 && !CHANNEL_WHITELIST.includes(channelName)) {
-    console.log(`[bot] Skipped - #${channelName} not in whitelist`);
-    return;
-  }
+  console.log(`[bot] Relay #${channelName} from ${msg.author.username}: ${fullContent.slice(0, 100)}`);
 
   const payload = {
     secret: INGEST_SECRET,
@@ -100,7 +78,7 @@ client.on("messageCreate", async (msg) => {
     author_username: msg.author.displayName ?? msg.author.username,
     author_avatar: msg.author.displayAvatarURL({ size: 64 }),
     content: fullContent,
-    created_at: msg.createdAt.toISOString(),
+    created_at: msg.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 
   try {
@@ -112,6 +90,20 @@ client.on("messageCreate", async (msg) => {
     if (!res.ok) console.error("[bot] Ingest failed:", res.status, await res.text());
   } catch (e) {
     console.error("[bot] Fetch error:", e.message);
+  }
+}
+
+// Catch new messages
+client.on("messageCreate", (msg) => { void relayMessage(msg); });
+
+// Catch embed updates — Discord adds Tenor/Giphy embeds AFTER messageCreate via messageUpdate
+client.on("messageUpdate", (oldMsg, newMsg) => {
+  // Only relay if embeds were added (old had none, new has some)
+  const hadEmbeds = (oldMsg.embeds?.length ?? 0) > 0;
+  const hasEmbeds = (newMsg.embeds?.length ?? 0) > 0;
+  if (!hadEmbeds && hasEmbeds) {
+    console.log(`[bot] Embed update detected for msg ${newMsg.id}`);
+    void relayMessage(newMsg);
   }
 });
 
