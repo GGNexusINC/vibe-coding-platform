@@ -6,9 +6,9 @@ import { Heartbeat } from "@/app/_components/heartbeat";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NewHopeGGN | Future Ops Hub",
+  title: "NewHopeGGN | Once Human Server Hub",
   description:
-    "Premium Once Human server hub with Discord support, store access, and live admin operations.",
+    "NewHopeGGN — the #1 Once Human community server. Store, support, rules, and live Discord feed.",
 };
 
 export default function RootLayout({
@@ -33,13 +33,13 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="rz-corporate-shell min-h-full flex flex-col bg-[#041018]">
+      <body className="rz-corporate-shell min-h-full flex flex-col bg-[#0a0d06]">
         <Heartbeat />
         <div className="relative z-10 min-h-screen flex flex-col">
-          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#07131c]/75 backdrop-blur-2xl">
+          <header className="sticky top-0 z-40 border-b border-orange-900/30 bg-[#0d110a]/80 backdrop-blur-2xl">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
               <Link href="/" className="flex items-center gap-3">
-                <div className="relative h-10 w-10 overflow-hidden rounded-2xl border border-cyan-300/25 bg-cyan-400/10 shadow-[0_0_32px_rgba(34,211,238,0.14)]">
+                <div className="relative h-10 w-10 overflow-hidden rounded-2xl border border-orange-400/30 bg-orange-400/10 shadow-[0_0_32px_rgba(249,115,22,0.18)]">
                   <Image
                     src="/raidzone-bg.png"
                     alt="NewHopeGGN"
@@ -51,14 +51,14 @@ export default function RootLayout({
                   <div className="absolute inset-0 bg-slate-950/25" />
                 </div>
                 <div className="leading-tight">
-                  <div className="font-[family:var(--font-brand-display)] text-sm font-semibold uppercase tracking-[0.28em] text-cyan-50">
-                    NewHope
+                  <div className="font-[family:var(--font-brand-display)] text-sm font-semibold uppercase tracking-[0.28em] text-orange-100">
+                    NewHope<span className="text-lime-400">GGN</span>
                   </div>
-                  <div className="text-xs text-slate-300">GG Nexus Operations</div>
+                  <div className="text-xs text-orange-200/60">Once Human Community</div>
                 </div>
               </Link>
 
-              <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1.5 lg:flex backdrop-blur">
+              <nav className="hidden items-center gap-1 rounded-full border border-orange-900/40 bg-black/20 px-2 py-1.5 lg:flex backdrop-blur">
                 {([
                   { href: "/about",      label: "About" },
                   { href: "/store",      label: "Store" },
@@ -71,7 +71,7 @@ export default function RootLayout({
                   <Link
                     key={href}
                     href={href}
-                    className="rounded-full px-3 py-1.5 text-sm font-medium text-slate-300 transition-all hover:bg-white/8 hover:text-white"
+                    className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-300 transition-all hover:bg-orange-400/10 hover:text-orange-100"
                   >
                     {label}
                   </Link>
@@ -83,7 +83,7 @@ export default function RootLayout({
                 {/* Lottery — amber accent */}
                 <Link
                   href="/lottery"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-400/10 hover:text-amber-200 border border-amber-400/20"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-yellow-300 transition-all hover:bg-yellow-400/10 hover:text-yellow-200 border border-yellow-400/20"
                 >
                   🎰 Lottery
                 </Link>
@@ -91,7 +91,7 @@ export default function RootLayout({
                 {/* Whack-a-Mole — green accent */}
                 <Link
                   href="/minigame"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-emerald-300 transition-all hover:bg-emerald-400/10 hover:text-emerald-200 border border-emerald-400/20"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-lime-300 transition-all hover:bg-lime-400/10 hover:text-lime-200 border border-lime-400/20"
                 >
                   🐹 Whack-a-Mole
                 </Link>
@@ -101,7 +101,7 @@ export default function RootLayout({
 
                 <Link
                   href="/admin"
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/8 hover:text-white"
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-400 transition-all hover:bg-orange-400/10 hover:text-orange-100"
                 >
                   Admin
                 </Link>
@@ -110,13 +110,13 @@ export default function RootLayout({
               <div className="flex items-center gap-2">
                 <Link
                   href="/dashboard"
-                  className="hidden h-10 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/10 sm:inline-flex"
+                  className="hidden h-10 items-center justify-center rounded-full border border-orange-400/20 bg-orange-400/5 px-4 text-sm font-semibold text-orange-100 transition hover:-translate-y-0.5 hover:bg-orange-400/10 sm:inline-flex"
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/store"
-                  className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#67e8f9,#facc15)] px-5 text-sm font-bold text-slate-950 transition hover:scale-[1.03] sm:inline-flex"
+                  className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.03] sm:inline-flex"
                 >
                   Store
                 </Link>
@@ -126,8 +126,8 @@ export default function RootLayout({
           </header>
 
           <main className="relative flex-1 overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,12,19,0.86),rgba(4,16,24,0.96))]" />
-            <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(103,232,249,0.16),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(34,197,94,0.11),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(251,191,36,0.09),transparent_40%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.88),rgba(10,13,6,0.96))]" />
+            <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(249,115,22,0.12),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(132,204,22,0.09),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(251,191,36,0.07),transparent_40%)]" />
             <div className="rz-starfield pointer-events-none">
               {globalStars.map((star, idx) => (
                 <span
@@ -148,15 +148,15 @@ export default function RootLayout({
             <div className="relative z-10 h-full">{children}</div>
           </main>
 
-          <footer className="border-t border-white/10 bg-[#07131c]/65 backdrop-blur-xl">
-            <div className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-slate-400">
+          <footer className="border-t border-orange-900/25 bg-[#0d110a]/70 backdrop-blur-xl">
+            <div className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-stone-400">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  (c) {new Date().getFullYear()} NewHopeGGN |{" "}
-                  <span className="font-semibold text-slate-100">Future Ops by GG Nexus</span>
+                  © {new Date().getFullYear()} NewHopeGGN |{" "}
+                  <span className="font-semibold text-orange-200">Once Human Community Server</span>
                 </div>
-                <div className="text-xs text-slate-500">
-                  Premium player operations, Discord-first support, and admin command tooling
+                <div className="text-xs text-stone-500">
+                  Store, support, events, and live Discord feed — built for Once Human players
                 </div>
               </div>
             </div>

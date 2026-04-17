@@ -1,23 +1,23 @@
 export default function Home() {
   const highlights = [
     {
-      title: "Fast Access",
-      copy: "Sign in with Discord, link your account, and get into the store quickly.",
+      title: "Once Human Server",
+      copy: "A dedicated Once Human community — wipes, events, and base-building with real players.",
     },
     {
       title: "Fast Support",
-      copy: "Tickets go straight to Discord so staff can respond faster.",
+      copy: "Open a ticket and staff respond directly through Discord. No waiting around.",
     },
     {
-      title: "VIP Perks",
-      copy: "Purchases during the active wipe include the VIP role benefit.",
+      title: "Wipe Packs & VIP",
+      copy: "Buy packs each wipe to get resources and VIP perks tied to the current season.",
     },
   ];
 
   const operations = [
     "Discord sign-in",
     "Support tickets",
-    "Pack checkout",
+    "Wipe pack checkout",
     "VIP role perks",
   ];
 
@@ -37,21 +37,21 @@ export default function Home() {
 
             <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-4xl font-semibold uppercase tracking-[0.06em] text-white sm:text-5xl xl:text-6xl">
               NewHopeGGN
-              <span className="mt-3 block bg-[linear-gradient(135deg,#e0fbff,#67e8f9,#facc15)] bg-clip-text text-transparent">
-                Packs, support, and server perks in one place.
+              <span className="mt-3 block bg-[linear-gradient(135deg,#fed7aa,#f97316,#fbbf24)] bg-clip-text text-transparent">
+                Your Once Human community home base.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-              Buy packs, contact staff, and manage your account through Discord-linked tools built for fast service.
+            <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+              Survive together. Build together. NewHopeGGN is a Once Human community server — buy wipe packs, open support tickets, and connect with your squad through Discord.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/store"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#67e8f9,#facc15)] px-6 text-sm font-semibold text-slate-950 transition hover:scale-[1.02]"
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-6 text-sm font-bold text-stone-950 transition hover:scale-[1.02] shadow-[0_0_28px_rgba(249,115,22,0.4)]"
               >
-                Explore Store
+                🛒 Wipe Store
               </a>
               <a
                 href="/admin"
@@ -112,8 +112,8 @@ export default function Home() {
                 </li>
               </ol>
 
-              <div className="mt-6 rounded-[1.5rem] border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-                VIP role perks are granted during the corresponding wipe.
+              <div className="mt-6 rounded-[1.5rem] border border-orange-400/25 bg-orange-400/10 p-4 text-sm text-orange-100">
+                ⚠️ VIP role perks are tied to the active wipe. Buy during the wipe to receive your rewards.
               </div>
             </div>
           </div>
