@@ -1,3 +1,16 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Policies | NewHopeGGN",
+  description: "Refund policy, fair service terms, account responsibility, and enforcement guidelines for NewHopeGGN.",
+  keywords: ["policies", "refund", "terms", "conditions", "Once Human", "NewHopeGGN"],
+  openGraph: {
+    title: "Policies | NewHopeGGN",
+    description: "Refund policy, fair service terms, and enforcement guidelines.",
+    type: "website",
+  },
+};
+
 const policyCards = [
   {
     title: "No Refund Policy",

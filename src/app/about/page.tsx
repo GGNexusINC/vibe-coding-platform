@@ -1,4 +1,15 @@
-"use client";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About | NewHopeGGN",
+  description: "Learn about NewHopeGGN — a dedicated Once Human private server community with wipe packs, VIP perks, fair play rules, and active staff.",
+  keywords: ["about", "Once Human", "private server", "community", "NewHopeGGN", "staff"],
+  openGraph: {
+    title: "About | NewHopeGGN",
+    description: "Learn about NewHopeGGN — a dedicated Once Human private server community.",
+    type: "website",
+  },
+};
 
 const gameScreenshots = [
   {

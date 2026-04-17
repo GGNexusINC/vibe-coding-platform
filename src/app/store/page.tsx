@@ -1,5 +1,17 @@
+import type { Metadata } from "next";
 import { getSession } from "@/lib/session";
 import { BuyButton } from "@/app/store/buy-button";
+
+export const metadata: Metadata = {
+  title: "Store | NewHopeGGN",
+  description: "Buy wipe packs for Once Human. Construction, Defense, PvP, and Clan packages with VIP perks. Instant delivery via Discord.",
+  keywords: ["store", "wipe packs", "Once Human", "VIP", "construction", "defense", "pvp", "packages"],
+  openGraph: {
+    title: "Store | NewHopeGGN",
+    description: "Buy wipe packs for Once Human. Construction, Defense, PvP, and Clan packages with VIP perks.",
+    type: "website",
+  },
+};
 
 const products = [
   {

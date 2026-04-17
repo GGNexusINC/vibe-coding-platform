@@ -1,3 +1,16 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Rules | NewHopeGGN",
+  description: "Community rules and guidelines for NewHopeGGN Once Human server. Respect, safety, and fair play policies.",
+  keywords: ["rules", "guidelines", "community", "Once Human", "NewHopeGGN", "conduct"],
+  openGraph: {
+    title: "Rules | NewHopeGGN",
+    description: "Community rules and guidelines for NewHopeGGN Once Human server.",
+    type: "website",
+  },
+};
+
 const rules = [
   {
     id: "01",
