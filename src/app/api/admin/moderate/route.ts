@@ -12,7 +12,7 @@ const MOD_WEBHOOK = "https://discord.com/api/webhooks/1494203915053563986/UmeAj1
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 function isOwnerSession(discordId?: string): boolean {

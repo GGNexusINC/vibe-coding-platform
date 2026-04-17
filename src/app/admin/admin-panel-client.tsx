@@ -265,6 +265,9 @@ export function AdminPanelClient() {
     // Live tick for wipe countdown
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
 
+    // Pre-load mod log so it's ready when owner opens the tab
+    void loadModLog();
+
     return () => { window.clearTimeout(timer); window.clearInterval(tick); };
   }, []);
 
@@ -442,7 +445,11 @@ export function AdminPanelClient() {
     setModLoading(true);
     const res = await fetch("/api/admin/moderate", { cache: "no-store" });
     const data = await res.json().catch(() => null);
-    if (data?.ok) setModActions(data.actions as ModAction[]);
+    if (data?.ok) {
+      setModActions(data.actions as ModAction[]);
+    } else {
+      setModStatus(data?.error ? `Error loading logs: ${data.error}` : "Failed to load mod log.");
+    }
     setModLoading(false);
   }
 
@@ -668,7 +675,7 @@ export function AdminPanelClient() {
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl shrink-0 ${
                           past ? "bg-slate-700/50" : urgent ? "bg-rose-500/15" : "bg-amber-400/10"
                         }`}>
-                          {past ? "�" : urgent ? "�🔴" : "⏳"}
+                          {past ? "�" : urgent ? "��" : "⏳"}
                         </div>
                         <div>
                           <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{wipeLabel}</div>
