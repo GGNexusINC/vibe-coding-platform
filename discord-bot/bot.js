@@ -14,9 +14,10 @@ require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_TOKEN    = process.env.BOT_TOKEN;
-const SITE_URL     = process.env.SITE_URL     || "https://newhopeggn.netlify.app";
+const BOT_TOKEN     = process.env.BOT_TOKEN;
+const SITE_URL      = process.env.SITE_URL      || "https://newhopeggn.vercel.app";
 const INGEST_SECRET = process.env.INGEST_SECRET || "newhopeggn-bot-secret";
+const GUILD_ID      = process.env.GUILD_ID      || "1419522458075005023";
 
 if (!BOT_TOKEN) { console.error("[bot] ERROR: BOT_TOKEN not set in .env"); process.exit(1); }
 
@@ -29,13 +30,50 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
   ],
 });
 
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
   console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
+
+  // Initial sync on startup, then every 10 minutes
+  await syncMembers();
+  setInterval(() => { void syncMembers(); }, 10 * 60 * 1000);
 });
+
+async function syncMembers() {
+  try {
+    const guild = await client.guilds.fetch(GUILD_ID);
+    const members = await guild.members.fetch();
+
+    const payload = [...members.values()].map(m => ({
+      discord_id:   m.user.id,
+      username:     m.user.username,
+      display_name: m.displayName ?? m.user.globalName ?? m.user.username,
+      avatar_url:   m.user.displayAvatarURL({ size: 64 }),
+      is_bot:       m.user.bot ?? false,
+      joined_at:    m.joinedAt?.toISOString() ?? null,
+      roles:        m.roles.cache
+                     .filter(r => r.id !== guild.id)
+                     .map(r => r.name),
+    }));
+
+    const res = await fetch(`${SITE_URL}/api/discord/members-sync`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ secret: INGEST_SECRET, members: payload }),
+    });
+    if (!res.ok) {
+      console.error("[bot] members-sync failed:", res.status, await res.text());
+    } else {
+      console.log(`[bot] Synced ${payload.length} guild members`);
+    }
+  } catch (e) {
+    console.error("[bot] syncMembers error:", e.message);
+  }
+}
 
 async function relayMessage(msg) {
   if (msg.author?.bot) return;

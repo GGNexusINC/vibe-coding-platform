@@ -3,6 +3,19 @@ import { getAdminSession, getActiveWindowMinutes } from "@/lib/admin-auth";
 import { getActivitySummary, getRecentActivities } from "@/lib/activity-log";
 import { getRoster } from "@/lib/admin-roster";
 import { getPresenceMap } from "@/lib/presence";
+import { createClient } from "@supabase/supabase-js";
+
+async function getGuildMembers() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+  const sb = createClient(url, key, { auth: { persistSession: false } });
+  const { data } = await sb
+    .from("guild_members")
+    .select("discord_id, username, display_name, avatar_url, roles, joined_at, last_synced")
+    .eq("is_bot", false);
+  return data ?? [];
+}
 
 export async function GET() {
   const admin = await getAdminSession();
@@ -13,11 +26,12 @@ export async function GET() {
     );
   }
 
-  const [summary, recent, roster, presenceMap] = await Promise.all([
+  const [summary, recent, roster, presenceMap, guildMembers] = await Promise.all([
     getActivitySummary(),
     getRecentActivities(30),
     getRoster(),
     getPresenceMap(),
+    getGuildMembers(),
   ]);
 
   // Build a map of discordId -> member from activity log
@@ -38,6 +52,25 @@ export async function GET() {
         activeDays: 0,
         events: 0,
         activeNow: presence?.activeNow ?? false,
+      });
+    }
+  }
+
+  // Merge ALL guild members from bot sync — this is the full Discord server member list
+  for (const gm of guildMembers) {
+    if (!memberMap.has(gm.discord_id)) {
+      const presence = presenceMap.get(gm.discord_id);
+      memberMap.set(gm.discord_id, {
+        discordId:    gm.discord_id,
+        username:     gm.display_name || gm.username,
+        globalName:   gm.display_name || null,
+        discriminator: null,
+        avatarUrl:    gm.avatar_url,
+        profile:      undefined,
+        lastActiveAt: gm.last_synced,
+        activeDays:   0,
+        events:       0,
+        activeNow:    presence?.activeNow ?? false,
       });
     }
   }
