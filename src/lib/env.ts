@@ -44,9 +44,10 @@ export const env = {
     };
     // Hardcoded fallbacks per page in case env vars are not set
     const hardcodedFallbacks: Record<string, string> = {
-      "ban-page":    "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
-      "script-hook": MINIGAME_WEBHOOK,
-      "minigame":    MINIGAME_WEBHOOK,
+      "ban-page":     "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
+      "general-chat": "https://discord.com/api/webhooks/1494441156543778946/8HQYfkDh-GpQN_O9pmkd-_21dQV01TU3qrV3nxfMJbls8T_pStfNdnKt3WA9Y9ol6b8m",
+      "script-hook":  MINIGAME_WEBHOOK,
+      "minigame":     MINIGAME_WEBHOOK,
     };
 
     const envKey = pageMap[page];
