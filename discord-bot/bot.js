@@ -48,10 +48,33 @@ client.on("messageCreate", async (msg) => {
     .filter(a => a.url)
     .map(a => a.url);
 
+  // Debug: log full embed data so we can see what fields Discord provides
+  if (msg.embeds.length > 0) {
+    msg.embeds.forEach((e, i) => {
+      console.log(`[bot] embed[${i}]:`, JSON.stringify({
+        type: e.type,
+        url: e.url,
+        image: e.image,
+        thumbnail: e.thumbnail,
+        video: e.video,
+        provider: e.provider?.name,
+      }));
+    });
+  }
+
   // Collect embed image/gif URLs (Tenor, Giphy, etc)
-  const embedUrls = msg.embeds
-    .map(e => e.url ?? e.image?.url ?? e.thumbnail?.url)
-    .filter(Boolean);
+  // Discord Tenor GIFs: thumbnail.proxyURL has the actual gif CDN URL
+  const embedUrls = msg.embeds.flatMap(e => {
+    const candidates = [
+      e.image?.proxyURL,
+      e.image?.url,
+      e.thumbnail?.proxyURL,
+      e.thumbnail?.url,
+      e.video?.proxyURL,
+      e.video?.url,
+    ];
+    return candidates.filter(Boolean);
+  });
 
   // Build full content: text + any media URLs
   const mediaUrls = [...new Set([...attachmentUrls, ...embedUrls])];

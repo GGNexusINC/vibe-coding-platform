@@ -62,18 +62,17 @@ type DiscordMessage = {
 };
 
 
-function makeMediaRegexes() {
-  return [
-    /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\S+/gi,
-    /https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)(?:\?\S*)?/gi,
-    /https?:\/\/(?:tenor\.com|media\.tenor\.com|c\.tenor\.com)\S+/gi,
-    /https?:\/\/(?:giphy\.com|media\.giphy\.com|i\.giphy\.com)\S+/gi,
-  ];
-}
+// URLs we can render directly as <img>
+const RENDERABLE_RE = /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net|i\.giphy\.com|media\.tenor\.com|c\.tenor\.com|media1\.tenor\.com|media2\.tenor\.com|media3\.tenor\.com)\S+/gi;
+// Image file extensions
+const IMG_EXT_RE = /https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)(?:[?#]\S*)?/gi;
+// All URLs (for stripping from text)
+const ANY_URL_RE = /https?:\/\/\S+/gi;
 
-function extractMediaUrls(text: string): string[] {
+function extractRenderableUrls(text: string): string[] {
   const all: string[] = [];
-  for (const re of makeMediaRegexes()) {
+  for (const re of [RENDERABLE_RE, IMG_EXT_RE]) {
+    re.lastIndex = 0;
     let m;
     while ((m = re.exec(text)) !== null) all.push(m[0]);
   }
@@ -81,23 +80,21 @@ function extractMediaUrls(text: string): string[] {
 }
 
 function renderContent(content: string) {
-  const mediaUrls = extractMediaUrls(content);
-  let textOnly = content;
-  for (const re of makeMediaRegexes()) {
-    textOnly = textOnly.replace(re, "");
-  }
-  textOnly = textOnly.trim();
+  const imageUrls = extractRenderableUrls(content);
+  // Strip all URLs from displayed text
+  ANY_URL_RE.lastIndex = 0;
+  const textOnly = content.replace(ANY_URL_RE, "").trim();
   return (
     <>
       {textOnly && (
         <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{textOnly}</p>
       )}
-      {mediaUrls.map((url) => (
+      {imageUrls.map((url) => (
         <img
           key={url}
           src={url}
           alt="media"
-          className="mt-1.5 max-w-[280px] max-h-[220px] rounded-xl object-contain border border-white/8 bg-black/20"
+          className="mt-1.5 max-w-[300px] max-h-[240px] rounded-xl object-contain border border-white/8 bg-black/20"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       ))}
