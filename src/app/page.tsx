@@ -29,6 +29,8 @@ const translations = {
     ownerBadge: "👑 Owner",
     adminBadge: "⚡ Admin",
     loadingStaff: "Loading team...",
+    online: "Online",
+    offline: "Offline",
   },
   es: {
     chip: "NewHopeGGN",
@@ -56,6 +58,8 @@ const translations = {
     ownerBadge: "👑 Dueño",
     adminBadge: "⚡ Admin",
     loadingStaff: "Cargando equipo...",
+    online: "En línea",
+    offline: "Desconectado",
   },
 };
 
@@ -66,6 +70,8 @@ type AdminEntry = {
   avatarUrl?: string;
   role?: string;
   status: string;
+  activeNow: boolean;
+  lastSeen: string | null;
 };
 
 export default function Home() {
@@ -76,15 +82,22 @@ export default function Home() {
   const t = translations[lang];
 
   useEffect(() => {
-    fetch("/api/staff", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.staff) {
-          setStaff(data.staff);
-        }
-      })
-      .catch(() => setStaff([]))
-      .finally(() => setStaffLoading(false));
+    const loadStaff = () => {
+      fetch("/api/staff", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.staff) {
+            setStaff(data.staff);
+          }
+        })
+        .catch(() => setStaff([]))
+        .finally(() => setStaffLoading(false));
+    };
+    
+    loadStaff();
+    // Refresh every 30 seconds for live status
+    const interval = setInterval(loadStaff, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -196,9 +209,16 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-white">{t.staffTitle}</h2>
               <p className="mt-1 text-sm text-slate-400">{t.staffDescription}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-slate-500">{staffLoading ? t.loadingStaff : `${staff.length} online`}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs text-slate-400">{staff.filter(s => s.activeNow).length} {t.online}</span>
+              </div>
+              <div className="h-3 w-px bg-white/10" />
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-slate-600" />
+                <span className="text-xs text-slate-500">{staff.filter(s => !s.activeNow).length} {t.offline}</span>
+              </div>
             </div>
           </div>
 
@@ -241,13 +261,17 @@ export default function Home() {
                         {member.username[0].toUpperCase()}
                       </div>
                     )}
+                    {/* Online status dot on avatar */}
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900 ${
+                      member.activeNow ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" : "bg-slate-600"
+                    }`} />
                     {member.role === "owner" && (
                       <span className="absolute -top-1 -right-1 text-xs">👑</span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-white truncate">{member.username}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       {member.role === "owner" ? (
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
                           {t.ownerBadge}
@@ -257,6 +281,10 @@ export default function Home() {
                           {t.adminBadge}
                         </span>
                       )}
+                      {/* Online/Offline indicator */}
+                      <span className={`text-[10px] font-medium ${member.activeNow ? "text-emerald-400" : "text-slate-500"}`}>
+                        {member.activeNow ? "● " + t.online : "● " + t.offline}
+                      </span>
                     </div>
                   </div>
                 </div>
