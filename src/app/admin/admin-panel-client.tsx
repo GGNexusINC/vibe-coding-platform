@@ -116,11 +116,22 @@ export function AdminPanelClient() {
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "streamers" | "lottery">("dashboard");
   const [roster, setRoster] = useState<AdminEntry[]>([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [rosterActionLoading, setRosterActionLoading] = useState<string | null>(null);
+
+  const [streamers, setStreamers] = useState<{id:string;discordId:string;username:string;avatarUrl?:string|null;streamUrl:string;streamTitle:string;platform:string;status:string}[]>([]);
+  const [streamersLoading, setStreamersLoading] = useState(false);
+  const [streamerActionLoading, setStreamerActionLoading] = useState<string|null>(null);
+
+  const [lotteryEntries, setLotteryEntries] = useState<{id:string;discordId:string;username:string;avatarUrl?:string|null;prize:string;enteredAt:string}[]>([]);
+  const [lotteryDraws, setLotteryDraws] = useState<{id:string;winnerUsername:string;prize:string;drawnAt:string}[]>([]);
+  const [lotteryLoading, setLotteryLoading] = useState(false);
+  const [lotteryPrize, setLotteryPrize] = useState("Once Human Supply Pack (Rare Gear + Resources)");
+  const [lotteryDrawing, setLotteryDrawing] = useState(false);
+  const [lotteryStatus, setLotteryStatus] = useState("");
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -321,6 +332,56 @@ export function AdminPanelClient() {
     setRosterLoading(false);
   }
 
+  async function loadStreamers() {
+    setStreamersLoading(true);
+    const res = await fetch("/api/streamers/admin", { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setStreamers(data.streamers);
+    setStreamersLoading(false);
+  }
+
+  async function handleStreamerAction(discordId: string, status: "approved" | "denied" | "pending") {
+    setStreamerActionLoading(discordId + status);
+    await fetch("/api/streamers", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ discordId, status }),
+    });
+    setStreamerActionLoading(null);
+    await loadStreamers();
+  }
+
+  async function loadLottery() {
+    setLotteryLoading(true);
+    const [entriesRes, drawsRes] = await Promise.all([
+      fetch("/api/lottery/enter", { cache: "no-store" }),
+      fetch("/api/lottery/draw", { cache: "no-store" }),
+    ]);
+    const entriesData = await entriesRes.json().catch(() => null);
+    const drawsData = await drawsRes.json().catch(() => null);
+    if (entriesData?.ok) setLotteryEntries(entriesData.entries);
+    if (drawsData?.ok) setLotteryDraws(drawsData.draws);
+    setLotteryLoading(false);
+  }
+
+  async function handleDrawWinner() {
+    setLotteryDrawing(true);
+    setLotteryStatus("");
+    const res = await fetch("/api/lottery/draw", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prize: lotteryPrize, clearAfter: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setLotteryDrawing(false);
+    if (!res.ok) {
+      setLotteryStatus(data?.error || "Draw failed.");
+    } else {
+      setLotteryStatus(`🏆 Winner: ${data.winner?.username} — Prize: ${data.winner?.prize}`);
+      await loadLottery();
+    }
+  }
+
   async function handleRosterAction(discordId: string, status: "approved" | "denied" | "pending") {
     setRosterActionLoading(discordId + status);
     setRosterError("");
@@ -377,34 +438,17 @@ export function AdminPanelClient() {
         </section>
       ) : (
         <>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("dashboard")}
-              className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
-                activeTab === "dashboard"
-                  ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-                  : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveTab("roster"); void loadRoster(); }}
-              className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
-                activeTab === "roster"
-                  ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-                  : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-              }`}
-            >
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setActiveTab("dashboard")} className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "dashboard" ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>Dashboard</button>
+            <button type="button" onClick={() => { setActiveTab("roster"); void loadRoster(); }} className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "roster" ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
               Admin Roster
-              {roster.filter((a) => a.status === "pending").length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-slate-950">
-                  {roster.filter((a) => a.status === "pending").length}
-                </span>
-              )}
+              {roster.filter((a) => a.status === "pending").length > 0 && (<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-slate-950">{roster.filter((a) => a.status === "pending").length}</span>)}
             </button>
+            <button type="button" onClick={() => { setActiveTab("streamers"); void loadStreamers(); }} className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "streamers" ? "border-violet-300/30 bg-violet-400/10 text-violet-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
+              📺 Streamers
+              {streamers.filter((s) => s.status === "pending").length > 0 && (<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-400 text-[10px] font-bold text-slate-950">{streamers.filter((s) => s.status === "pending").length}</span>)}
+            </button>
+            <button type="button" onClick={() => { setActiveTab("lottery"); void loadLottery(); }} className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "lottery" ? "border-amber-300/30 bg-amber-400/10 text-amber-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>🎰 Lottery</button>
           </div>
 
           {activeTab === "roster" ? (
@@ -508,6 +552,88 @@ export function AdminPanelClient() {
                     </div>
                   ))
                 )}
+              </div>
+            </section>
+          ) : null}
+
+          {activeTab === "streamers" ? (
+            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+              <div className="rz-chip">📺 Streamers</div>
+              <h2 className="mt-3 text-2xl font-semibold text-white">Manage Streamers</h2>
+              <p className="mt-2 text-sm text-slate-300">Approve or deny streamer applications. Approved streamers appear on the public streamers page.</p>
+              <div className="mt-6 grid gap-3">
+                {streamersLoading ? <div className="text-sm text-slate-400">Loading...</div> : streamers.length === 0 ? (
+                  <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">No streamer applications yet.</div>
+                ) : streamers.map((s) => (
+                  <div key={s.id} className="flex flex-col gap-3 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {s.avatarUrl ? <img src={s.avatarUrl} alt={s.username} className="h-10 w-10 rounded-full object-cover border border-white/10" /> : <div className="h-10 w-10 rounded-full bg-violet-500/20 flex items-center justify-center text-sm font-bold text-violet-300">{s.username[0]?.toUpperCase()}</div>}
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-white">{s.username}</div>
+                        <div className="text-xs text-slate-400 truncate">{s.streamTitle}</div>
+                        <a href={s.streamUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:underline truncate block">{s.streamUrl}</a>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-slate-500 capitalize">{s.platform}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.status === "approved" ? "bg-emerald-500/15 text-emerald-300" : s.status === "denied" ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {s.status !== "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "approved"} onClick={() => void handleStreamerAction(s.discordId, "approved")} className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/20 disabled:opacity-50">Approve</button>}
+                      {s.status !== "denied" && <button type="button" disabled={streamerActionLoading === s.discordId + "denied"} onClick={() => void handleStreamerAction(s.discordId, "denied")} className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20 disabled:opacity-50">Deny</button>}
+                      {s.status === "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "pending"} onClick={() => void handleStreamerAction(s.discordId, "pending")} className="rounded-2xl border border-slate-400/20 bg-slate-500/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-500/20 disabled:opacity-50">Revoke</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {activeTab === "lottery" ? (
+            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
+              <div className="rz-chip">🎰 Lottery</div>
+              <h2 className="mt-3 text-2xl font-semibold text-white">Lottery Manager</h2>
+              <p className="mt-2 text-sm text-slate-300">Draw a winner from all entered users. The winner is announced on Discord and all entries are cleared.</p>
+              <div className="mt-5 flex flex-col gap-3 max-w-lg">
+                <label className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Prize Label</label>
+                <input value={lotteryPrize} onChange={(e) => setLotteryPrize(e.target.value)} className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" />
+                <button onClick={() => void handleDrawWinner()} disabled={lotteryDrawing || lotteryEntries.length === 0} className="h-12 rounded-2xl bg-[linear-gradient(135deg,#facc15,#f97316)] text-sm font-bold text-slate-950 hover:scale-[1.02] transition disabled:opacity-50">
+                  {lotteryDrawing ? "Drawing..." : `🎲 Draw Winner (${lotteryEntries.length} entries)`}
+                </button>
+                {lotteryStatus && <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-200">{lotteryStatus}</div>}
+              </div>
+              <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Current Entries ({lotteryEntries.length})</div>
+                  {lotteryLoading ? <div className="text-sm text-slate-400">Loading...</div> : lotteryEntries.length === 0 ? <div className="text-sm text-slate-500">No entries yet.</div> : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {lotteryEntries.map((e) => (
+                        <div key={e.id} className="flex items-center gap-2 rounded-2xl border border-white/8 bg-slate-950/60 px-3 py-2">
+                          {e.avatarUrl ? <img src={e.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="h-7 w-7 rounded-full bg-amber-500/20 flex items-center justify-center text-xs text-amber-300 font-bold">{e.username[0]?.toUpperCase()}</div>}
+                          <div className="text-sm text-white">{e.username}</div>
+                          <div className="ml-auto text-xs text-slate-500">{new Date(e.enteredAt).toLocaleTimeString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Past Winners</div>
+                  {lotteryDraws.length === 0 ? <div className="text-sm text-slate-500">No draws yet.</div> : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {lotteryDraws.map((d) => (
+                        <div key={d.id} className="flex items-center gap-2 rounded-2xl border border-white/8 bg-slate-950/60 px-3 py-2">
+                          <span className="text-lg">🏆</span>
+                          <div>
+                            <div className="text-sm font-semibold text-white">{d.winnerUsername}</div>
+                            <div className="text-xs text-slate-400">{d.prize}</div>
+                          </div>
+                          <div className="ml-auto text-xs text-slate-500">{new Date(d.drawnAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           ) : null}
