@@ -34,8 +34,11 @@ export async function GET() {
     getGuildMembers(),
   ]);
 
-  // Build a map of discordId -> member from activity log
-  const memberMap = new Map(summary.members.map((m) => [m.discordId, m]));
+  // Build set of approved admin IDs for gold badge tagging
+  const adminIds = new Set(roster.filter(r => r.status === "approved").map(r => r.discordId));
+
+  // Build a map of discordId -> member from activity log, tagging admins
+  const memberMap = new Map(summary.members.map((m) => [m.discordId, { ...m, isAdmin: adminIds.has(m.discordId) }]));
 
   // Merge in roster members who have logged in but may have no other activity entries
   for (const entry of roster) {
@@ -52,6 +55,7 @@ export async function GET() {
         activeDays: 0,
         events: 0,
         activeNow: presence?.activeNow ?? false,
+        isAdmin: true,
       });
     }
   }
@@ -71,6 +75,7 @@ export async function GET() {
         activeDays:   0,
         events:       0,
         activeNow:    presence?.activeNow ?? false,
+        isAdmin:      adminIds.has(gm.discord_id),
       });
     }
   }

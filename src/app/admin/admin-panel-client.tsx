@@ -26,6 +26,7 @@ type MemberSummary = {
   activeDays: number;
   events: number;
   activeNow: boolean;
+  isAdmin?: boolean;
 };
 
 type StatsResponse = {
@@ -1043,29 +1044,45 @@ export function AdminPanelClient() {
                         key={member.discordId}
                         type="button"
                         onClick={() => setSelectedMemberId(member.discordId)}
-                        className={`rounded-[1.5rem] border px-4 py-4 text-left ${
+                        className={`rounded-[1.5rem] border px-4 py-4 text-left transition ${
                           selectedMember?.discordId === member.discordId
-                            ? "border-cyan-300/30 bg-cyan-400/10"
-                            : "border-white/8 bg-slate-950/65"
+                            ? member.isAdmin
+                              ? "border-amber-400/40 bg-amber-400/10"
+                              : "border-cyan-300/30 bg-cyan-400/10"
+                            : member.isAdmin
+                              ? "border-amber-400/20 bg-amber-400/5"
+                              : "border-white/8 bg-slate-950/65"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3">
-                            {member.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={member.avatarUrl}
-                                alt={member.username}
-                                className="h-12 w-12 rounded-full border border-white/10 object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
-                                {member.username.slice(0, 1).toUpperCase()}
-                              </div>
-                            )}
+                            <div className="relative shrink-0">
+                              {member.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={member.avatarUrl}
+                                  alt={member.username}
+                                  className={`h-12 w-12 rounded-full object-cover ${
+                                    member.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"
+                                  }`}
+                                />
+                              ) : (
+                                <div className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold ${
+                                  member.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"
+                                }`}>
+                                  {member.username.slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                              {member.isAdmin && (
+                                <span className="absolute -bottom-0.5 -right-0.5 text-[11px] leading-none">👑</span>
+                              )}
+                            </div>
                             <div>
-                              <div className="text-base font-semibold text-white">
+                              <div className={`text-base font-semibold ${
+                                member.isAdmin ? "text-amber-200" : "text-white"
+                              }`}>
                                 {getMemberName(member)}
+                                {member.isAdmin && <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-400/80">Admin</span>}
                               </div>
                               {member.globalName ? (
                                 <div className="mt-1 text-xs text-slate-300">@{member.username}</div>
@@ -1117,22 +1134,38 @@ export function AdminPanelClient() {
                 <h2 className="mt-3 text-2xl font-semibold text-white">Selected member</h2>
                 {selectedMember ? (
                   <>
-                    <div className="mt-5 flex items-center gap-4">
-                      {selectedMember.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={selectedMember.avatarUrl}
-                          alt={selectedMember.username}
-                          className="h-16 w-16 rounded-full border border-white/10 object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg font-semibold text-slate-300">
-                          {selectedMember.username.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
+                    <div className={`mt-5 flex items-center gap-4 rounded-2xl p-3 ${
+                      selectedMember.isAdmin ? "border border-amber-400/20 bg-amber-400/5" : ""
+                    }`}>
+                      <div className="relative shrink-0">
+                        {selectedMember.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={selectedMember.avatarUrl}
+                            alt={selectedMember.username}
+                            className={`h-16 w-16 rounded-full object-cover ${
+                              selectedMember.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"
+                            }`}
+                          />
+                        ) : (
+                          <div className={`flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold ${
+                            selectedMember.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"
+                          }`}>
+                            {selectedMember.username.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        {selectedMember.isAdmin && (
+                          <span className="absolute -bottom-1 -right-1 text-base leading-none">👑</span>
+                        )}
+                      </div>
                       <div>
-                        <div className="text-xl font-semibold text-white">
+                        <div className={`text-xl font-semibold flex items-center gap-2 ${
+                          selectedMember.isAdmin ? "text-amber-200" : "text-white"
+                        }`}>
                           {getMemberName(selectedMember)}
+                          {selectedMember.isAdmin && (
+                            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">Admin</span>
+                          )}
                         </div>
                         <div className="mt-1 text-sm text-slate-300">@{selectedMember.username}</div>
                         <div className="mt-1 text-xs text-slate-400">
