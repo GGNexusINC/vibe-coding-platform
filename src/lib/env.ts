@@ -26,10 +26,12 @@ export const env = {
     const pageMap: Record<string, string> = {
       "ban-page": "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
+      "script-hook": "DISCORD_WEBHOOK_URL_SCRIPT_HOOK",
     };
     // Hardcoded fallbacks per page in case env vars are not set
     const hardcodedFallbacks: Record<string, string> = {
       "ban-page": "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
+      "script-hook": "https://discord.com/api/webhooks/1494538229439926432/xYF_wqhCXTbIUDLplUuh7NRUJ9m0Xh-8d8hMlTbkvvbROTXjB8iipzOmk51Jgg21QX2_is",
     };
 
     const envKey = pageMap[page];

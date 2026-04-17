@@ -11,6 +11,7 @@ const links = [
   { href: "/community", label: "🎮 Community" },
   { href: "/streamers", label: "📺 Streamers" },
   { href: "/lottery", label: "🎰 Lottery" },
+  { href: "/minigame", label: "🎮 Weekly Gun Spin" },
   { href: "/support", label: "Support" },
   { href: "/policies", label: "Policies" },
   { href: "/rules", label: "Rules" },

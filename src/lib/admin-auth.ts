@@ -34,7 +34,7 @@ export async function setAdminSession(opts?: { discord_id?: string; username?: s
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime("7d")
     .sign(getAdminSecret());
 
   const store = await cookies();
@@ -43,6 +43,7 @@ export async function setAdminSession(opts?: { discord_id?: string; username?: s
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    maxAge: 60 * 60 * 24 * 7,
   });
 }
 

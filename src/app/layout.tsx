@@ -109,6 +109,12 @@ export default function RootLayout({
                 </Link>
                 <Link
                   className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
+                  href="/minigame"
+                >
+                  🎮 Gun Spin
+                </Link>
+                <Link
+                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
                   href="/admin"
                 >
                   Admin
