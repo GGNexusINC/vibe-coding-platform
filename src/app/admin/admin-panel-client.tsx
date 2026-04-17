@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type ActivityEntry = {
   id: string;
@@ -160,6 +160,7 @@ export function AdminPanelClient() {
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [now, setNow] = useState(Date.now());
 
   const filteredMembers = useMemo(() => {
     return (stats?.summary.members ?? []).filter((member) => {
@@ -196,7 +197,7 @@ export function AdminPanelClient() {
     ? JSON.stringify(selectedMember.profile, null, 2)
     : "";
 
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     setRefreshing(true);
     setStatsError("");
 
@@ -224,7 +225,8 @@ export function AdminPanelClient() {
       return data.summary.members[0]?.discordId ?? "";
     });
     setRefreshing(false);
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -260,7 +262,10 @@ export function AdminPanelClient() {
       }
     }).catch(() => {});
 
-    return () => window.clearTimeout(timer);
+    // Live tick for wipe countdown
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+
+    return () => { window.clearTimeout(timer); window.clearInterval(tick); };
   }, []);
 
   useEffect(() => {
@@ -537,7 +542,7 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               DESKTOP SIDEBAR
           ══════════════════════════════════════════════ */}
-          <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-white/6 bg-gradient-to-b from-slate-950 to-[#090c14]">
+          <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-white/6 bg-gradient-to-b from-slate-950 to-[#090c14]">
             <div className="px-5 pt-7 pb-5">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-xs font-black text-white">N</div>
@@ -552,19 +557,19 @@ export function AdminPanelClient() {
                   key={tab.id}
                   type="button"
                   onClick={() => switchTab(tab.id)}
-                  className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                     activeTab === tab.id
-                      ? "bg-white/8 text-white"
-                      : "text-slate-500 hover:bg-white/4 hover:text-slate-200"
+                      ? "bg-white/8 text-white shadow-sm"
+                      : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                   }`}
                 >
                   {activeTab === tab.id && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-cyan-400" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
                   )}
-                  <span className={`text-base ${activeTab === tab.id ? "text-cyan-400" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
-                  {tab.label}
+                  <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                  <span className="flex-1 text-left">{tab.label}</span>
                   {"badge" in tab && tab.badge > 0 && (
-                    <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/20 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>
+                    <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>
                   )}
                 </button>
               ))}
@@ -587,7 +592,7 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               MAIN CONTENT
           ══════════════════════════════════════════════ */}
-          <main className="flex-1 min-w-0 overflow-auto">
+          <main className="flex-1 min-w-0 overflow-auto scroll-smooth">
             {/* Mobile header */}
             <div className="flex items-center justify-between border-b border-white/6 bg-slate-950/95 px-4 py-3 md:hidden sticky top-0 z-30 backdrop-blur">
               <div className="flex items-center gap-2">
@@ -602,7 +607,7 @@ export function AdminPanelClient() {
               </div>
             </div>
 
-            <div className="p-4 md:p-7">
+            <div className="p-4 md:p-6 pb-24 md:pb-6">
 
           {/* ════ OVERVIEW ════ */}
           {activeTab === "dashboard" && (
@@ -610,56 +615,76 @@ export function AdminPanelClient() {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Overview</h1>
-                  <p className="mt-0.5 text-sm text-slate-500">Real-time server stats and activity.</p>
+                  <p className="mt-0.5 text-sm text-slate-500">Real-time server stats · auto-syncs every 15s</p>
                 </div>
                 <button type="button" onClick={() => void loadStats()} disabled={refreshing}
-                  className="hidden md:flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 transition disabled:opacity-40">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                  className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 active:scale-95 transition-all disabled:opacity-40">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={refreshing ? "animate-spin" : ""}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                   {refreshing ? "Syncing…" : "Refresh"}
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: "Active Now", value: stats?.summary.activeNowCount ?? 0, color: "from-emerald-400/20 to-emerald-400/5", accent: "text-emerald-400", dot: "bg-emerald-400" },
-                  { label: "Members", value: stats?.summary.totalMembersTracked ?? 0, color: "from-cyan-400/20 to-cyan-400/5", accent: "text-cyan-400", dot: "bg-cyan-400" },
-                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "from-violet-400/20 to-violet-400/5", accent: "text-violet-400", dot: "bg-violet-400" },
-                  { label: "Events", value: stats?.summary.totalEvents ?? 0, color: "from-amber-400/20 to-amber-400/5", accent: "text-amber-400", dot: "bg-amber-400" },
+                  { label: "Active Now", value: stats?.summary.activeNowCount ?? 0, color: "from-emerald-400/15 to-emerald-400/3 border-emerald-400/15", accent: "text-emerald-400", dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" },
+                  { label: "Members", value: stats?.summary.totalMembersTracked ?? 0, color: "from-cyan-400/15 to-cyan-400/3 border-cyan-400/15", accent: "text-cyan-400", dot: "bg-cyan-400" },
+                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "from-violet-400/15 to-violet-400/3 border-violet-400/15", accent: "text-violet-400", dot: "bg-violet-400" },
+                  { label: "Events", value: stats?.summary.totalEvents ?? 0, color: "from-amber-400/15 to-amber-400/3 border-amber-400/15", accent: "text-amber-400", dot: "bg-amber-400" },
                 ].map((s) => (
-                  <div key={s.label} className={`relative overflow-hidden rounded-2xl border border-white/6 bg-gradient-to-b ${s.color} p-4`}>
+                  <div key={s.label} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b ${s.color} p-4 transition-transform duration-150 hover:scale-[1.02]`}>
                     <div className="flex items-center gap-1.5 mb-2">
-                      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${s.dot}`} />
                       <span className="text-[11px] font-medium text-slate-400">{s.label}</span>
                     </div>
-                    <div className={`text-3xl font-black tracking-tight ${s.accent}`}>{s.value}</div>
+                    <div className={`text-3xl font-black tracking-tight ${s.accent}`}>{s.value.toLocaleString()}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Wipe Timer Status */}
+              {/* Wipe Timer Status — live ticking */}
               {wipeAt && (() => {
-                const ms = new Date(wipeAt).getTime() - Date.now();
+                const ms = new Date(wipeAt).getTime() - now;
                 const past = ms <= 0;
                 const abs = Math.abs(ms);
                 const d = Math.floor(abs / 86400000);
                 const h = Math.floor((abs % 86400000) / 3600000);
                 const m = Math.floor((abs % 3600000) / 60000);
-                const parts = d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+                const s = Math.floor((abs % 60000) / 1000);
+                const parts = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+                const urgent = !past && ms < 3600000;
                 return (
-                  <div className={`flex items-center justify-between rounded-2xl border px-5 py-3.5 ${past ? "border-slate-500/30 bg-slate-500/8" : ms < 3600000 ? "border-rose-500/30 bg-rose-500/8" : "border-amber-400/25 bg-amber-400/6"}`}>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{past ? "💥" : ms < 3600000 ? "🔴" : "⏳"}</span>
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Wipe Timer · {wipeLabel}</div>
-                        <div className={`text-lg font-black tabular-nums ${past ? "text-slate-400" : ms < 3600000 ? "text-rose-300" : "text-amber-300"}`}>
-                          {past ? "WIPED" : parts}
+                  <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 transition-colors ${
+                    past ? "border-slate-500/30 bg-slate-800/40" :
+                    urgent ? "border-rose-500/35 bg-rose-950/40" :
+                    "border-amber-400/25 bg-amber-950/30"
+                  } ${urgent && !past ? "animate-pulse" : ""}`}>
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className={`absolute inset-x-0 top-0 h-px ${
+                        past ? "bg-slate-500/30" : urgent ? "bg-gradient-to-r from-transparent via-rose-500/60 to-transparent" : "bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"
+                      }`} />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl shrink-0 ${
+                          past ? "bg-slate-700/50" : urgent ? "bg-rose-500/15" : "bg-amber-400/10"
+                        }`}>
+                          {past ? "�" : urgent ? "�🔴" : "⏳"}
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{wipeLabel}</div>
+                          <div className={`text-xl font-black tabular-nums leading-none ${
+                            past ? "text-slate-500" : urgent ? "text-rose-300" : "text-amber-300"
+                          }`}>
+                            {past ? "WIPED" : parts}
+                          </div>
+                          <div className="text-[10px] text-slate-600 mt-0.5">{past ? "Timer expired" : "Until wipe"}</div>
                         </div>
                       </div>
+                      <button type="button" onClick={() => switchTab("wipe")}
+                        className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 hover:text-white transition-all">
+                        Edit Timer
+                      </button>
                     </div>
-                    <button type="button" onClick={() => switchTab("wipe")}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/10 transition">
-                      Edit
-                    </button>
                   </div>
                 );
               })()}
@@ -1213,21 +1238,24 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* ── Mobile sticky bottom nav ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-white/6 bg-[#06080f]/95 backdrop-blur-xl md:hidden safe-area-bottom">
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-white/8 bg-slate-950/98 backdrop-blur-xl md:hidden safe-area-inset-bottom">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => switchTab(tab.id)}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold transition ${
-              activeTab === tab.id ? "text-cyan-300" : "text-slate-600"
+            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[9px] font-bold transition-all duration-150 active:scale-90 ${
+              activeTab === tab.id ? "text-cyan-300" : "text-slate-600 hover:text-slate-400"
             }`}
           >
-            <span className={`text-base leading-none transition ${activeTab === tab.id ? "scale-110" : ""}`}>{tab.icon}</span>
+            {activeTab === tab.id && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            )}
+            <span className={`text-lg leading-none transition-transform duration-150 ${activeTab === tab.id ? "scale-110" : ""}`}>{tab.icon}</span>
             {tab.label}
             {"badge" in tab && tab.badge > 0 && (
-              <span className="absolute right-[20%] top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[8px] font-black text-slate-950">{tab.badge}</span>
+              <span className="absolute right-[18%] top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[8px] font-black text-slate-950">{tab.badge}</span>
             )}
           </button>
         ))}
