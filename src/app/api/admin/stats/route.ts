@@ -4,6 +4,7 @@ import { getActivitySummary, getRecentActivities } from "@/lib/activity-log";
 import { getRoster } from "@/lib/admin-roster";
 import { getPresenceMap } from "@/lib/presence";
 import { createClient } from "@supabase/supabase-js";
+import { KNOWN_ADMINS } from "@/lib/env";
 
 async function getGuildMembers() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -86,9 +87,14 @@ export async function GET() {
     return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
   });
 
+  const isOwner = KNOWN_ADMINS.some(
+    (a) => a.discordId === admin.discord_id && a.role === "owner"
+  );
+
   return NextResponse.json({
     ok: true,
     activeWindowMinutes: getActiveWindowMinutes(),
+    viewer: { discordId: admin.discord_id, username: admin.username, isOwner },
     summary: {
       ...summary,
       totalMembersTracked: mergedMembers.length,
