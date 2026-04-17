@@ -20,16 +20,8 @@ const INGEST_SECRET = process.env.INGEST_SECRET || "newhopeggn-bot-secret";
 
 if (!BOT_TOKEN) { console.error("[bot] ERROR: BOT_TOKEN not set in .env"); process.exit(1); }
 
-// Channels to relay (by name). Leave empty [] to relay ALL channels.
-const CHANNEL_WHITELIST = [
-  "general-chat",
-  "announcements",
-  "memes",
-  "fotos-photos",
-  "videos",
-  "guias-guides",
-  "sugerencias-suggestions",
-];
+// Relay ALL channels (whitelist is empty = no filter)
+const CHANNEL_WHITELIST = [];
 // ─────────────────────────────────────────────────────────────────────────────
 
 const client = new Client({
@@ -52,8 +44,13 @@ client.on("messageCreate", async (msg) => {
 
   const channelName = msg.channel.name ?? "";
 
+  console.log(`[bot] Message in #${channelName} from ${msg.author.username}: ${msg.content.slice(0, 50)}`);
+
   // Filter by whitelist if set
-  if (CHANNEL_WHITELIST.length > 0 && !CHANNEL_WHITELIST.includes(channelName)) return;
+  if (CHANNEL_WHITELIST.length > 0 && !CHANNEL_WHITELIST.includes(channelName)) {
+    console.log(`[bot] Skipped - #${channelName} not in whitelist`);
+    return;
+  }
 
   const payload = {
     secret: INGEST_SECRET,

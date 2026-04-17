@@ -61,15 +61,6 @@ type DiscordMessage = {
   created_at: string;
 };
 
-const MSG_CHANNELS = [
-  "general-chat",
-  "announcements",
-  "memes",
-  "fotos-photos",
-  "videos",
-  "guias-guides",
-  "sugerencias-suggestions",
-];
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -97,7 +88,8 @@ export default function CommunityPage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   // Discord messages
-  const [activeChannel, setActiveChannel] = useState(MSG_CHANNELS[0]);
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [channelList, setChannelList] = useState<string[]>([]);
   const [messages, setMessages] = useState<DiscordMessage[]>([]);
   const [msgLoading, setMsgLoading] = useState(true);
   const [noBotYet, setNoBotYet] = useState(false);
@@ -124,8 +116,19 @@ export default function CommunityPage() {
     setFeedLoading(false);
   }
 
-  async function loadMessages(channel: string) {
-    const res = await fetch(`/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`).catch(() => null);
+  async function loadChannels() {
+    const res = await fetch("/api/discord/messages?channels=1").catch(() => null);
+    if (!res?.ok) return;
+    const data = await res.json().catch(() => null);
+    const chs: string[] = data?.channels ?? [];
+    if (chs.length > 0) setChannelList(chs);
+  }
+
+  async function loadMessages(channel: string | null) {
+    const url = channel
+      ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`
+      : `/api/discord/messages?limit=60`;
+    const res = await fetch(url).catch(() => null);
     if (!res?.ok) { setMsgLoading(false); return; }
     const data = await res.json().catch(() => null);
     const msgs: DiscordMessage[] = data?.messages ?? [];
@@ -138,10 +141,11 @@ export default function CommunityPage() {
   useEffect(() => {
     void loadWidget();
     void loadFeed();
-    void loadMessages(activeChannel);
+    void loadChannels();
+    void loadMessages(null);
     const wt = window.setInterval(() => void loadWidget(), 30000);
     const ft = window.setInterval(() => void loadFeed(), 15000);
-    const mt = window.setInterval(() => void loadMessages(activeChannel), 10000);
+    const mt = window.setInterval(() => { void loadMessages(activeChannel); void loadChannels(); }, 10000);
     return () => { window.clearInterval(wt); window.clearInterval(ft); window.clearInterval(mt); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -331,7 +335,17 @@ export default function CommunityPage() {
 
               {/* Channel tabs */}
               <div className="flex flex-wrap gap-1.5 mb-3">
-                {MSG_CHANNELS.map((ch) => (
+                <button
+                  onClick={() => setActiveChannel(null)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                    activeChannel === null
+                      ? "bg-[#5865F2] text-white"
+                      : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  All
+                </button>
+                {channelList.map((ch) => (
                   <button
                     key={ch}
                     onClick={() => setActiveChannel(ch)}
@@ -354,8 +368,8 @@ export default function CommunityPage() {
                 {!msgLoading && noBotYet && (
                   <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-5 text-center">
                     <div className="text-2xl mb-2">🤖</div>
-                    <div className="text-xs font-semibold text-amber-300 mb-1">Bot not connected yet</div>
-                    <div className="text-[11px] text-slate-500">Once the Discord bot is running, messages from #{activeChannel} will appear here live.</div>
+                    <div className="text-xs font-semibold text-amber-300 mb-1">No messages yet</div>
+                    <div className="text-[11px] text-slate-500">Messages from Discord will appear here once members start chatting.</div>
                   </div>
                 )}
                 {!msgLoading && messages.map((msg) => (
@@ -373,8 +387,11 @@ export default function CommunityPage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-xs font-bold text-white">{msg.author_username}</span>
+                        {!activeChannel && (
+                          <span className="text-[10px] text-[#5865F2] font-semibold">#{msg.channel_name}</span>
+                        )}
                         <span className="text-[10px] text-slate-600">{timeAgo(msg.created_at)}</span>
                       </div>
                       <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{msg.content}</p>

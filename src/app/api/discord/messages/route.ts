@@ -8,14 +8,26 @@ function getClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-// GET /api/discord/messages?channel=general-chat&limit=50
+// GET /api/discord/messages?channel=NAME&limit=50
+// GET /api/discord/messages?channels=1  → returns distinct channel names
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const sb = getClient();
+  if (!sb) return NextResponse.json({ ok: false, messages: [], channels: [] });
+
+  // Return distinct channel names
+  if (searchParams.get("channels") === "1") {
+    const { data } = await sb
+      .from("discord_messages")
+      .select("channel_name")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const unique = [...new Set((data ?? []).map((r: { channel_name: string }) => r.channel_name))];
+    return NextResponse.json({ ok: true, channels: unique });
+  }
+
   const channel = searchParams.get("channel");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
-
-  const sb = getClient();
-  if (!sb) return NextResponse.json({ ok: false, messages: [] });
 
   let query = sb
     .from("discord_messages")
