@@ -252,6 +252,14 @@ export function AdminPanelClient() {
       void loadStats();
     }, 0);
 
+    // Load wipe timer for dashboard display
+    fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
+      if (d.ok && d.wipeAt) {
+        setWipeAt(new Date(d.wipeAt).toISOString().slice(0, 16));
+        setWipeLabel(d.label ?? "Server Wipe");
+      }
+    }).catch(() => {});
+
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -627,6 +635,34 @@ export function AdminPanelClient() {
                   </div>
                 ))}
               </div>
+
+              {/* Wipe Timer Status */}
+              {wipeAt && (() => {
+                const ms = new Date(wipeAt).getTime() - Date.now();
+                const past = ms <= 0;
+                const abs = Math.abs(ms);
+                const d = Math.floor(abs / 86400000);
+                const h = Math.floor((abs % 86400000) / 3600000);
+                const m = Math.floor((abs % 3600000) / 60000);
+                const parts = d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+                return (
+                  <div className={`flex items-center justify-between rounded-2xl border px-5 py-3.5 ${past ? "border-slate-500/30 bg-slate-500/8" : ms < 3600000 ? "border-rose-500/30 bg-rose-500/8" : "border-amber-400/25 bg-amber-400/6"}`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{past ? "💥" : ms < 3600000 ? "🔴" : "⏳"}</span>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Wipe Timer · {wipeLabel}</div>
+                        <div className={`text-lg font-black tabular-nums ${past ? "text-slate-400" : ms < 3600000 ? "text-rose-300" : "text-amber-300"}`}>
+                          {past ? "WIPED" : parts}
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => switchTab("wipe")}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/10 transition">
+                      Edit
+                    </button>
+                  </div>
+                );
+              })()}
 
               <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
