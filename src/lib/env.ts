@@ -27,10 +27,14 @@ export const env = {
       "ban-page": "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
     };
+    // Hardcoded fallbacks per page in case env vars are not set
+    const hardcodedFallbacks: Record<string, string> = {
+      "ban-page": "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
+    };
 
     const envKey = pageMap[page];
     if (!envKey) return getEnv("DISCORD_WEBHOOK_URL") ?? "";
-    return getEnv(envKey) ?? getEnv("DISCORD_WEBHOOK_URL") ?? "";
+    return getEnv(envKey) ?? hardcodedFallbacks[page] ?? getEnv("DISCORD_WEBHOOK_URL") ?? "";
   },
   hasSupabase: () =>
     Boolean(getEnv("NEXT_PUBLIC_SUPABASE_URL") && getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")),
