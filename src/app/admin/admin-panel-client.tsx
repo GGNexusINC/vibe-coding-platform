@@ -50,6 +50,8 @@ type AdminEntry = {
   status: "approved" | "pending" | "denied";
   addedAt: string;
   updatedAt: string;
+  activeNow?: boolean;
+  lastActiveAt?: string | null;
 };
 
 const pageOptions = [
@@ -456,27 +458,43 @@ export function AdminPanelClient() {
                 ) : (
                   roster.map((entry) => (
                     <div key={entry.id} className="flex flex-col gap-3 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-3">
-                        {entry.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={entry.avatarUrl} alt={entry.username} className="h-10 w-10 rounded-full border border-white/10 object-cover" />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
-                            {entry.username.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm font-semibold text-white">{entry.username}</div>
-                          <div className="mt-0.5 text-xs text-slate-400">Discord ID: {entry.discordId}</div>
-                          <div className="mt-0.5 text-xs text-slate-500">Requested: {new Date(entry.addedAt).toLocaleString()}</div>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="relative shrink-0">
+                          {entry.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entry.avatarUrl} alt={entry.username} className="h-10 w-10 rounded-full border border-white/10 object-cover" />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
+                              {entry.username.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-950 ${
+                            entry.activeNow ? "bg-emerald-400" : "bg-rose-500"
+                          }`} />
                         </div>
-                        <span className={`ml-2 rounded-full px-3 py-1 text-xs font-semibold ${
-                          entry.status === "approved" ? "bg-emerald-500/15 text-emerald-200"
-                          : entry.status === "denied" ? "bg-rose-500/15 text-rose-200"
-                          : "bg-amber-400/15 text-amber-200"
-                        }`}>
-                          {entry.status}
-                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="text-sm font-semibold text-white">{entry.username}</div>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                              entry.activeNow ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
+                            }`}>
+                              {entry.activeNow ? "Active" : "Inactive"}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              entry.status === "approved" ? "bg-emerald-500/15 text-emerald-200"
+                              : entry.status === "denied" ? "bg-rose-500/15 text-rose-200"
+                              : "bg-amber-400/15 text-amber-200"
+                            }`}>
+                              {entry.status}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 text-xs text-slate-400">ID: {entry.discordId}</div>
+                          <div className="mt-0.5 text-xs text-slate-500">
+                            {entry.lastActiveAt
+                              ? `Last seen: ${new Date(entry.lastActiveAt).toLocaleString()}`
+                              : `Added: ${new Date(entry.addedAt).toLocaleString()}`}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         {entry.status !== "approved" && (
