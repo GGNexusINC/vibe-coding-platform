@@ -5,6 +5,7 @@ import { sendDiscordWebhook } from "@/lib/discord";
 import { getActivitySummary } from "@/lib/activity-log";
 import { getPresenceMap } from "@/lib/presence";
 import type { AdminStatus } from "@/lib/admin-roster";
+import { KNOWN_ADMINS } from "@/lib/env";
 
 export async function GET() {
   const admin = await getAdminSession();
@@ -20,6 +21,21 @@ export async function GET() {
 
   const activityMap = new Map(activitySummary.members.map((m) => [m.discordId, m]));
   const rosterMap = new Map(rosterRaw.map((r) => [r.discordId, r]));
+
+  // Pre-seed all known staff so they appear even before first login
+  const knownSeedPromises: Promise<unknown>[] = [];
+  for (const ka of KNOWN_ADMINS) {
+    if (!rosterMap.has(ka.discordId)) {
+      knownSeedPromises.push(
+        upsertAdmin({ discordId: ka.discordId, username: ka.username, status: "approved" }),
+      );
+    }
+  }
+  if (knownSeedPromises.length > 0) {
+    await Promise.all(knownSeedPromises);
+    const seeded = await getRoster();
+    seeded.forEach((r) => rosterMap.set(r.discordId, r));
+  }
 
   // Any activity member not yet in roster → auto-add as approved (pre-existing user)
   const upsertPromises: Promise<unknown>[] = [];

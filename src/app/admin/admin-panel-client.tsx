@@ -453,11 +453,27 @@ export function AdminPanelClient() {
 
           {activeTab === "roster" ? (
             <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-              <div className="rz-chip">Admin Roster</div>
-              <h2 className="mt-3 text-2xl font-semibold text-white">Manage admin access</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                Approve or deny Discord accounts that have requested admin access. Owners (in ADMIN_DISCORD_IDS) are always approved.
-              </p>
+              <div className="rz-chip">👥 Admin Roster</div>
+              <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white">Staff & Admin Panel</h2>
+                  <p className="mt-1 text-sm text-slate-400">All staff appear here. Approve pending requests or revoke access.</p>
+                </div>
+                <div className="flex gap-3 text-center">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-2">
+                    <div className="text-lg font-black text-emerald-400">{roster.filter(r => r.status === "approved").length}</div>
+                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Approved</div>
+                  </div>
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/8 px-4 py-2">
+                    <div className="text-lg font-black text-amber-400">{roster.filter(r => r.status === "pending").length}</div>
+                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Pending</div>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/20 bg-black/20 px-4 py-2">
+                    <div className="text-lg font-black text-white">{roster.filter(r => r.activeNow).length}</div>
+                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Online Now</div>
+                  </div>
+                </div>
+              </div>
               <div className="mt-6 grid gap-3">
                 {rosterLoading ? (
                   <div className="text-sm text-slate-400">Loading...</div>
@@ -500,10 +516,12 @@ export function AdminPanelClient() {
                               {entry.status}
                             </span>
                           </div>
-                          <div className="mt-0.5 text-xs text-slate-400">ID: {entry.discordId}</div>
+                          <div className="mt-0.5 text-xs text-slate-500">ID: {entry.discordId}</div>
                           <div className="mt-0.5 text-xs text-slate-500">
                             {entry.lastActiveAt
                               ? `Last seen: ${new Date(entry.lastActiveAt).toLocaleString()}`
+                              : entry.isOwner
+                              ? "Pre-seeded — not yet signed in"
                               : `Added: ${new Date(entry.addedAt).toLocaleString()}`}
                           </div>
                         </div>
@@ -511,7 +529,7 @@ export function AdminPanelClient() {
                       <div className="flex items-center gap-2">
                         {entry.isOwner ? (
                           <div className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 py-2">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-300"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span className="text-sm">👑</span>
                             <span className="text-xs font-semibold text-amber-200">Owner</span>
                           </div>
                         ) : (

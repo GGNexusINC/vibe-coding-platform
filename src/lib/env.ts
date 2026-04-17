@@ -10,6 +10,18 @@ export function requireEnv(key: string): string {
   return v;
 }
 
+export type KnownAdmin = { discordId: string; username: string; role: "owner" | "admin" };
+
+export const KNOWN_ADMINS: KnownAdmin[] = [
+  { discordId: "940804710267486249",  username: "Kilo",        role: "owner" },
+  { discordId: "1310794181190352997", username: "Buzzworthy",  role: "owner" },
+  { discordId: "145278391166173185",  username: "Zeus",        role: "owner" },
+  { discordId: "Hope",                username: "Hope",        role: "admin" },
+  { discordId: "Encriptado",          username: "Encriptado",  role: "admin" },
+  { discordId: "Jon",                 username: "Jon",         role: "admin" },
+  { discordId: "Cortez",              username: "Cortez",      role: "admin" },
+];
+
 export const env = {
   supabaseUrl: () => requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: () => requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
@@ -18,7 +30,7 @@ export const env = {
     const raw = getEnv("ADMIN_DISCORD_IDS") ?? getEnv("ADMIN_DISCORD_ID") ?? "";
     const fromEnv = raw.split(",").map((id) => id.trim()).filter(Boolean);
     // Hardcoded owner IDs — always treated as owners regardless of env var
-    const hardcoded = ["940804710267486249", "1310794181190352997", "145278391166173185"];
+    const hardcoded = KNOWN_ADMINS.map((a) => a.discordId);
     return new Set([...hardcoded, ...fromEnv]);
   },
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
