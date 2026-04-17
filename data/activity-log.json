@@ -1,5 +1,16 @@
 [
   {
+    "id": "e769e729-dd71-4c1d-9cc7-1cb3eafc1362",
+    "createdAt": "2026-04-17T03:47:34.510Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": null,
+    "details": "Heartbeat — user active on site."
+  },
+  {
     "id": "eb5a693f-8250-471e-bfa5-57c48988e80e",
     "createdAt": "2026-04-17T03:44:33.686Z",
     "type": "login",

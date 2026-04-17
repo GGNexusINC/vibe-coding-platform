@@ -76,8 +76,9 @@ export async function POST(req: Request) {
     });
   }
 
-  // Always send to Discord script-hook webhook
-  const webhookUrl = env.discordWebhookUrlForPage("script-hook");
+  // Always send to Discord minigame webhook
+  const webhookUrl = env.discordWebhookUrlForPage("minigame");
+  console.log("[minigame] Discord webhook URL:", webhookUrl ? webhookUrl.slice(0, 60) + "..." : "NONE");
   if (webhookUrl) {
     const rarityBar: Record<string, string> = {
       legendary: "🟠🟠🟠🟠🟠",
@@ -110,7 +111,10 @@ export async function POST(req: Request) {
           timestamp: now,
         }],
       }),
-    }).catch(() => null);
+    }).then(async (r) => {
+      if (!r.ok) console.error("[minigame] Discord webhook failed:", r.status, await r.text().catch(() => ""));
+      else console.log("[minigame] Discord webhook sent OK:", r.status);
+    }).catch((e) => console.error("[minigame] Discord fetch error:", e));
   }
 
   return NextResponse.json({ ok: true, prize, score, spunAt: now });
