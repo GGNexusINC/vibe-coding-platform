@@ -58,64 +58,50 @@ export default function RootLayout({
                 </div>
               </Link>
 
-              <nav className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1 lg:flex">
+              <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1.5 lg:flex backdrop-blur">
+                {([
+                  { href: "/about",      label: "About" },
+                  { href: "/store",      label: "Store" },
+                  { href: "/support",    label: "Support" },
+                  { href: "/policies",   label: "Policies" },
+                  { href: "/rules",      label: "Rules" },
+                  { href: "/community",  label: "Community" },
+                  { href: "/streamers",  label: "Streamers" },
+                ] as { href: string; label: string }[]).map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="rounded-full px-3 py-1.5 text-sm font-medium text-slate-300 transition-all hover:bg-white/8 hover:text-white"
+                  >
+                    {label}
+                  </Link>
+                ))}
+
+                {/* Divider */}
+                <div className="h-4 w-px bg-white/10 mx-1" />
+
+                {/* Lottery — amber accent */}
                 <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/about"
-                >
-                  About
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/store"
-                >
-                  Store
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/support"
-                >
-                  Support
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/policies"
-                >
-                  Policies
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/rules"
-                >
-                  Rules
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/community"
-                >
-                  Community
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  href="/streamers"
-                >
-                  Streamers
-                </Link>
-                <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
                   href="/lottery"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-400/10 hover:text-amber-200 border border-amber-400/20"
                 >
                   🎰 Lottery
                 </Link>
+
+                {/* Whack-a-Mole — green accent */}
                 <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
                   href="/minigame"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-emerald-300 transition-all hover:bg-emerald-400/10 hover:text-emerald-200 border border-emerald-400/20"
                 >
-                  🎮 Gun Spin
+                  🐹 Whack-a-Mole
                 </Link>
+
+                {/* Divider */}
+                <div className="h-4 w-px bg-white/10 mx-1" />
+
                 <Link
-                  className="rounded-full px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 hover:text-white"
                   href="/admin"
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/8 hover:text-white"
                 >
                   Admin
                 </Link>
