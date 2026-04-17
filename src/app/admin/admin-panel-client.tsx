@@ -95,10 +95,8 @@ function getMemberName(member: MemberSummary) {
 }
 
 export function AdminPanelClient() {
-  const [password, setPassword] = useState("");
   const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
 
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [statsError, setStatsError] = useState("");
@@ -247,30 +245,6 @@ export function AdminPanelClient() {
     return () => window.clearInterval(timer);
   }, [isAuthed, activeTab]);
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError("");
-
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      setAuthError(data?.error || "Login failed.");
-      setAuthLoading(false);
-      return;
-    }
-
-    setPassword("");
-    setIsAuthed(true);
-    setAuthLoading(false);
-    await loadStats();
-  }
-
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     setIsAuthed(false);
@@ -394,34 +368,11 @@ export function AdminPanelClient() {
             Sign in with Discord
           </a>
 
-          <div className="mt-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-slate-500">or use password</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <form className="mt-4 grid gap-4" onSubmit={handleLogin}>
-            <input
-              type="password"
-              className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-              placeholder="Admin password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="h-12 rounded-2xl bg-white/8 border border-white/10 px-5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:bg-white/12 disabled:opacity-70"
-            >
-              {authLoading ? "Unlocking..." : "Unlock with password"}
-            </button>
-            {authError || statsError ? (
-              <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-                {authError || statsError}
-              </div>
-            ) : null}
-          </form>
+          {authError || statsError ? (
+            <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {authError || statsError}
+            </div>
+          ) : null}
         </section>
       ) : (
         <>
