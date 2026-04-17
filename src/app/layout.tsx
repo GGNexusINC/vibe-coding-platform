@@ -80,18 +80,16 @@ export default function RootLayout({
                 {/* Divider */}
                 <div className="h-4 w-px bg-white/10 mx-1" />
 
-                {/* Lottery — amber accent */}
                 <Link
                   href="/lottery"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-yellow-300 transition-all hover:bg-yellow-400/10 hover:text-yellow-200 border border-yellow-400/20"
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-300 transition-all hover:bg-orange-400/10 hover:text-orange-100"
                 >
                   🎰 Lottery
                 </Link>
 
-                {/* Whack-a-Mole — green accent */}
                 <Link
                   href="/minigame"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-lime-300 transition-all hover:bg-lime-400/10 hover:text-lime-200 border border-lime-400/20"
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-300 transition-all hover:bg-orange-400/10 hover:text-orange-100"
                 >
                   🐹 Whack-a-Mole
                 </Link>

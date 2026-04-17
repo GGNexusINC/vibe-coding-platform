@@ -62,6 +62,47 @@ type DiscordMessage = {
 };
 
 
+const IMAGE_RE = /https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)(\?\S*)?/gi;
+const TENOR_RE = /https?:\/\/(?:tenor\.com|media\.tenor\.com|c\.tenor\.com)\S+/gi;
+const GIPHY_RE = /https?:\/\/(?:giphy\.com|media\.giphy\.com|i\.giphy\.com)\S+/gi;
+const DISCORD_CDN_RE = /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\S+/gi;
+
+function extractMediaUrls(text: string): string[] {
+  const all: string[] = [];
+  for (const re of [IMAGE_RE, TENOR_RE, GIPHY_RE, DISCORD_CDN_RE]) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(text)) !== null) all.push(m[0]);
+  }
+  return [...new Set(all)];
+}
+
+function renderContent(content: string) {
+  const mediaUrls = extractMediaUrls(content);
+  const textOnly = content
+    .replace(IMAGE_RE, "")
+    .replace(TENOR_RE, "")
+    .replace(GIPHY_RE, "")
+    .replace(DISCORD_CDN_RE, "")
+    .trim();
+  return (
+    <>
+      {textOnly && (
+        <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{textOnly}</p>
+      )}
+      {mediaUrls.map((url) => (
+        <img
+          key={url}
+          src={url}
+          alt="media"
+          className="mt-1.5 max-w-[280px] max-h-[200px] rounded-xl object-cover border border-white/8"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      ))}
+    </>
+  );
+}
+
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
@@ -410,7 +451,7 @@ export default function CommunityPage() {
                         )}
                         <span className="text-[10px] text-slate-600">{timeAgo(msg.created_at)}</span>
                       </div>
-                      <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{msg.content}</p>
+                      {renderContent(msg.content)}
                     </div>
                   </div>
                 ))}
