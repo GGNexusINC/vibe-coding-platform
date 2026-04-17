@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { KNOWN_ADMINS } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
+import { logActivity } from "@/lib/activity-log";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = process.env.GUILD_ID || "1419522458075005023";
 const BOT_TOKEN = process.env.BOT_TOKEN;
+const MOD_WEBHOOK = "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -121,6 +123,36 @@ export async function POST(req: Request) {
     reason,
     created_at: new Date().toISOString(),
   });
+
+  // Log to activity feed
+  const actionLabel = action === "warn" ? "⚠️ Warning" : action === "ban" ? "🔨 Ban" : "✅ Unban";
+  await logActivity({
+    type: "admin_broadcast",
+    username: actorName,
+    discordId: actorId,
+    details: `${actionLabel} issued to <@${targetDiscordId}>: ${reason}`,
+  });
+
+  // Post to moderation webhook
+  const embedColor = action === "warn" ? 0xf59e0b : action === "ban" ? 0xef4444 : 0x22c55e;
+  const embedTitle = action === "warn" ? "⚠️ Warning Issued" : action === "ban" ? "🔨 Member Banned" : "✅ Member Unbanned";
+  await fetch(MOD_WEBHOOK, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      embeds: [{
+        title: embedTitle,
+        color: embedColor,
+        fields: [
+          { name: "Target", value: `<@${targetDiscordId}> (${targetDiscordId})`, inline: true },
+          { name: "Action by", value: `${actorName}`, inline: true },
+          { name: "Reason", value: reason },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: "NewHopeGGN Admin Panel" },
+      }],
+    }),
+  }).catch(() => { /* webhook failure is non-fatal */ });
 
   return NextResponse.json({ ok: true, action, targetDiscordId });
 }
