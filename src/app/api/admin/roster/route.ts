@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getRoster, updateAdminStatus, getAdminByDiscordId, upsertAdmin } from "@/lib/admin-roster";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { getActivitySummary } from "@/lib/activity-log";
+import { getPresenceMap } from "@/lib/presence";
 import type { AdminStatus } from "@/lib/admin-roster";
 
 export async function GET() {
@@ -11,20 +12,16 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  const [rosterRaw, activitySummary] = await Promise.all([
+  const [rosterRaw, activitySummary, presenceMap] = await Promise.all([
     getRoster(),
-    getActivitySummary(15),
+    getActivitySummary(60),   // broader window just for lastActiveAt display
+    getPresenceMap(),          // real-time 5-min window for activeNow
   ]);
 
-  // Build a map of activity data keyed by discordId
-  const activityMap = new Map(
-    activitySummary.members.map((m) => [m.discordId, m]),
-  );
-
-  // Build a map of roster entries keyed by discordId
+  const activityMap = new Map(activitySummary.members.map((m) => [m.discordId, m]));
   const rosterMap = new Map(rosterRaw.map((r) => [r.discordId, r]));
 
-  // Any activity member not in roster was a pre-existing admin — add them as approved
+  // Any activity member not yet in roster → auto-add as approved (pre-existing user)
   const upsertPromises: Promise<unknown>[] = [];
   for (const member of activitySummary.members) {
     if (!rosterMap.has(member.discordId)) {
@@ -38,32 +35,46 @@ export async function GET() {
       );
     }
   }
+  // Also add any presence entries not yet in roster
+  for (const [id, p] of presenceMap) {
+    if (!rosterMap.has(id) && !activityMap.has(id)) {
+      upsertPromises.push(
+        upsertAdmin({
+          discordId: id,
+          username: p.globalName || p.username,
+          avatarUrl: p.avatarUrl ?? undefined,
+          status: "approved",
+        }),
+      );
+    }
+  }
   if (upsertPromises.length > 0) {
     await Promise.all(upsertPromises);
-    // Re-fetch after upserts
     const fresh = await getRoster();
     fresh.forEach((r) => rosterMap.set(r.discordId, r));
   }
 
-  // Merge roster + activity into enriched list
-  const allIds = new Set([...rosterMap.keys(), ...activityMap.keys()]);
+  const allIds = new Set([...rosterMap.keys(), ...activityMap.keys(), ...presenceMap.keys()]);
   const enriched = [...allIds].map((id) => {
     const r = rosterMap.get(id);
     const a = activityMap.get(id);
+    const p = presenceMap.get(id);
+    // presence is authoritative for activeNow and lastSeen
+    const activeNow = p?.activeNow ?? false;
+    const lastActiveAt = p?.lastSeen ?? a?.lastActiveAt ?? null;
     return {
       id: r?.id ?? id,
       discordId: id,
-      username: r?.username ?? a?.globalName ?? a?.username ?? id,
-      avatarUrl: r?.avatarUrl ?? a?.avatarUrl,
-      status: r?.status ?? "approved",
-      addedAt: r?.addedAt ?? a?.lastActiveAt ?? new Date().toISOString(),
-      updatedAt: r?.updatedAt ?? a?.lastActiveAt ?? new Date().toISOString(),
-      activeNow: a?.activeNow ?? false,
-      lastActiveAt: a?.lastActiveAt ?? null,
+      username: r?.username ?? p?.globalName ?? p?.username ?? a?.globalName ?? a?.username ?? id,
+      avatarUrl: r?.avatarUrl ?? p?.avatarUrl ?? a?.avatarUrl,
+      status: (r?.status ?? "approved") as "approved" | "pending" | "denied",
+      addedAt: r?.addedAt ?? lastActiveAt ?? new Date().toISOString(),
+      updatedAt: r?.updatedAt ?? lastActiveAt ?? new Date().toISOString(),
+      activeNow,
+      lastActiveAt,
     };
   });
 
-  // Sort: active first, then by last active
   enriched.sort((a, b) => {
     if (Number(b.activeNow) !== Number(a.activeNow)) return Number(b.activeNow) - Number(a.activeNow);
     if (a.lastActiveAt && b.lastActiveAt) return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
