@@ -6,14 +6,14 @@ import { env } from "@/lib/env";
 type Prize = { name: string; rarity: string; emoji: string; color: number };
 
 function scoreToPrize(score: number): Prize {
-  if (score >= 30) return { name: "Minigun", rarity: "legendary", emoji: "⚙️", color: 0xef4444 };
-  if (score >= 25) return { name: "Flamethrower", rarity: "legendary", emoji: "�", color: 0xf97316 };
-  if (score >= 20) return { name: "Sniper Rifle (AWM)", rarity: "epic", emoji: "🎯", color: 0x8b5cf6 };
-  if (score >= 15) return { name: "M4A1 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
-  if (score >= 10) return { name: "AK-47 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
-  if (score >= 7)  return { name: "SPAS-12 Shotgun", rarity: "uncommon", emoji: "💥", color: 0x22c55e };
-  if (score >= 4)  return { name: "MP5 Submachine Gun", rarity: "uncommon", emoji: "�", color: 0x22c55e };
-  if (score >= 1)  return { name: "Desert Eagle Pistol", rarity: "common", emoji: "🔫", color: 0x94a3b8 };
+  if (score >= 60) return { name: "Minigun", rarity: "legendary", emoji: "⚙️", color: 0xef4444 };
+  if (score >= 48) return { name: "Flamethrower", rarity: "legendary", emoji: "🔥", color: 0xf97316 };
+  if (score >= 36) return { name: "Sniper Rifle (AWM)", rarity: "epic", emoji: "🎯", color: 0x8b5cf6 };
+  if (score >= 28) return { name: "M4A1 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
+  if (score >= 20) return { name: "AK-47 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
+  if (score >= 14) return { name: "SPAS-12 Shotgun", rarity: "uncommon", emoji: "💥", color: 0x22c55e };
+  if (score >= 8)  return { name: "MP5 Submachine Gun", rarity: "uncommon", emoji: "🔫", color: 0x22c55e };
+  if (score >= 2)  return { name: "Desert Eagle Pistol", rarity: "common", emoji: "🔫", color: 0x94a3b8 };
   return { name: "Better Luck Next Time", rarity: "none", emoji: "😔", color: 0x475569 };
 }
 
@@ -88,23 +88,30 @@ export async function POST(req: Request) {
       common: "⬜⬜⬛⬛⬛",
       none: "⬛⬛⬛⬛⬛",
     };
+    const winMessage = prize.rarity === "none"
+      ? `❌ **${session.username}** played Whack-a-Mole but didn't score high enough.`
+      : `🎉 **${session.username} WON ${prize.name.toUpperCase()}!**`;
+    
+    const description = prize.rarity === "none"
+      ? `Score: **${score} hits** — No prize this week. Better luck next time!`
+      : `Congratulations! You earned **${prize.name}** (${prize.rarity.toUpperCase()} rarity)`;
+
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        content: winMessage,
         username: "NewHopeGGN 🐹 Whack-a-Mole",
         embeds: [{
-          title: prize.rarity === "none" ? `${prize.emoji} No prize this week` : `${prize.emoji} Whack-a-Mole Winner!`,
-          description: prize.rarity !== "none"
-            ? `**${session.username}** earned a weapon reward!`
-            : `**${session.username}** played but didn't score high enough. Better luck next week!`,
+          title: prize.rarity === "none" ? "No Prize This Week" : `🎁 Prize: ${prize.emoji} ${prize.name}`,
+          description,
           color: prize.color,
           fields: [
-            { name: "Player", value: session.username, inline: true },
-            { name: "Score", value: `**${score} hits**`, inline: true },
-            { name: "Prize", value: prize.rarity !== "none" ? `${prize.emoji} ${prize.name}` : "No prize", inline: true },
-            { name: "Rarity", value: `${rarityBar[prize.rarity] ?? ""} ${prize.rarity.toUpperCase()}`, inline: false },
-            { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
+            { name: "👤 Player", value: session.username, inline: true },
+            { name: "🎯 Score", value: `**${score} hits**`, inline: true },
+            { name: "🏆 Prize Won", value: prize.rarity !== "none" ? `${prize.emoji} **${prize.name}**` : "No prize", inline: true },
+            { name: "⭐ Rarity", value: `${rarityBar[prize.rarity] ?? ""} ${prize.rarity.toUpperCase()}`, inline: false },
+            { name: "🆔 Discord ID", value: `\`${session.discord_id}\``, inline: false },
           ],
           thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
           footer: { text: "NewHopeGGN Whack-a-Mole • Once per week" },

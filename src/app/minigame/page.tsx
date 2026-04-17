@@ -262,9 +262,12 @@ export default function MinigamePage() {
       spawnOne();
     } else {
       playMiss();
+      scoreRef.current = Math.max(0, scoreRef.current - 1);
+      setScore(Math.max(0, scoreRef.current));
       setMisses((m) => m + 1);
       setMissIdx(idx);
-      setTimeout(() => setMissIdx(null), 250);
+      setScoreFlash("-1 ❌");
+      setTimeout(() => { setMissIdx(null); setScoreFlash(null); }, 300);
     }
   }
 
@@ -286,7 +289,7 @@ export default function MinigamePage() {
           Infected Mole <span className="bg-[linear-gradient(135deg,#4ade80,#22c55e)] bg-clip-text text-transparent">Hunt</span>
         </h1>
         <p className="mt-2 text-slate-400 text-sm max-w-lg">
-          Survivors are emerging from contaminated ground. Whack the regular moles 🐹, but <span className="text-rose-400 font-semibold">avoid the infected ☣️</span> — hitting them costs <span className="text-rose-400 font-semibold">−2 pts</span>. Once per week.
+          Survivors are emerging from contaminated ground. Whack the regular moles 🐹 for +1 pt. <span className="text-rose-400 font-semibold">Miss and lose −1 pt</span>. <span className="text-rose-400 font-semibold">Hit infected ☣️ and lose −2 pts</span>. Once per week.
         </p>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_280px]">
