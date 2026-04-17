@@ -30,7 +30,6 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
   ],
 });
 
@@ -45,19 +44,35 @@ client.once("clientReady", async () => {
 
 async function syncMembers() {
   try {
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const members = await guild.members.fetch();
+    // Use Discord REST API — no privileged GuildMembers intent required
+    const DISCORD_TOKEN = BOT_TOKEN;
+    let allMembers = [];
+    let after = "0";
+    const LIMIT = 1000;
 
-    const payload = [...members.values()].map(m => ({
+    while (true) {
+      const res = await fetch(
+        `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=${LIMIT}&after=${after}`,
+        { headers: { Authorization: `Bot ${DISCORD_TOKEN}` } }
+      );
+      if (!res.ok) { console.error("[bot] Discord members REST failed:", res.status); break; }
+      const batch = await res.json();
+      if (!batch.length) break;
+      allMembers = allMembers.concat(batch);
+      if (batch.length < LIMIT) break;
+      after = batch[batch.length - 1].user.id;
+    }
+
+    const payload = allMembers.map(m => ({
       discord_id:   m.user.id,
       username:     m.user.username,
-      display_name: m.displayName ?? m.user.globalName ?? m.user.username,
-      avatar_url:   m.user.displayAvatarURL({ size: 64 }),
+      display_name: m.nick ?? m.user.global_name ?? m.user.username,
+      avatar_url:   m.user.avatar
+                     ? `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png?size=64`
+                     : `https://cdn.discordapp.com/embed/avatars/0.png`,
       is_bot:       m.user.bot ?? false,
-      joined_at:    m.joinedAt?.toISOString() ?? null,
-      roles:        m.roles.cache
-                     .filter(r => r.id !== guild.id)
-                     .map(r => r.name),
+      joined_at:    m.joined_at ?? null,
+      roles:        m.roles ?? [],
     }));
 
     const res = await fetch(`${SITE_URL}/api/discord/members-sync`, {
