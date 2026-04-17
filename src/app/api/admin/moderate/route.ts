@@ -56,8 +56,13 @@ export async function POST(req: Request) {
     });
     discordResult = { ok: res.ok, status: res.status, body: await res.text().catch(() => "") };
     if (!res.ok && res.status !== 204) {
+      const errBody = discordResult.body;
+      let hint = "";
+      if (res.status === 403 && errBody.includes("Missing Permissions")) {
+        hint = " Fix: (1) Give bot 'Ban Members' permission. (2) Drag bot role ABOVE target member's highest role in Server Settings > Roles.";
+      }
       return NextResponse.json(
-        { ok: false, error: `Discord ban failed (${res.status}): ${discordResult.body}` },
+        { ok: false, error: `Discord ban failed (${res.status}): ${errBody}${hint}` },
         { status: 502 },
       );
     }
