@@ -117,7 +117,7 @@ export function AdminPanelClient() {
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "streamers" | "lottery">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery">("dashboard");
   const [roster, setRoster] = useState<AdminEntry[]>([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
@@ -411,824 +411,422 @@ export function AdminPanelClient() {
     setBroadcastStatus(`Preset loaded: ${preset.label}`);
   }
 
-  return (
-    <div className="grid gap-6">
-      {!isAuthed ? (
-        <section className="rz-surface rz-panel-border max-w-xl rounded-[2rem] p-6">
-          <div className="rz-chip">Locked Access</div>
-          <h2 className="mt-4 text-2xl font-semibold text-white">Admin sign in</h2>
-          <p className="mt-2 text-sm text-slate-300">
-            Sign in with your Discord account. Only authorized admins can access this panel.
-          </p>
+  const pendingAdmins = roster.filter((a) => a.status === "pending").length;
+  const pendingStreamers = streamers.filter((s) => s.status === "pending").length;
 
+  const tabs = [
+    { id: "dashboard" as const, label: "Dashboard", icon: "📊" },
+    { id: "roster"    as const, label: "Roster",    icon: "👥", badge: pendingAdmins },
+    { id: "members"   as const, label: "Members",   icon: "🔍" },
+    { id: "broadcast" as const, label: "Broadcast", icon: "📢" },
+    { id: "streamers" as const, label: "Streamers", icon: "📺", badge: pendingStreamers },
+    { id: "lottery"   as const, label: "Lottery",   icon: "🎰" },
+  ] as const;
+
+  type TabId = (typeof tabs)[number]["id"];
+
+  function switchTab(id: TabId) {
+    setActiveTab(id as typeof activeTab);
+    if (id === "roster")    void loadRoster();
+    if (id === "streamers") void loadStreamers();
+    if (id === "lottery")   void loadLottery();
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col pb-20 md:pb-6">
+      {!isAuthed ? (
+        <section className="mx-auto mt-12 w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950/80 p-6">
+          <div className="text-center">
+            <div className="text-4xl">🔐</div>
+            <h2 className="mt-3 text-xl font-bold text-white">Admin Sign In</h2>
+            <p className="mt-1 text-sm text-slate-400">Sign in with Discord to access the panel.</p>
+          </div>
           <a
             href="/auth/admin/start"
-            className="mt-6 flex h-12 items-center justify-center gap-3 rounded-2xl bg-[#5865F2] px-5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:bg-[#4752c4]"
+            className="mt-6 flex h-12 items-center justify-center gap-3 rounded-2xl bg-[#5865F2] text-sm font-semibold text-white transition hover:bg-[#4752c4]"
           >
-            <svg width="20" height="20" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 10.6 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4c.4-.3.7-.6 1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36.2 36.2 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.7-9 .2.2 0 0 0 .1-.2c1.5-14.9-2.5-27.8-10.5-39.2a.2.2 0 0 0-.1 0ZM23.7 36.2c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z" fill="currentColor"/>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 71 55" fill="currentColor"><path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5a.2.2 0 0 0-.2-.1A58.4 58.4 0 0 0 10.6 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4c.4-.3.7-.6 1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36.2 36.2 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.7 58.7 0 0 0 17.7-9 .2.2 0 0 0 .1-.2c1.5-14.9-2.5-27.8-10.5-39.2a.2.2 0 0 0-.1 0ZM23.7 36.2c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z"/></svg>
             Sign in with Discord
           </a>
-
-          {authError || statsError ? (
-            <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-              {authError || statsError}
-            </div>
-          ) : null}
+          {(authError || statsError) && (
+            <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{authError || statsError}</div>
+          )}
         </section>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setActiveTab("dashboard")} className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "dashboard" ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>Dashboard</button>
-            <button type="button" onClick={() => { setActiveTab("roster"); void loadRoster(); }} className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "roster" ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
-              Admin Roster
-              {roster.filter((a) => a.status === "pending").length > 0 && (<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-slate-950">{roster.filter((a) => a.status === "pending").length}</span>)}
+          {/* ── Desktop top nav ── */}
+          <div className="mb-5 hidden flex-wrap gap-2 md:flex">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => switchTab(tab.id)}
+                className={`relative flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === tab.id
+                    ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
+                    : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+                {"badge" in tab && tab.badge > 0 && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold text-slate-950">{tab.badge}</span>
+                )}
+              </button>
+            ))}
+            <button type="button" onClick={handleLogout} className="ml-auto rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10">
+              Sign out
             </button>
-            <button type="button" onClick={() => { setActiveTab("streamers"); void loadStreamers(); }} className={`relative rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "streamers" ? "border-violet-300/30 bg-violet-400/10 text-violet-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
-              📺 Streamers
-              {streamers.filter((s) => s.status === "pending").length > 0 && (<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-400 text-[10px] font-bold text-slate-950">{streamers.filter((s) => s.status === "pending").length}</span>)}
-            </button>
-            <button type="button" onClick={() => { setActiveTab("lottery"); void loadLottery(); }} className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${activeTab === "lottery" ? "border-amber-300/30 bg-amber-400/10 text-amber-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>🎰 Lottery</button>
           </div>
 
-          {activeTab === "roster" ? (
-            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-              <div className="rz-chip">👥 Admin Roster</div>
-              <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">Staff & Admin Panel</h2>
-                  <p className="mt-1 text-sm text-slate-400">All staff appear here. Approve pending requests or revoke access.</p>
-                </div>
-                <div className="flex gap-3 text-center">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-2">
-                    <div className="text-lg font-black text-emerald-400">{roster.filter(r => r.status === "approved").length}</div>
-                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Approved</div>
-                  </div>
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/8 px-4 py-2">
-                    <div className="text-lg font-black text-amber-400">{roster.filter(r => r.status === "pending").length}</div>
-                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Pending</div>
-                  </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-black/20 px-4 py-2">
-                    <div className="text-lg font-black text-white">{roster.filter(r => r.activeNow).length}</div>
-                    <div className="text-[10px] text-stone-500 uppercase tracking-wide">Online Now</div>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-6 grid gap-3">
-                {rosterLoading ? (
-                  <div className="text-sm text-slate-400">Loading...</div>
-                ) : rosterError ? (
-                  <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{rosterError}</div>
-                ) : roster.length === 0 ? (
-                  <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
-                    No admins have attempted login yet.
-                  </div>
-                ) : (
-                  roster.map((entry) => (
-                    <div key={entry.id} className="flex flex-col gap-3 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="relative shrink-0">
-                          {entry.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={entry.avatarUrl} alt={entry.username} className="h-10 w-10 rounded-full border border-white/10 object-cover" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300">
-                              {entry.username.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-950 ${
-                            entry.activeNow ? "bg-emerald-400" : "bg-rose-500"
-                          }`} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="text-sm font-semibold text-white">{entry.username}</div>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                              entry.activeNow ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
-                            }`}>
-                              {entry.activeNow ? "Active" : "Inactive"}
-                            </span>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              entry.status === "approved" ? "bg-emerald-500/15 text-emerald-200"
-                              : entry.status === "denied" ? "bg-rose-500/15 text-rose-200"
-                              : "bg-amber-400/15 text-amber-200"
-                            }`}>
-                              {entry.status}
-                            </span>
-                          </div>
-                          <div className="mt-0.5 text-xs text-slate-500">ID: {entry.discordId}</div>
-                          <div className="mt-0.5 text-xs text-slate-500">
-                            {entry.lastActiveAt
-                              ? `Last seen: ${new Date(entry.lastActiveAt).toLocaleString()}`
-                              : entry.isOwner
-                              ? "Pre-seeded — not yet signed in"
-                              : `Added: ${new Date(entry.addedAt).toLocaleString()}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {entry.isOwner ? (
-                          <div className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 py-2">
-                            <span className="text-sm">👑</span>
-                            <span className="text-xs font-semibold text-amber-200">Owner</span>
-                          </div>
-                        ) : (
-                          <>
-                            {entry.status !== "approved" && (
-                              <button
-                                type="button"
-                                disabled={rosterActionLoading === entry.discordId + "approved"}
-                                onClick={() => void handleRosterAction(entry.discordId, "approved")}
-                                className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-50"
-                              >
-                                Approve
-                              </button>
-                            )}
-                            {entry.status !== "denied" && (
-                              <button
-                                type="button"
-                                disabled={rosterActionLoading === entry.discordId + "denied"}
-                                onClick={() => void handleRosterAction(entry.discordId, "denied")}
-                                className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-50"
-                              >
-                                Deny
-                              </button>
-                            )}
-                            {entry.status === "approved" && (
-                              <button
-                                type="button"
-                                disabled={rosterActionLoading === entry.discordId + "pending"}
-                                onClick={() => void handleRosterAction(entry.discordId, "pending")}
-                                className="rounded-2xl border border-slate-400/20 bg-slate-500/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-500/20 disabled:opacity-50"
-                              >
-                                Revoke
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))
+          {/* ── Mobile sticky bottom nav ── */}
+          <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-white/10 bg-slate-950/95 backdrop-blur-md md:hidden">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => switchTab(tab.id)}
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold transition ${
+                  activeTab === tab.id ? "text-cyan-300" : "text-slate-500"
+                }`}
+              >
+                <span className="text-lg leading-none">{tab.icon}</span>
+                {tab.label}
+                {"badge" in tab && tab.badge > 0 && (
+                  <span className="absolute right-2 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[8px] font-bold text-slate-950">{tab.badge}</span>
                 )}
-              </div>
-            </section>
-          ) : null}
+              </button>
+            ))}
+          </nav>
 
-          {activeTab === "streamers" ? (
-            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-              <div className="rz-chip">📺 Streamers</div>
-              <h2 className="mt-3 text-2xl font-semibold text-white">Manage Streamers</h2>
-              <p className="mt-2 text-sm text-slate-300">Approve or deny streamer applications. Approved streamers appear on the public streamers page.</p>
-              <div className="mt-6 grid gap-3">
-                {streamersLoading ? <div className="text-sm text-slate-400">Loading...</div> : streamers.length === 0 ? (
-                  <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">No streamer applications yet.</div>
-                ) : streamers.map((s) => (
-                  <div key={s.id} className="flex flex-col gap-3 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {s.avatarUrl ? <img src={s.avatarUrl} alt={s.username} className="h-10 w-10 rounded-full object-cover border border-white/10" /> : <div className="h-10 w-10 rounded-full bg-violet-500/20 flex items-center justify-center text-sm font-bold text-violet-300">{s.username[0]?.toUpperCase()}</div>}
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-white">{s.username}</div>
-                        <div className="text-xs text-slate-400 truncate">{s.streamTitle}</div>
-                        <a href={s.streamUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:underline truncate block">{s.streamUrl}</a>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-500 capitalize">{s.platform}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.status === "approved" ? "bg-emerald-500/15 text-emerald-300" : s.status === "denied" ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {s.status !== "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "approved"} onClick={() => void handleStreamerAction(s.discordId, "approved")} className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/20 disabled:opacity-50">Approve</button>}
-                      {s.status !== "denied" && <button type="button" disabled={streamerActionLoading === s.discordId + "denied"} onClick={() => void handleStreamerAction(s.discordId, "denied")} className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20 disabled:opacity-50">Deny</button>}
-                      {s.status === "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "pending"} onClick={() => void handleStreamerAction(s.discordId, "pending")} className="rounded-2xl border border-slate-400/20 bg-slate-500/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-500/20 disabled:opacity-50">Revoke</button>}
-                    </div>
+          {/* ════ DASHBOARD ════ */}
+          {activeTab === "dashboard" && (
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white">Overview</h2>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => void loadStats()} disabled={refreshing} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50">
+                    {refreshing ? "Syncing…" : "↻ Refresh"}
+                  </button>
+                  <button type="button" onClick={handleLogout} className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300">Sign out</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: "Active Now", value: stats?.summary.activeNowCount ?? 0, color: "text-emerald-400" },
+                  { label: "Total Members", value: stats?.summary.totalMembersTracked ?? 0, color: "text-cyan-400" },
+                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "text-violet-400" },
+                  { label: "Events", value: stats?.summary.totalEvents ?? 0, color: "text-amber-400" },
+                ].map((s) => (
+                  <div key={s.label} className="rz-surface rz-panel-border rounded-2xl p-4">
+                    <div className="text-[11px] uppercase tracking-widest text-slate-500">{s.label}</div>
+                    <div className={`mt-2 text-3xl font-black ${s.color}`}>{s.value}</div>
                   </div>
                 ))}
               </div>
-            </section>
-          ) : null}
-
-          {activeTab === "lottery" ? (
-            <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-              <div className="rz-chip">🎰 Lottery</div>
-              <h2 className="mt-3 text-2xl font-semibold text-white">Lottery Manager</h2>
-              <p className="mt-2 text-sm text-slate-300">Draw a winner from all entered users. The winner is announced on Discord and all entries are cleared.</p>
-              <div className="mt-5 flex flex-col gap-3 max-w-lg">
-                <label className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Prize Label</label>
-                <input value={lotteryPrize} onChange={(e) => setLotteryPrize(e.target.value)} className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" />
-                <button onClick={() => void handleDrawWinner()} disabled={lotteryDrawing || lotteryEntries.length === 0} className="h-12 rounded-2xl bg-[linear-gradient(135deg,#facc15,#f97316)] text-sm font-bold text-slate-950 hover:scale-[1.02] transition disabled:opacity-50">
-                  {lotteryDrawing ? "Drawing..." : `🎲 Draw Winner (${lotteryEntries.length} entries)`}
-                </button>
-                {lotteryStatus && <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-200">{lotteryStatus}</div>}
-              </div>
-              <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Current Entries ({lotteryEntries.length})</div>
-                  {lotteryLoading ? <div className="text-sm text-slate-400">Loading...</div> : lotteryEntries.length === 0 ? <div className="text-sm text-slate-500">No entries yet.</div> : (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {lotteryEntries.map((e) => (
-                        <div key={e.id} className="flex items-center gap-2 rounded-2xl border border-white/8 bg-slate-950/60 px-3 py-2">
-                          {e.avatarUrl ? <img src={e.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="h-7 w-7 rounded-full bg-amber-500/20 flex items-center justify-center text-xs text-amber-300 font-bold">{e.username[0]?.toUpperCase()}</div>}
-                          <div className="text-sm text-white">{e.username}</div>
-                          <div className="ml-auto text-xs text-slate-500">{new Date(e.enteredAt).toLocaleTimeString()}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Past Winners</div>
-                  {lotteryDraws.length === 0 ? <div className="text-sm text-slate-500">No draws yet.</div> : (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {lotteryDraws.map((d) => (
-                        <div key={d.id} className="flex items-center gap-2 rounded-2xl border border-white/8 bg-slate-950/60 px-3 py-2">
-                          <span className="text-lg">🏆</span>
-                          <div>
-                            <div className="text-sm font-semibold text-white">{d.winnerUsername}</div>
-                            <div className="text-xs text-slate-400">{d.prize}</div>
-                          </div>
-                          <div className="ml-auto text-xs text-slate-500">{new Date(d.drawnAt).toLocaleDateString()}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          ) : null}
-
-          {activeTab === "dashboard" ? (<><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Now</div>
-              <div className="mt-3 text-4xl font-semibold text-white">
-                {stats?.summary.activeNowCount ?? 0}
-              </div>
-              <div className="mt-2 text-sm text-slate-300">
-                Members active in the last {stats?.activeWindowMinutes ?? 15} minutes.
-              </div>
-            </div>
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">
-                Members Tracked
-              </div>
-              <div className="mt-3 text-4xl font-semibold text-white">
-                {stats?.summary.totalMembersTracked ?? 0}
-              </div>
-              <div className="mt-2 text-sm text-slate-300">Unique members in the activity log.</div>
-            </div>
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Active Days</div>
-              <div className="mt-3 text-4xl font-semibold text-white">
-                {stats?.summary.activeDaysObserved ?? 0}
-              </div>
-              <div className="mt-2 text-sm text-slate-300">Distinct days with tracked activity.</div>
-            </div>
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Event Feed</div>
-              <div className="mt-3 text-4xl font-semibold text-white">
-                {stats?.summary.totalEvents ?? 0}
-              </div>
-              <div className="mt-2 text-sm text-slate-300">Live events powering the tracker.</div>
-            </div>
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Last Sync</div>
-              <div className="mt-3 text-xl font-semibold text-white">
-                {lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : "Waiting"}
-              </div>
-              <div className="mt-2 text-sm text-slate-300">
-                Refreshes automatically every 15 seconds.
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="grid gap-6">
-              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="rz-chip">Discord Broadcast</div>
-                    <h2 className="mt-3 text-2xl font-semibold text-white">
-                      Send a custom message
-                    </h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-                  >
-                    Log out
-                  </button>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  {pageOptions.map((option) => (
-                    <div
-                      key={option.value}
-                      className={`rounded-[1.5rem] border px-4 py-4 ${
-                        target === option.value
-                          ? "border-cyan-300/30 bg-cyan-400/10"
-                          : "border-white/8 bg-slate-950/55"
-                      }`}
-                    >
-                      <div className="text-sm font-semibold text-white">{option.label}</div>
-                      <div className="mt-1 text-sm text-slate-300">{option.note}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5">
-                  <div className="text-sm font-semibold text-white">Quick presets</div>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    {broadcastPresets.map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => applyPreset(preset)}
-                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
-                      >
-                        {preset.label}
+              <div className="rz-surface rz-panel-border rounded-2xl p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-sm font-semibold text-white">Recent Activity</div>
+                  <div className="flex gap-1 overflow-x-auto">
+                    {["all", "login", "support_ticket", "purchase_intent"].map((t) => (
+                      <button key={t} type="button" onClick={() => setEventFilter(t)}
+                        className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition ${eventFilter === t ? "bg-cyan-400/20 text-cyan-200" : "text-slate-400 hover:text-white"}`}>
+                        {t === "all" ? "All" : formatEventType(t)}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                <form className="mt-6 grid gap-4" onSubmit={handleBroadcast}>
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Target route</span>
-                    <select
-                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
-                      value={target}
-                      onChange={(e) => setTarget(e.target.value)}
-                    >
-                      {pageOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Custom audience label</span>
-                    <input
-                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                      value={audienceLabel}
-                      onChange={(e) => setAudienceLabel(e.target.value)}
-                      placeholder="staff chat, main page, bans, alerts..."
-                      maxLength={80}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Message title</span>
-                    <input
-                      className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Maintenance, promotion, outage, reminder..."
-                      maxLength={80}
-                      required
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Embed color</span>
-                    <div className="flex gap-3">
-                      <input
-                        type="color"
-                        className="h-12 w-16 rounded-2xl border border-white/10 bg-slate-950/70 p-1"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                      />
-                      <input
-                        className="h-12 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        placeholder="#22c55e"
-                        maxLength={7}
-                      />
-                    </div>
-                  </label>
-
-                  <div className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Embed image</span>
-                    <div className="grid gap-2">
-                      <div
-                        className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-slate-950/55 px-4 py-4 transition hover:border-cyan-300/40"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {imagePreview ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={imagePreview} alt="preview" className="h-12 w-12 rounded-xl object-cover border border-white/10" />
-                        ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm font-semibold text-white">
-                            {imageFile ? imageFile.name : "Upload an image"}
-                          </div>
-                          <div className="mt-0.5 text-xs text-slate-400">JPEG, PNG, GIF, WebP · max 8 MB</div>
-                        </div>
-                        {imageFile && (
-                          <button
-                            type="button"
-                            className="ml-auto text-xs text-slate-400 hover:text-red-300"
-                            onClick={(ev) => { ev.stopPropagation(); setImageFile(null); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                      />
-                      <div className="flex items-center gap-3">
-                        <div className="h-px flex-1 bg-white/10" />
-                        <span className="text-xs text-slate-500">or paste URL</span>
-                        <div className="h-px flex-1 bg-white/10" />
-                      </div>
-                      <input
-                        className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                        value={imageUrl}
-                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(""); } }}
-                        placeholder="https://example.com/banner.png"
-                        maxLength={500}
-                        disabled={!!imageFile}
-                      />
-                    </div>
-                  </div>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-semibold text-white">Discord message</span>
-                    <textarea
-                      className="min-h-40 rounded-[1.5rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Write the exact message you want posted to Discord."
-                      maxLength={1500}
-                      required
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={broadcastLoading}
-                    className="h-12 rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#67e8f9)] px-5 text-sm font-semibold text-slate-950 transition hover:scale-[1.01] disabled:opacity-70"
-                  >
-                    {broadcastLoading ? "Sending..." : "Send to Discord"}
-                  </button>
-
-                  {broadcastStatus ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100">
-                      {broadcastStatus}
-                    </div>
-                  ) : null}
-                </form>
-
-                <div className="mt-6 rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-                  <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
-                    Message Preview
-                  </div>
-                  <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-white/8 bg-[#111827]">
-                    <div className="h-1.5 w-full" style={{ backgroundColor: color || "#22c55e" }} />
-                    <div className="p-4">
-                      <div className="text-sm font-semibold text-white">
-                        {title || "Your title will appear here"}
-                      </div>
-                      <div className="mt-2 text-sm leading-6 text-slate-300">
-                        {message || "Your Discord message preview will appear here."}
-                      </div>
-                      <div className="mt-3 text-xs text-slate-400">
-                        Route: {pageOptions.find((option) => option.value === target)?.label || target}
-                        {" | "}
-                        Label: {audienceLabel || "Default"}
-                      </div>
-                      {imageUrl ? (
-                        <div className="mt-4">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={imageUrl}
-                            alt="Discord embed preview"
-                            className="max-h-48 w-full rounded-xl border border-white/8 object-cover"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="rz-chip">Recent Events</div>
-                    <h2 className="mt-3 text-2xl font-semibold text-white">Activity stream</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void loadStats()}
-                    disabled={refreshing}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-70"
-                  >
-                    {refreshing ? "Refreshing..." : "Refresh now"}
-                  </button>
-                </div>
-
-                <div className="mt-5 grid gap-3 lg:grid-cols-5">
-                  <button
-                    type="button"
-                    onClick={() => setEventFilter("all")}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm ${
-                      eventFilter === "all"
-                        ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-                        : "border-white/8 bg-slate-950/55 text-slate-300"
-                    }`}
-                  >
-                    All events
-                    <div className="mt-1 text-xs opacity-80">{stats?.recent.length ?? 0}</div>
-                  </button>
-                  {["login", "support_ticket", "purchase_intent", "admin_broadcast"].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setEventFilter(type)}
-                      className={`rounded-2xl border px-4 py-3 text-left text-sm ${
-                        eventFilter === type
-                          ? "border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-                          : "border-white/8 bg-slate-950/55 text-slate-300"
-                      }`}
-                    >
-                      {formatEventType(type)}
-                      <div className="mt-1 text-xs opacity-80">{eventTotals[type] ?? 0}</div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-5 grid gap-3">
+                <div className="grid gap-2 max-h-[420px] overflow-y-auto">
+                  {filteredRecent.length === 0 && <div className="py-6 text-center text-sm text-slate-500">No events yet.</div>}
                   {filteredRecent.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex flex-col gap-2 rounded-[1.5rem] border border-white/8 bg-slate-950/65 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center gap-3">
-                          {entry.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={entry.avatarUrl}
-                              alt={entry.username || "User avatar"}
-                              className="h-10 w-10 rounded-full border border-white/10 object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-slate-300">
-                              {(entry.username || "G").slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-sm font-semibold text-white">
-                              {entry.username || "Guest"} | {formatEventType(entry.type)}
-                            </div>
-                            {entry.globalName ? (
-                              <div className="mt-1 text-xs text-cyan-200/80">
-                                Display name: {entry.globalName}
-                              </div>
-                            ) : null}
-                            <div className="mt-1 text-xs text-slate-400">
-                              {entry.discordId ? `Discord ID: ${entry.discordId}` : "No Discord ID recorded"}
-                              {entry.discriminator ? ` | Tag: ${entry.discriminator}` : ""}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">{entry.details}</div>
-                        {entry.profile ? (
-                          <div className="mt-2 text-xs text-slate-400">
-                            Locale: {String(entry.profile.locale ?? "N/A")} | Verified:{" "}
-                            {String(entry.profile.verified ?? "Unknown")}
-                          </div>
-                        ) : null}
+                    <div key={entry.id} className="flex items-center gap-3 rounded-xl border border-white/8 bg-slate-950/60 px-3 py-2.5">
+                      {entry.avatarUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={entry.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover border border-white/10" />
+                        : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-bold text-slate-300">{(entry.username || "G")[0].toUpperCase()}</div>
+                      }
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-white">{entry.username || "Guest"}</div>
+                        <div className="text-xs text-slate-400">{formatEventType(entry.type)} · {entry.details}</div>
                       </div>
-                      <div className="text-xs text-slate-400">
-                        {new Date(entry.createdAt).toLocaleString()}
-                      </div>
+                      <div className="shrink-0 text-[11px] text-slate-500">{new Date(entry.createdAt).toLocaleTimeString()}</div>
                     </div>
                   ))}
                 </div>
-              </section>
+              </div>
             </div>
+          )}
 
-            <div className="grid gap-6">
-              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-                <div className="rz-chip">Member Tracker</div>
-                <h2 className="mt-3 text-2xl font-semibold text-white">Live member activity</h2>
-                <p className="mt-2 text-sm text-slate-300">
-                  Search members, see who is active now, and open their Discord profile data.
-                </p>
-                <div className="mt-4">
-                  <input
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                    value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
-                    placeholder="Search by username, display name, or Discord ID"
-                  />
-                </div>
-                <div className="mt-5 grid gap-3">
-                  {filteredMembers.length ? (
-                    filteredMembers.map((member) => (
-                      <button
-                        key={member.discordId}
-                        type="button"
-                        onClick={() => setSelectedMemberId(member.discordId)}
-                        className={`rounded-[1.5rem] border px-4 py-4 text-left transition ${
-                          selectedMember?.discordId === member.discordId
-                            ? member.isAdmin
-                              ? "border-amber-400/40 bg-amber-400/10"
-                              : "border-cyan-300/30 bg-cyan-400/10"
-                            : member.isAdmin
-                              ? "border-amber-400/20 bg-amber-400/5"
-                              : "border-white/8 bg-slate-950/65"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <div className="relative shrink-0">
-                              {member.avatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={member.avatarUrl}
-                                  alt={member.username}
-                                  className={`h-12 w-12 rounded-full object-cover ${
-                                    member.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"
-                                  }`}
-                                />
-                              ) : (
-                                <div className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold ${
-                                  member.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"
-                                }`}>
-                                  {member.username.slice(0, 1).toUpperCase()}
-                                </div>
-                              )}
-                              {member.isAdmin && (
-                                <span className="absolute -bottom-0.5 -right-0.5 text-[11px] leading-none">👑</span>
-                              )}
-                            </div>
-                            <div>
-                              <div className={`text-base font-semibold ${
-                                member.isAdmin ? "text-amber-200" : "text-white"
-                              }`}>
-                                {getMemberName(member)}
-                                {member.isAdmin && <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-400/80">Admin</span>}
-                              </div>
-                              {member.globalName ? (
-                                <div className="mt-1 text-xs text-slate-300">@{member.username}</div>
-                              ) : null}
-                              <div className="mt-1 text-xs text-slate-400">
-                                Discord ID: {member.discordId}
-                                {member.discriminator ? ` | Tag: ${member.discriminator}` : ""}
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              member.activeNow
-                                ? "bg-emerald-500/15 text-emerald-200"
-                                : "bg-white/8 text-slate-300"
-                            }`}
-                          >
-                            {member.activeNow ? "Live" : "Idle"}
-                          </div>
-                        </div>
-                        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <div className="text-slate-500">Events</div>
-                            <div className="mt-1 font-semibold text-white">{member.events}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">Days active</div>
-                            <div className="mt-1 font-semibold text-white">{member.activeDays}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">Last seen</div>
-                            <div className="mt-1 font-semibold text-white">
-                              {new Date(member.lastActiveAt).toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
-                      No member activity has been logged yet.
+          {/* ════ MEMBERS ════ */}
+          {activeTab === "members" && (
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white">All Members <span className="text-sm font-normal text-slate-500">({filteredMembers.length})</span></h2>
+              </div>
+              <input
+                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                placeholder="Search by name or Discord ID…"
+              />
+              {selectedMember && (
+                <div className={`rounded-2xl border p-4 ${selectedMember.isAdmin ? "border-amber-400/30 bg-amber-400/5" : "border-white/10 bg-white/5"}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      {selectedMember.avatarUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={selectedMember.avatarUrl} alt="" className={`h-14 w-14 rounded-full object-cover ${selectedMember.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"}`} />
+                        : <div className={`flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold ${selectedMember.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"}`}>{selectedMember.username[0].toUpperCase()}</div>
+                      }
+                      {selectedMember.isAdmin && <span className="absolute -bottom-1 -right-1 text-sm">👑</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className={`flex flex-wrap items-center gap-2 font-bold ${selectedMember.isAdmin ? "text-amber-200" : "text-white"}`}>
+                        {getMemberName(selectedMember)}
+                        {selectedMember.isAdmin && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">Admin</span>}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${selectedMember.activeNow ? "bg-emerald-500/20 text-emerald-300" : "bg-white/8 text-slate-400"}`}>{selectedMember.activeNow ? "● Live" : "Idle"}</span>
+                      </div>
+                      <div className="text-xs text-slate-400">@{selectedMember.username} · ID: {selectedMember.discordId}</div>
+                      <div className="mt-1 flex gap-4 text-xs text-slate-400">
+                        <span>Events: <strong className="text-white">{selectedMember.events}</strong></span>
+                        <span>Days: <strong className="text-white">{selectedMember.activeDays}</strong></span>
+                        <span>Last: <strong className="text-white">{new Date(selectedMember.lastActiveAt).toLocaleDateString()}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedMember.profile && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400 sm:grid-cols-4">
+                      <span>Locale: <strong className="text-slate-200">{String(selectedMember.profile.locale ?? "—")}</strong></span>
+                      <span>Verified: <strong className="text-slate-200">{String(selectedMember.profile.verified ?? "—")}</strong></span>
                     </div>
                   )}
                 </div>
-              </section>
-
-              <section className="rz-surface rz-panel-border rounded-[2rem] p-6">
-                <div className="rz-chip">Profile Details</div>
-                <h2 className="mt-3 text-2xl font-semibold text-white">Selected member</h2>
-                {selectedMember ? (
-                  <>
-                    <div className={`mt-5 flex items-center gap-4 rounded-2xl p-3 ${
-                      selectedMember.isAdmin ? "border border-amber-400/20 bg-amber-400/5" : ""
-                    }`}>
-                      <div className="relative shrink-0">
-                        {selectedMember.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={selectedMember.avatarUrl}
-                            alt={selectedMember.username}
-                            className={`h-16 w-16 rounded-full object-cover ${
-                              selectedMember.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"
-                            }`}
-                          />
-                        ) : (
-                          <div className={`flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold ${
-                            selectedMember.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"
-                          }`}>
-                            {selectedMember.username.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        {selectedMember.isAdmin && (
-                          <span className="absolute -bottom-1 -right-1 text-base leading-none">👑</span>
-                        )}
+              )}
+              <div className="grid gap-2 max-h-[520px] overflow-y-auto">
+                {filteredMembers.length === 0 && <div className="py-8 text-center text-sm text-slate-500">No members yet.</div>}
+                {filteredMembers.map((member) => (
+                  <button
+                    key={member.discordId}
+                    type="button"
+                    onClick={() => setSelectedMemberId(member.discordId)}
+                    className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                      selectedMember?.discordId === member.discordId
+                        ? member.isAdmin ? "border-amber-400/40 bg-amber-400/10" : "border-cyan-300/30 bg-cyan-400/10"
+                        : member.isAdmin ? "border-amber-400/15 bg-amber-400/4" : "border-white/8 bg-slate-950/50"
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      {member.avatarUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={member.avatarUrl} alt="" className={`h-10 w-10 rounded-full object-cover ${member.isAdmin ? "border-2 border-amber-400/60" : "border border-white/10"}`} />
+                        : <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${member.isAdmin ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"}`}>{member.username[0].toUpperCase()}</div>
+                      }
+                      {member.isAdmin && <span className="absolute -bottom-0.5 -right-0.5 text-[10px]">👑</span>}
+                      <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-950 ${member.activeNow ? "bg-emerald-400" : "bg-slate-600"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate text-sm font-semibold ${member.isAdmin ? "text-amber-200" : "text-white"}`}>
+                        {getMemberName(member)}
+                        {member.isAdmin && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-400/70">Admin</span>}
                       </div>
-                      <div>
-                        <div className={`text-xl font-semibold flex items-center gap-2 ${
-                          selectedMember.isAdmin ? "text-amber-200" : "text-white"
-                        }`}>
-                          {getMemberName(selectedMember)}
-                          {selectedMember.isAdmin && (
-                            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">Admin</span>
-                          )}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">@{selectedMember.username}</div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          Discord ID: {selectedMember.discordId}
-                        </div>
+                      <div className="text-xs text-slate-500">
+                        {member.events > 0 ? `${member.events} events · ${member.activeDays}d active` : "Discord member"}
                       </div>
                     </div>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
-                        <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
-                          Presence
-                        </div>
-                        <div className="mt-3 text-sm text-slate-300">
-                          Status: {selectedMember.activeNow ? "Live now" : "Idle"}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Last seen: {new Date(selectedMember.lastActiveAt).toLocaleString()}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Active days: {selectedMember.activeDays}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Total events: {selectedMember.events}
-                        </div>
-                      </div>
-                      <div className="rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
-                        <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
-                          Discord Data
-                        </div>
-                        <div className="mt-3 text-sm text-slate-300">
-                          Locale: {String(selectedMember.profile?.locale ?? "Not provided")}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Verified: {String(selectedMember.profile?.verified ?? "Unknown")}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Banner color: {String(selectedMember.profile?.banner_color ?? "None")}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-300">
-                          Accent color: {String(selectedMember.profile?.accent_color ?? "None")}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 rounded-[1.25rem] border border-white/8 bg-slate-950/55 p-4">
-                      <div className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
-                        Raw Discord Profile
-                      </div>
-                      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-slate-300">
-                        {selectedMemberProfileJson || "No raw Discord profile saved yet."}
-                      </pre>
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-4 rounded-[1.5rem] border border-dashed border-white/12 bg-slate-950/45 px-4 py-6 text-sm text-slate-400">
-                    Pick a member from the tracker to view full Discord details.
-                  </div>
-                )}
-              </section>
+                    <div className="shrink-0 text-[11px] text-slate-500">{new Date(member.lastActiveAt).toLocaleDateString()}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
-        </>) : null}
+          )}
+
+          {/* ════ BROADCAST ════ */}
+          {activeTab === "broadcast" && (
+            <div className="grid gap-4 max-w-xl">
+              <h2 className="text-lg font-bold text-white">Send to Discord</h2>
+              <div className="flex flex-wrap gap-2">
+                {broadcastPresets.map((p) => (
+                  <button key={p.label} type="button" onClick={() => applyPreset(p)}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10">
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <form className="grid gap-3" onSubmit={handleBroadcast}>
+                <select className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" value={target} onChange={(e) => setTarget(e.target.value)}>
+                  {pageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <input className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                  value={audienceLabel} onChange={(e) => setAudienceLabel(e.target.value)} placeholder="Audience label (optional)" maxLength={80} />
+                <input className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                  value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Message title *" maxLength={80} required />
+                <div className="flex gap-2">
+                  <input type="color" className="h-11 w-14 rounded-2xl border border-white/10 bg-slate-950/70 p-1" value={color} onChange={(e) => setColor(e.target.value)} />
+                  <input className="h-11 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                    value={color} onChange={(e) => setColor(e.target.value)} placeholder="#22c55e" maxLength={7} />
+                </div>
+                <div className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-slate-950/55 px-4 py-3 transition hover:border-cyan-300/40"
+                  onClick={() => fileInputRef.current?.click()}>
+                  {imagePreview
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={imagePreview} alt="" className="h-10 w-10 rounded-xl object-cover border border-white/10" />
+                    : <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+                  }
+                  <div className="flex-1 text-sm text-slate-300">{imageFile ? imageFile.name : "Upload image (optional)"}</div>
+                  {imageFile && <button type="button" className="text-xs text-slate-500 hover:text-rose-300" onClick={(ev) => { ev.stopPropagation(); setImageFile(null); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}>Remove</button>}
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
+                <input className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                  value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(""); } }}
+                  placeholder="Or paste image URL" maxLength={500} disabled={!!imageFile} />
+                <textarea className="min-h-32 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                  value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your Discord message *" maxLength={1500} required />
+                <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#111827]">
+                  <div className="h-1 w-full" style={{ backgroundColor: color || "#22c55e" }} />
+                  <div className="px-4 py-3">
+                    <div className="text-sm font-semibold text-white">{title || "Preview title"}</div>
+                    <div className="mt-1 text-sm text-slate-400">{message || "Preview message…"}</div>
+                  </div>
+                </div>
+                <button type="submit" disabled={broadcastLoading} className="h-12 rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#67e8f9)] text-sm font-bold text-slate-950 transition hover:scale-[1.01] disabled:opacity-70">
+                  {broadcastLoading ? "Sending…" : "Send to Discord"}
+                </button>
+                {broadcastStatus && <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100">{broadcastStatus}</div>}
+              </form>
+            </div>
+          )}
+
+          {/* ════ ROSTER ════ */}
+          {activeTab === "roster" && (
+            <div className="grid gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-white">Admin Roster</h2>
+                <div className="flex gap-2 text-center">
+                  {[
+                    { label: "Approved", val: roster.filter(r => r.status === "approved").length, color: "text-emerald-400" },
+                    { label: "Pending",  val: roster.filter(r => r.status === "pending").length,  color: "text-amber-400"   },
+                    { label: "Online",   val: roster.filter(r => r.activeNow).length,              color: "text-white"       },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-center">
+                      <div className={`text-base font-black ${s.color}`}>{s.val}</div>
+                      <div className="text-[10px] text-slate-500">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {rosterLoading && <div className="text-sm text-slate-400">Loading…</div>}
+              {rosterError && <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{rosterError}</div>}
+              <div className="grid gap-2">
+                {roster.length === 0 && !rosterLoading && <div className="py-8 text-center text-sm text-slate-500">No admins yet.</div>}
+                {roster.map((entry) => (
+                  <div key={entry.id} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${entry.isOwner ? "border-amber-400/20 bg-amber-400/5" : "border-white/8 bg-slate-950/60"}`}>
+                    <div className="relative shrink-0">
+                      {entry.avatarUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={entry.avatarUrl} alt="" className={`h-10 w-10 rounded-full object-cover ${entry.isOwner ? "border-2 border-amber-400/60" : "border border-white/10"}`} />
+                        : <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${entry.isOwner ? "border-2 border-amber-400/60 bg-amber-400/10 text-amber-200" : "border border-white/10 bg-white/5 text-slate-300"}`}>{entry.username[0].toUpperCase()}</div>
+                      }
+                      <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-950 ${entry.activeNow ? "bg-emerald-400" : "bg-slate-600"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className={`flex flex-wrap items-center gap-1.5 text-sm font-semibold ${entry.isOwner ? "text-amber-200" : "text-white"}`}>
+                        {entry.isOwner && <span>👑</span>}
+                        {entry.username}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${entry.status === "approved" ? "bg-emerald-500/15 text-emerald-300" : entry.status === "denied" ? "bg-rose-500/15 text-rose-300" : "bg-amber-400/15 text-amber-300"}`}>{entry.status}</span>
+                      </div>
+                      <div className="text-xs text-slate-500">{entry.lastActiveAt ? `Last seen ${new Date(entry.lastActiveAt).toLocaleDateString()}` : `Added ${new Date(entry.addedAt).toLocaleDateString()}`}</div>
+                    </div>
+                    {!entry.isOwner && (
+                      <div className="flex shrink-0 gap-1.5">
+                        {entry.status !== "approved" && <button type="button" disabled={rosterActionLoading === entry.discordId + "approved"} onClick={() => void handleRosterAction(entry.discordId, "approved")} className="rounded-xl bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50">✓ Approve</button>}
+                        {entry.status === "approved" && <button type="button" disabled={rosterActionLoading === entry.discordId + "pending"} onClick={() => void handleRosterAction(entry.discordId, "pending")} className="rounded-xl bg-slate-500/15 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-500/25 disabled:opacity-50">Revoke</button>}
+                        {entry.status !== "denied" && entry.status !== "approved" && <button type="button" disabled={rosterActionLoading === entry.discordId + "denied"} onClick={() => void handleRosterAction(entry.discordId, "denied")} className="rounded-xl bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 disabled:opacity-50">✕ Deny</button>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ════ STREAMERS ════ */}
+          {activeTab === "streamers" && (
+            <div className="grid gap-4">
+              <h2 className="text-lg font-bold text-white">Streamers</h2>
+              {streamersLoading && <div className="text-sm text-slate-400">Loading…</div>}
+              <div className="grid gap-2">
+                {streamers.length === 0 && !streamersLoading && <div className="py-8 text-center text-sm text-slate-500">No streamer applications yet.</div>}
+                {streamers.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-slate-950/60 px-4 py-3">
+                    {s.avatarUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={s.avatarUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/10" />
+                      : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">{s.username[0].toUpperCase()}</div>
+                    }
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white">
+                        {s.username}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "approved" ? "bg-emerald-500/15 text-emerald-300" : s.status === "denied" ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
+                      </div>
+                      <div className="truncate text-xs text-slate-400">{s.streamTitle}</div>
+                      <a href={s.streamUrl} target="_blank" rel="noopener noreferrer" className="truncate text-xs text-violet-400 hover:underline">{s.streamUrl}</a>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      {s.status !== "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "approved"} onClick={() => void handleStreamerAction(s.discordId, "approved")} className="rounded-xl bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50">✓</button>}
+                      {s.status === "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "pending"} onClick={() => void handleStreamerAction(s.discordId, "pending")} className="rounded-xl bg-slate-500/15 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-500/25 disabled:opacity-50">Revoke</button>}
+                      {s.status !== "denied" && s.status !== "approved" && <button type="button" disabled={streamerActionLoading === s.discordId + "denied"} onClick={() => void handleStreamerAction(s.discordId, "denied")} className="rounded-xl bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 disabled:opacity-50">✕</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ════ LOTTERY ════ */}
+          {activeTab === "lottery" && (
+            <div className="grid gap-4 max-w-lg">
+              <h2 className="text-lg font-bold text-white">Lottery</h2>
+              <input value={lotteryPrize} onChange={(e) => setLotteryPrize(e.target.value)} className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" placeholder="Prize label" />
+              <button onClick={() => void handleDrawWinner()} disabled={lotteryDrawing || lotteryEntries.length === 0}
+                className="h-12 rounded-2xl bg-[linear-gradient(135deg,#facc15,#f97316)] text-sm font-bold text-slate-950 transition hover:scale-[1.01] disabled:opacity-50">
+                {lotteryDrawing ? "Drawing…" : `🎲 Draw Winner · ${lotteryEntries.length} entries`}
+              </button>
+              {lotteryStatus && <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-200">{lotteryStatus}</div>}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">Current Entries ({lotteryEntries.length})</div>
+                  {lotteryLoading ? <div className="text-sm text-slate-400">Loading…</div> : lotteryEntries.length === 0 ? <div className="text-sm text-slate-500">No entries yet.</div> : (
+                    <div className="grid gap-1.5 max-h-60 overflow-y-auto">
+                      {lotteryEntries.map((e) => (
+                        <div key={e.id} className="flex items-center gap-2 rounded-xl border border-white/8 bg-slate-950/60 px-3 py-2">
+                          {e.avatarUrl ? <img src={e.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-300">{e.username[0].toUpperCase()}</div>}
+                          <div className="flex-1 text-sm text-white">{e.username}</div>
+                          <div className="text-[11px] text-slate-500">{new Date(e.enteredAt).toLocaleTimeString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">Past Winners</div>
+                  {lotteryDraws.length === 0 ? <div className="text-sm text-slate-500">No draws yet.</div> : (
+                    <div className="grid gap-1.5 max-h-60 overflow-y-auto">
+                      {lotteryDraws.map((d) => (
+                        <div key={d.id} className="flex items-center gap-2 rounded-xl border border-white/8 bg-slate-950/60 px-3 py-2">
+                          <span className="text-base">🏆</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-white">{d.winnerUsername}</div>
+                            <div className="truncate text-xs text-slate-400">{d.prize}</div>
+                          </div>
+                          <div className="shrink-0 text-[11px] text-slate-500">{new Date(d.drawnAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
