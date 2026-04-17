@@ -38,6 +38,9 @@ export async function POST(req: Request) {
     { onConflict: "key" }
   );
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[wipe-timer] Supabase error:", JSON.stringify(error));
+    return NextResponse.json({ ok: false, error: error.message, code: error.code }, { status: 500 });
+  }
   return NextResponse.json({ ok: true, wipeAt, label });
 }

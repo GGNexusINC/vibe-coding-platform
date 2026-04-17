@@ -1065,8 +1065,9 @@ export function AdminPanelClient() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ wipeAt: new Date(wipeAt).toISOString(), label: wipeLabel }),
                       });
+                      const data = await res.json().catch(() => ({}));
                       setWipeSaving(false);
-                      setWipeStatus(res.ok ? "✓ Wipe timer saved. Community page updated." : "Failed to save.");
+                      setWipeStatus(res.ok ? "✓ Wipe timer saved. Community page updated." : `Failed: ${data?.error ?? data?.code ?? res.status}`);
                     }}
                     className="h-11 flex-1 rounded-2xl bg-amber-400/15 text-sm font-bold text-amber-300 hover:bg-amber-400/25 disabled:opacity-50 transition"
                   >
