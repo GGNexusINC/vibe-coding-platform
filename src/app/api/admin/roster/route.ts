@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getAdminSession, isAdminDiscordId } from "@/lib/admin-auth";
 import { getRoster, updateAdminStatus, getAdminByDiscordId, upsertAdmin } from "@/lib/admin-roster";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { getActivitySummary } from "@/lib/activity-log";
@@ -59,7 +59,6 @@ export async function GET() {
     const r = rosterMap.get(id);
     const a = activityMap.get(id);
     const p = presenceMap.get(id);
-    // presence is authoritative for activeNow and lastSeen
     const activeNow = p?.activeNow ?? false;
     const lastActiveAt = p?.lastSeen ?? a?.lastActiveAt ?? null;
     return {
@@ -72,6 +71,7 @@ export async function GET() {
       updatedAt: r?.updatedAt ?? lastActiveAt ?? new Date().toISOString(),
       activeNow,
       lastActiveAt,
+      isOwner: isAdminDiscordId(id),
     };
   });
 
@@ -99,6 +99,11 @@ export async function POST(req: Request) {
       { ok: false, error: "discordId and valid status required." },
       { status: 400 },
     );
+  }
+
+  // Owners cannot be revoked or denied
+  if (isAdminDiscordId(discordId)) {
+    return NextResponse.json({ ok: false, error: "Owner accounts cannot be modified." }, { status: 403 });
   }
 
   const entry = await getAdminByDiscordId(discordId);

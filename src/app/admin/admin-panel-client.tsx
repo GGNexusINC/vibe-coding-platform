@@ -52,6 +52,7 @@ type AdminEntry = {
   updatedAt: string;
   activeNow?: boolean;
   lastActiveAt?: string | null;
+  isOwner?: boolean;
 };
 
 const pageOptions = [
@@ -463,36 +464,45 @@ export function AdminPanelClient() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        {entry.status !== "approved" && (
-                          <button
-                            type="button"
-                            disabled={rosterActionLoading === entry.discordId + "approved"}
-                            onClick={() => void handleRosterAction(entry.discordId, "approved")}
-                            className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-50"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {entry.status !== "denied" && (
-                          <button
-                            type="button"
-                            disabled={rosterActionLoading === entry.discordId + "denied"}
-                            onClick={() => void handleRosterAction(entry.discordId, "denied")}
-                            className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-50"
-                          >
-                            Deny
-                          </button>
-                        )}
-                        {entry.status === "approved" && (
-                          <button
-                            type="button"
-                            disabled={rosterActionLoading === entry.discordId + "pending"}
-                            onClick={() => void handleRosterAction(entry.discordId, "pending")}
-                            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
-                          >
-                            Revoke
-                          </button>
+                      <div className="flex items-center gap-2">
+                        {entry.isOwner ? (
+                          <div className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 py-2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-300"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span className="text-xs font-semibold text-amber-200">Owner</span>
+                          </div>
+                        ) : (
+                          <>
+                            {entry.status !== "approved" && (
+                              <button
+                                type="button"
+                                disabled={rosterActionLoading === entry.discordId + "approved"}
+                                onClick={() => void handleRosterAction(entry.discordId, "approved")}
+                                className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {entry.status !== "denied" && (
+                              <button
+                                type="button"
+                                disabled={rosterActionLoading === entry.discordId + "denied"}
+                                onClick={() => void handleRosterAction(entry.discordId, "denied")}
+                                className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-50"
+                              >
+                                Deny
+                              </button>
+                            )}
+                            {entry.status === "approved" && (
+                              <button
+                                type="button"
+                                disabled={rosterActionLoading === entry.discordId + "pending"}
+                                onClick={() => void handleRosterAction(entry.discordId, "pending")}
+                                className="rounded-2xl border border-slate-400/20 bg-slate-500/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-500/20 disabled:opacity-50"
+                              >
+                                Revoke
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
