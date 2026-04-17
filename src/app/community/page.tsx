@@ -94,6 +94,8 @@ export default function CommunityPage() {
   const [msgLoading, setMsgLoading] = useState(true);
   const [noBotYet, setNoBotYet] = useState(false);
   const msgBottomRef = useRef<HTMLDivElement>(null);
+  const lastMsgCount = useRef(0);
+  const isFirstLoad = useRef(true);
 
   async function loadWidget() {
     try {
@@ -124,19 +126,29 @@ export default function CommunityPage() {
     if (chs.length > 0) setChannelList(chs);
   }
 
-  async function loadMessages(channel: string | null) {
+  async function loadMessages(channel: string | null, isRefresh = false) {
     const url = channel
       ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`
       : `/api/discord/messages?limit=60`;
     const res = await fetch(url).catch(() => null);
-    if (!res?.ok) { setMsgLoading(false); return; }
+    if (!res?.ok) { if (!isRefresh) setMsgLoading(false); return; }
     const data = await res.json().catch(() => null);
     const msgs: DiscordMessage[] = data?.messages ?? [];
+    const prevCount = lastMsgCount.current;
+    lastMsgCount.current = msgs.length;
     setMessages(msgs);
     setNoBotYet(msgs.length === 0);
     setMsgLoading(false);
-    setTimeout(() => msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    // Only scroll on first load or when new messages arrive
+    if (isFirstLoad.current || msgs.length > prevCount) {
+      isFirstLoad.current = false;
+      setTimeout(() => msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
+    }
   }
+
+  // Keep activeChannel accessible in interval without re-registering
+  const activeChannelRef = useRef<string | null>(null);
+  activeChannelRef.current = activeChannel;
 
   useEffect(() => {
     void loadWidget();
@@ -145,15 +157,19 @@ export default function CommunityPage() {
     void loadMessages(null);
     const wt = window.setInterval(() => void loadWidget(), 30000);
     const ft = window.setInterval(() => void loadFeed(), 15000);
-    const mt = window.setInterval(() => { void loadMessages(activeChannel); void loadChannels(); }, 10000);
+    const mt = window.setInterval(() => {
+      void loadMessages(activeChannelRef.current, true);
+      void loadChannels();
+    }, 10000);
     return () => { window.clearInterval(wt); window.clearInterval(ft); window.clearInterval(mt); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload messages when channel tab changes
+  // Reload messages when channel tab changes (show loading only, keep old msgs until new arrive)
   useEffect(() => {
+    isFirstLoad.current = true;
+    lastMsgCount.current = 0;
     setMsgLoading(true);
-    setMessages([]);
     void loadMessages(activeChannel);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChannel]);
@@ -333,8 +349,8 @@ export default function CommunityPage() {
                 </div>
               </div>
 
-              {/* Channel tabs */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
+              {/* Channel tabs - min-height prevents layout jump while loading */}
+              <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
                 <button
                   onClick={() => setActiveChannel(null)}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
@@ -360,9 +376,9 @@ export default function CommunityPage() {
                 ))}
               </div>
 
-              {/* Message list */}
-              <div className="overflow-y-auto max-h-[420px] space-y-2 pr-1">
-                {msgLoading && (
+              {/* Message list - fixed height prevents layout shifts */}
+              <div className="overflow-y-auto max-h-[420px] min-h-[120px] space-y-2 pr-1">
+                {msgLoading && messages.length === 0 && (
                   <div className="text-xs text-slate-500 animate-pulse py-4 text-center">Loading messages...</div>
                 )}
                 {!msgLoading && noBotYet && (
