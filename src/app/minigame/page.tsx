@@ -9,14 +9,14 @@ import { useEffect, useState, useRef, useCallback } from "react";
 
 const GRID = 9;
 const GAME_DURATION = 30;
-// Spawn delay: starts at 650ms, floors at 250ms. Score speeds it up faster.
-const BASE_DELAY = 650;
-const MIN_DELAY = 250;
-const SPEED_STEP = 22; // ms faster per hit
-// Bomb moles appear 25% of the time after score ≥ 3
-const BOMB_CHANCE = 0.28;
+// Spawn delay: starts at 900ms, floors at 350ms. Gentler ramp.
+const BASE_DELAY = 900;
+const MIN_DELAY = 350;
+const SPEED_STEP = 15; // ms faster per hit
+// Infected moles appear 15% of the time after score ≥ 5
+const BOMB_CHANCE = 0.15;
 // How many simultaneous active cells (increases with score)
-const MAX_ACTIVE = (score: number) => score >= 20 ? 3 : score >= 10 ? 2 : 1;
+const MAX_ACTIVE = (score: number) => score >= 25 ? 3 : score >= 12 ? 2 : 1;
 
 const RARITY_STYLE: Record<string, { text: string; border: string; bg: string; glow: string }> = {
   legendary: { text: "text-orange-400", border: "border-orange-400/50", bg: "bg-orange-400/10",  glow: "shadow-[0_0_40px_rgba(251,146,60,0.6)]" },
@@ -27,17 +27,16 @@ const RARITY_STYLE: Record<string, { text: string; border: string; bg: string; g
   none:      { text: "text-slate-500",  border: "border-slate-600/30",  bg: "bg-slate-600/10",   glow: "" },
 };
 
-// Raised thresholds — much harder to get top prizes
 function scoreToPrize(score: number) {
-  if (score >= 40) return { name: "Minigun",           rarity: "legendary", emoji: "⚙️" };
-  if (score >= 33) return { name: "Flamethrower",      rarity: "legendary", emoji: "🔥" };
-  if (score >= 26) return { name: "Sniper Rifle (AWM)",rarity: "epic",      emoji: "🎯" };
-  if (score >= 20) return { name: "M4A1 Assault Rifle",rarity: "rare",      emoji: "🔫" };
-  if (score >= 14) return { name: "AK-47 Assault Rifle",rarity:"rare",      emoji: "🔫" };
-  if (score >= 9)  return { name: "SPAS-12 Shotgun",   rarity: "uncommon",  emoji: "💥" };
-  if (score >= 5)  return { name: "MP5 SMG",           rarity: "uncommon",  emoji: "🔫" };
-  if (score >= 2)  return { name: "Desert Eagle",      rarity: "common",    emoji: "🔫" };
-  return             { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️" };
+  if (score >= 30) return { name: "Minigun",            rarity: "legendary", emoji: "⚙️" };
+  if (score >= 24) return { name: "Flamethrower",       rarity: "legendary", emoji: "🔥" };
+  if (score >= 18) return { name: "Sniper Rifle (AWM)", rarity: "epic",      emoji: "🎯" };
+  if (score >= 14) return { name: "M4A1 Assault Rifle", rarity: "rare",      emoji: "🔫" };
+  if (score >= 10) return { name: "AK-47 Assault Rifle",rarity: "rare",      emoji: "🔫" };
+  if (score >= 7)  return { name: "SPAS-12 Shotgun",    rarity: "uncommon",  emoji: "💥" };
+  if (score >= 4)  return { name: "MP5 SMG",            rarity: "uncommon",  emoji: "🔫" };
+  if (score >= 1)  return { name: "Desert Eagle",       rarity: "common",    emoji: "🔫" };
+  return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️" };
 }
 
 function formatCountdown(ms: number) {
@@ -213,13 +212,10 @@ export default function MinigamePage() {
       setTimeout(() => { setPenaltyIdx(null); setScoreFlash(null); }, 400);
       spawnOne();
     } else {
-      // Miss on empty cell — penalty -1
-      scoreRef.current = Math.max(0, scoreRef.current - 1);
-      setScore(Math.max(0, scoreRef.current));
+      // Miss on empty cell — no point penalty, just visual
       setMisses((m) => m + 1);
       setMissIdx(idx);
-      setScoreFlash("-1");
-      setTimeout(() => { setMissIdx(null); setScoreFlash(null); }, 250);
+      setTimeout(() => setMissIdx(null), 250);
     }
   }
 
@@ -323,13 +319,8 @@ export default function MinigamePage() {
                     onClick={() => whack(i)}
                     disabled={phase !== "playing"}
                     style={{ aspectRatio: "1" }}
-                    className={`relative rounded-[1.1rem] overflow-hidden transition-all duration-75 focus:outline-none ${
+                    className={`relative rounded-[1.1rem] overflow-hidden focus:outline-none ${
                       phase === "playing" ? "cursor-crosshair" : "cursor-default"
-                    } ${
-                      isHit     ? "scale-[0.88]" :
-                      isPenalty ? "scale-[0.88]" :
-                      isBomb    ? "scale-[1.06]" :
-                      isMole    ? "scale-[1.04]" : "scale-100"
                     }`}
                   >
                     {/* ── Cell background ── */}
@@ -484,14 +475,14 @@ export default function MinigamePage() {
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🔫 Weapon Rewards</div>
               <div className="space-y-1">
                 {[
-                  { score: "40+", prize: "Minigun",      rarity: "legendary", emoji: "⚙️" },
-                  { score: "33+", prize: "Flamethrower", rarity: "legendary", emoji: "🔥" },
-                  { score: "26+", prize: "Sniper (AWM)", rarity: "epic",      emoji: "🎯" },
-                  { score: "20+", prize: "M4A1",         rarity: "rare",      emoji: "🔫" },
-                  { score: "14+", prize: "AK-47",        rarity: "rare",      emoji: "🔫" },
-                  { score: "9+",  prize: "SPAS-12",      rarity: "uncommon",  emoji: "💥" },
-                  { score: "5+",  prize: "MP5",          rarity: "uncommon",  emoji: "🔫" },
-                  { score: "2+",  prize: "Desert Eagle", rarity: "common",    emoji: "🔫" },
+                  { score: "30+", prize: "Minigun",      rarity: "legendary", emoji: "⚙️" },
+                  { score: "24+", prize: "Flamethrower", rarity: "legendary", emoji: "🔥" },
+                  { score: "18+", prize: "Sniper (AWM)", rarity: "epic",      emoji: "🎯" },
+                  { score: "14+", prize: "M4A1",         rarity: "rare",      emoji: "🔫" },
+                  { score: "10+", prize: "AK-47",        rarity: "rare",      emoji: "🔫" },
+                  { score: "7+",  prize: "SPAS-12",      rarity: "uncommon",  emoji: "💥" },
+                  { score: "4+",  prize: "MP5",          rarity: "uncommon",  emoji: "🔫" },
+                  { score: "1+",  prize: "Desert Eagle", rarity: "common",    emoji: "🔫" },
                   { score: "0",   prize: "No reward",    rarity: "none",      emoji: "☣️" },
                 ].map((t) => {
                   const rs = RARITY_STYLE[t.rarity];

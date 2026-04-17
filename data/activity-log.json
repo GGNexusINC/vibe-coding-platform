@@ -1,5 +1,27 @@
 [
   {
+    "id": "b180b66c-c98f-494f-b4fc-47c2f39ba902",
+    "createdAt": "2026-04-17T03:53:34.492Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": null,
+    "details": "Heartbeat — user active on site."
+  },
+  {
+    "id": "55fe86c3-52a0-4636-9c54-2b11ada6d5ef",
+    "createdAt": "2026-04-17T03:50:34.565Z",
+    "type": "login",
+    "username": "Buzzworthy (Dream Big)",
+    "discordId": "940804710267486249",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/940804710267486249/d189a026e2bd2df560592b3a62bb9dd6.png?size=128",
+    "globalName": "Buzzworthy (Dream Big)",
+    "discriminator": null,
+    "details": "Heartbeat — user active on site."
+  },
+  {
     "id": "e769e729-dd71-4c1d-9cc7-1cb3eafc1362",
     "createdAt": "2026-04-17T03:47:34.510Z",
     "type": "login",
