@@ -1,0 +1,14 @@
+app = "newhopeggn-discord-bot"
+primary_region = "mia"
+
+[build]
+
+[env]
+  SITE_URL = "https://newhopeggn.vercel.app"
+  INGEST_SECRET = "newhopeggn-bot-secret"
+
+# No HTTP server needed - bot only uses outbound connections
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
