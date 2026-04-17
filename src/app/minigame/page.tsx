@@ -77,6 +77,56 @@ export default function MinigamePage() {
   const gameTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const scoreRef = useRef(0);
   const phaseRef = useRef<"idle" | "playing" | "submitting" | "done">("idle");
+  const audioCtx = useRef<AudioContext | null>(null);
+
+  function getAudio() {
+    if (!audioCtx.current) audioCtx.current = new AudioContext();
+    return audioCtx.current;
+  }
+
+  function playHit() {
+    try {
+      const ctx = getAudio();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "square";
+      o.frequency.setValueAtTime(520, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.08);
+      g.gain.setValueAtTime(0.18, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      o.start(); o.stop(ctx.currentTime + 0.12);
+    } catch {}
+  }
+
+  function playBomb() {
+    try {
+      const ctx = getAudio();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(180, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.2);
+      g.gain.setValueAtTime(0.22, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      o.start(); o.stop(ctx.currentTime + 0.22);
+    } catch {}
+  }
+
+  function playMiss() {
+    try {
+      const ctx = getAudio();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.setValueAtTime(200, ctx.currentTime);
+      g.gain.setValueAtTime(0.07, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      o.start(); o.stop(ctx.currentTime + 0.08);
+    } catch {}
+  }
 
   useEffect(() => {
     void fetch("/api/minigame/spin")
@@ -188,7 +238,7 @@ export default function MinigamePage() {
     const cellType = cells[idx];
 
     if (cellType === "mole") {
-      // Good hit — clear cell, +1 score
+      playHit();
       if (moleTimers.current.has(idx)) clearTimeout(moleTimers.current.get(idx)!);
       clearCell(idx);
       scoreRef.current += 1;
@@ -196,13 +246,12 @@ export default function MinigamePage() {
       setHitIdx(idx);
       setScoreFlash("+1");
       setTimeout(() => { setHitIdx(null); setScoreFlash(null); }, 300);
-      // possibly spawn extra if score unlocks multi-mole
       const needed = MAX_ACTIVE(scoreRef.current);
       const active = cells.filter((c, ci) => c !== null && ci !== idx).length;
       for (let x = active; x < needed; x++) spawnOne();
       spawnOne();
     } else if (cellType === "bomb") {
-      // Hit infected mole — penalty -2
+      playBomb();
       if (moleTimers.current.has(idx)) clearTimeout(moleTimers.current.get(idx)!);
       clearCell(idx);
       scoreRef.current = Math.max(0, scoreRef.current - 2);
@@ -212,7 +261,7 @@ export default function MinigamePage() {
       setTimeout(() => { setPenaltyIdx(null); setScoreFlash(null); }, 400);
       spawnOne();
     } else {
-      // Miss on empty cell — no point penalty, just visual
+      playMiss();
       setMisses((m) => m + 1);
       setMissIdx(idx);
       setTimeout(() => setMissIdx(null), 250);
@@ -237,7 +286,7 @@ export default function MinigamePage() {
           Infected Mole <span className="bg-[linear-gradient(135deg,#4ade80,#22c55e)] bg-clip-text text-transparent">Hunt</span>
         </h1>
         <p className="mt-2 text-slate-400 text-sm max-w-lg">
-          Survivors are emerging from contaminated ground. Whack the regular moles 🐹, but <span className="text-rose-400 font-semibold">avoid the infected ☣️</span> — hitting them costs <span className="text-rose-400 font-semibold">−2 pts</span>. Missing empty cells costs <span className="text-rose-400 font-semibold">−1 pt</span>. Once per week.
+          Survivors are emerging from contaminated ground. Whack the regular moles 🐹, but <span className="text-rose-400 font-semibold">avoid the infected ☣️</span> — hitting them costs <span className="text-rose-400 font-semibold">−2 pts</span>. Once per week.
         </p>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -247,12 +296,14 @@ export default function MinigamePage() {
             {/* ── HUD ── */}
             {(phase === "playing" || phase === "submitting") && (
               <div className="w-full max-w-sm">
-                {/* Score flash */}
-                {scoreFlash && (
-                  <div className={`text-center text-lg font-black mb-1 transition-all ${
-                    scoreFlash.startsWith("+") ? "text-emerald-400" : "text-rose-400"
-                  }`}>{scoreFlash}</div>
-                )}
+                {/* Score flash — fixed height so it never shifts the grid */}
+                <div className="h-6 flex items-center justify-center mb-1">
+                  {scoreFlash && (
+                    <div className={`text-base font-black ${
+                      scoreFlash.startsWith("+") ? "text-emerald-400" : "text-rose-400"
+                    }`}>{scoreFlash}</div>
+                  )}
+                </div>
                 <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur px-5 py-3 flex items-center gap-4">
                   <div className="text-center min-w-[44px]">
                     <div className="text-3xl font-black text-emerald-400 leading-none tabular-nums">{score}</div>
