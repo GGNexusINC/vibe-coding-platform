@@ -10,12 +10,15 @@
  * Requires bot permissions: Read Messages, Read Message History, View Channels
  */
 
+require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_TOKEN    = process.env.BOT_TOKEN    || "YOUR_BOT_TOKEN_HERE";
-const SITE_URL     = process.env.SITE_URL     || "https://your-site.com";  // e.g. https://newhopeggn.com
+const BOT_TOKEN    = process.env.BOT_TOKEN;
+const SITE_URL     = process.env.SITE_URL     || "https://newhopeggn.netlify.app";
 const INGEST_SECRET = process.env.INGEST_SECRET || "newhopeggn-bot-secret";
+
+if (!BOT_TOKEN) { console.error("[bot] ERROR: BOT_TOKEN not set in .env"); process.exit(1); }
 
 // Channels to relay (by name). Leave empty [] to relay ALL channels.
 const CHANNEL_WHITELIST = [
