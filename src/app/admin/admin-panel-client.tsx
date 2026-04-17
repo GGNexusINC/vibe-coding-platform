@@ -54,6 +54,33 @@ type ModAction = {
   created_at: string;
 };
 
+type PendingBanApproval = {
+  discord_id: string;
+  username: string;
+  approved_at: string;
+  note?: string;
+};
+
+type PendingBan = {
+  id: string;
+  target_discord_id: string;
+  target_username: string | null;
+  reason: string;
+  proposed_by_discord_id: string;
+  proposed_by_username: string;
+  proposed_at: string;
+  status: "pending" | "approved" | "executed" | "rejected";
+  approvals: PendingBanApproval[];
+  required_approvals: number;
+  executed_at?: string;
+  executed_by_discord_id?: string;
+  executed_by_username?: string;
+  rejection_reason?: string;
+  rejected_by_discord_id?: string;
+  rejected_by_username?: string;
+  rejected_at?: string;
+};
+
 type AdminEntry = {
   id: string;
   discordId: string;
@@ -134,13 +161,17 @@ export function AdminPanelClient() {
   const [wipeSaving, setWipeSaving] = useState(false);
   const [wipeStatus, setWipeStatus] = useState("");
   const [modActions, setModActions] = useState<ModAction[]>([]);
+  const [pendingBans, setPendingBans] = useState<PendingBan[]>([]);
   const [modLoading, setModLoading] = useState(false);
+  const [pendingBanActionLoading, setPendingBanActionLoading] = useState<string | null>(null);
   const [modTargetId, setModTargetId] = useState("");
   const [modReason, setModReason] = useState("");
   const [modAction, setModAction] = useState<"warn" | "ban" | "unban">("warn");
   const [modStatus, setModStatus] = useState("");
   const [modWorking, setModWorking] = useState(false);
   const [showModModal, setShowModModal] = useState(false);
+  const [approveNote, setApproveNote] = useState("");
+  const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
   const [roster, setRoster] = useState<AdminEntry[]>([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
@@ -447,10 +478,37 @@ export function AdminPanelClient() {
     const data = await res.json().catch(() => null);
     if (data?.ok) {
       setModActions(data.actions as ModAction[]);
+      setPendingBans(data.pendingBans as PendingBan[] ?? []);
     } else {
       setModStatus(data?.error ? `Error loading logs: ${data.error}` : "Failed to load mod log.");
     }
     setModLoading(false);
+  }
+
+  async function handleApproveBan(pendingBanId: string, action: "approve" | "reject") {
+    setPendingBanActionLoading(pendingBanId + action);
+    const res = await fetch("/api/admin/moderate", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pendingBanId, action, note: approveNote }),
+    });
+    const data = await res.json().catch(() => null);
+    setPendingBanActionLoading(null);
+    setApproveNote("");
+    setShowApproveModal(null);
+
+    if (data?.ok) {
+      if (data.executed) {
+        setModStatus(`✓ Ban executed! Target has been banned from Discord.`);
+      } else if (data.rejected) {
+        setModStatus(`✓ Ban proposal rejected.`);
+      } else {
+        setModStatus(`✓ Approval recorded (${data.approvalsCount}/${2}). Waiting for final approval...`);
+      }
+      await loadModLog();
+    } else {
+      setModStatus(data?.error || "Failed to process approval.");
+    }
   }
 
   async function handleModerate(e: React.FormEvent) {
@@ -467,6 +525,10 @@ export function AdminPanelClient() {
     setModWorking(false);
     if (!res.ok) {
       setModStatus(data?.error || "Action failed.");
+    } else if (data?.pending) {
+      setModStatus(`⏳ ${data.message} (ID: ${data.pendingBanId?.slice(0, 8)}...)`);
+      setModTargetId(""); setModReason(""); setShowModModal(false);
+      await loadModLog();
     } else {
       setModStatus(`✓ ${modAction} applied to ${modTargetId}.`);
       setModTargetId(""); setModReason(""); setShowModModal(false);
@@ -1052,8 +1114,8 @@ export function AdminPanelClient() {
             <div className="grid gap-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Moderation Log</h1>
-                  <p className="mt-0.5 text-sm text-slate-500">All warn / ban / unban actions performed via the admin panel.</p>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Moderation Center</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Multi-signature moderation · Owners execute immediately · Regular admins need 2 approvals to ban</p>
                 </div>
                 <button type="button" onClick={() => { setShowModModal(true); setModTargetId(""); }}
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-orange-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-rose-500/15 hover:opacity-90 transition">
@@ -1063,9 +1125,138 @@ export function AdminPanelClient() {
               </div>
 
               {modStatus && (
-                <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${modStatus.startsWith("✓") ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-300" : "border-rose-500/20 bg-rose-500/8 text-rose-300"}`}>{modStatus}</div>
+                <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                  modStatus.startsWith("✓") ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-300" :
+                  modStatus.startsWith("⏳") ? "border-amber-400/20 bg-amber-500/8 text-amber-300" :
+                  "border-rose-500/20 bg-rose-500/8 text-rose-300"
+                }`}>{modStatus}</div>
               )}
 
+              {/* Pending Bans Section */}
+              {pendingBans.filter(pb => pb.status === "pending").length > 0 && (
+                <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-b from-amber-950/40 to-slate-950/80 overflow-hidden">
+                  <div className="border-b border-amber-400/20 px-5 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-400">⏳</span>
+                      <span className="text-sm font-bold text-amber-200">Pending Ban Proposals</span>
+                      <span className="text-xs text-amber-400/60">({pendingBans.filter(pb => pb.status === "pending").length} awaiting approval)</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-amber-400/10">
+                    {pendingBans.filter(pb => pb.status === "pending").map((pb) => {
+                      const approvals = pb.approvals || [];
+                      const hasApproved = approvals.some(a => a.discord_id === stats?.viewer?.discordId);
+                      const isProposer = pb.proposed_by_discord_id === stats?.viewer?.discordId;
+                      return (
+                        <div key={pb.id} className="px-5 py-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400 text-lg">🔨</div>
+                              <div>
+                                <div className="text-sm font-bold text-white">Ban <span className="font-mono text-slate-400">{pb.target_discord_id.slice(0, 12)}...</span></div>
+                                <div className="text-xs text-slate-500">Proposed by {pb.proposed_by_username}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-amber-400">{approvals.length}/2 approvals</span>
+                            </div>
+                          </div>
+
+                          <div className="mb-3 text-sm text-slate-300 bg-slate-900/50 rounded-lg px-3 py-2 border border-white/5">
+                            <span className="text-slate-500">Reason:</span> {pb.reason}
+                          </div>
+
+                          {/* Approval Tracker */}
+                          <div className="mb-3">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Approval Tracker</div>
+                            <div className="flex flex-wrap gap-2">
+                              {approvals.map((approval, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1">
+                                  <span className="text-emerald-400 text-xs">✓</span>
+                                  <span className="text-xs font-medium text-emerald-200">{approval.username}</span>
+                                  <span className="text-[10px] text-emerald-400/60">{new Date(approval.approved_at).toLocaleTimeString()}</span>
+                                </div>
+                              ))}
+                              {Array.from({ length: Math.max(0, 2 - approvals.length) }).map((_, idx) => (
+                                <div key={`empty-${idx}`} className="flex items-center gap-1.5 rounded-full border border-slate-600/30 bg-slate-800/30 px-2.5 py-1">
+                                  <span className="text-slate-600 text-xs">○</span>
+                                  <span className="text-xs font-medium text-slate-500">Awaiting...</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-wrap gap-2">
+                            {!hasApproved && !isProposer && (
+                              <button
+                                type="button"
+                                disabled={pendingBanActionLoading === pb.id + "approve"}
+                                onClick={() => setShowApproveModal(pb.id)}
+                                className="flex items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition disabled:opacity-50"
+                              >
+                                {pendingBanActionLoading === pb.id + "approve" ? "Processing..." : "✓ Approve Ban"}
+                              </button>
+                            )}
+                            {(isOwner || isProposer) && (
+                              <button
+                                type="button"
+                                disabled={pendingBanActionLoading === pb.id + "reject"}
+                                onClick={() => handleApproveBan(pb.id, "reject")}
+                                className="flex items-center gap-1.5 rounded-xl bg-slate-700/30 border border-slate-600/30 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition disabled:opacity-50"
+                              >
+                                {pendingBanActionLoading === pb.id + "reject" ? "Processing..." : "✕ Reject"}
+                              </button>
+                            )}
+                            {isOwner && (
+                              <button
+                                type="button"
+                                disabled={pendingBanActionLoading === pb.id + "approve"}
+                                onClick={() => setShowApproveModal(pb.id)}
+                                className="flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-500/25 transition disabled:opacity-50"
+                              >
+                                🔨 Execute Now (Owner)
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Executed/Rejected Bans History */}
+              {pendingBans.filter(pb => pb.status !== "pending").length > 0 && (
+                <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
+                  <div className="border-b border-white/6 px-5 py-3">
+                    <span className="text-sm font-bold text-slate-300">Multi-Sig Ban History</span>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto">
+                    {pendingBans.filter(pb => pb.status !== "pending").map((pb) => (
+                      <div key={pb.id} className="px-5 py-2.5 flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className={pb.status === "executed" ? "text-rose-400" : pb.status === "rejected" ? "text-slate-500" : "text-amber-400"}>
+                            {pb.status === "executed" ? "🔨" : pb.status === "rejected" ? "✕" : "⏳"}
+                          </span>
+                          <span className="font-mono text-xs text-slate-400">{pb.target_discord_id.slice(0, 12)}...</span>
+                          <span className="text-xs text-slate-500">by {pb.proposed_by_username}</span>
+                        </div>
+                        <div className="text-xs">
+                          {pb.status === "executed" && (
+                            <span className="text-emerald-400">Executed by {pb.executed_by_username}</span>
+                          )}
+                          {pb.status === "rejected" && (
+                            <span className="text-slate-500">Rejected by {pb.rejected_by_username}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Mod Actions Table */}
               <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
                 <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
                   <span>Target</span><span>Action</span><span>Reason</span><span>Time</span>
@@ -1236,6 +1427,76 @@ export function AdminPanelClient() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════ APPROVE BAN MODAL ════ */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-[101] flex items-end justify-center sm:items-center p-4 bg-black/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowApproveModal(null); }}>
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60">
+            <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 to-cyan-400" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-white">Approve Ban Proposal</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Your approval brings this ban closer to execution.</p>
+                </div>
+                <button type="button" onClick={() => setShowApproveModal(null)} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/8 hover:text-white transition">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {(() => {
+                const pb = pendingBans.find(p => p.id === showApproveModal);
+                if (!pb) return null;
+                const isOwner = stats?.viewer?.isOwner;
+                const willExecute = isOwner || (pb.approvals?.length || 0) >= 1;
+                return (
+                  <>
+                    <div className="mb-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3">
+                      <div className="text-xs text-amber-400 font-bold mb-1">Target</div>
+                      <div className="text-sm text-white font-mono">{pb.target_discord_id}</div>
+                      <div className="text-xs text-slate-400 mt-1">{pb.reason}</div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-widest">Approval Note (Optional)</label>
+                      <textarea
+                        className="w-full rounded-xl border border-white/8 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-emerald-400/30 resize-none transition"
+                        rows={2}
+                        value={approveNote}
+                        onChange={(e) => setApproveNote(e.target.value)}
+                        placeholder="Add a note about your approval decision..."
+                        maxLength={200}
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => setShowApproveModal(null)} className="flex-1 rounded-xl border border-white/8 bg-white/4 py-2.5 text-sm font-semibold text-slate-400 hover:bg-white/8 transition">Cancel</button>
+                      <button
+                        type="button"
+                        disabled={pendingBanActionLoading === showApproveModal + "approve"}
+                        onClick={() => handleApproveBan(showApproveModal, "approve")}
+                        className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 ${
+                          willExecute
+                            ? "bg-gradient-to-r from-rose-600 to-red-700 shadow-rose-500/15"
+                            : "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/15"
+                        } shadow-lg`}
+                      >
+                        {pendingBanActionLoading === showApproveModal + "approve" ? "Processing..." : willExecute ? "🔨 Execute Ban" : "✓ Approve"}
+                      </button>
+                    </div>
+
+                    {willExecute && (
+                      <div className="mt-3 text-xs text-rose-300 text-center">
+                        ⚠️ This will immediately ban the user from Discord
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

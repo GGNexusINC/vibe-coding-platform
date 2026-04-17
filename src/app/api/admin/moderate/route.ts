@@ -20,6 +20,107 @@ function isOwnerSession(discordId?: string): boolean {
   return KNOWN_ADMINS.some((a) => a.discordId === discordId && a.role === "owner");
 }
 
+async function checkIfAdmin(discordId: string): Promise<boolean> {
+  const sb = getSupabase();
+  const { data } = await sb.from("admin_roster").select("status").eq("discord_id", discordId).single();
+  if (data?.status === "approved") return true;
+  // Also check KNOWN_ADMINS owners
+  return KNOWN_ADMINS.some((a) => a.discordId === discordId);
+}
+
+async function createPendingBan(
+  sb: ReturnType<typeof getSupabase>,
+  targetId: string,
+  targetName: string | null,
+  reason: string,
+  proposerId: string,
+  proposerName: string
+) {
+  const { data, error } = await sb.from("pending_bans").insert({
+    target_discord_id: targetId,
+    target_username: targetName,
+    reason,
+    proposed_by_discord_id: proposerId,
+    proposed_by_username: proposerName,
+    status: "pending",
+    approvals: [{ discord_id: proposerId, username: proposerName, approved_at: new Date().toISOString(), note: "Proposed ban" }],
+    required_approvals: 2,
+  }).select().single();
+  return { data, error };
+}
+
+async function approvePendingBan(
+  sb: ReturnType<typeof getSupabase>,
+  pendingBanId: string,
+  approverId: string,
+  approverName: string,
+  note?: string
+) {
+  // Get current pending ban
+  const { data: existing } = await sb.from("pending_bans").select("*").eq("id", pendingBanId).single();
+  if (!existing) return { error: "Pending ban not found", executed: false };
+  if (existing.status !== "pending") return { error: "Ban is no longer pending", executed: false };
+
+  const approvals = [...(existing.approvals || [])];
+  // Check if already approved by this user
+  if (approvals.some((a: Record<string, unknown>) => a.discord_id === approverId)) {
+    return { error: "You have already approved this ban", executed: false };
+  }
+
+  approvals.push({
+    discord_id: approverId,
+    username: approverName,
+    approved_at: new Date().toISOString(),
+    note: note || "Approved",
+  });
+
+  const hasEnoughApprovals = approvals.length >= (existing.required_approvals || 2);
+
+  if (hasEnoughApprovals) {
+    // Execute the ban immediately
+    const res = await fetch(`${DISCORD_API}/guilds/${GUILD_ID}/bans/${existing.target_discord_id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bot ${BOT_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        reason: `[Admin Panel] Multi-sig ban approved by ${approvals.map((a: Record<string, unknown>) => a.username).join(", ")}. Reason: ${existing.reason}`,
+        delete_message_seconds: 0,
+      }),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      return { error: `Discord ban failed: ${await res.text()}`, executed: false };
+    }
+
+    // Update pending ban to executed
+    await sb.from("pending_bans").update({
+      status: "executed",
+      executed_at: new Date().toISOString(),
+      executed_by_discord_id: approverId,
+      executed_by_username: approverName,
+      approvals,
+    }).eq("id", pendingBanId);
+
+    // Log to admin_actions
+    await sb.from("admin_actions").insert({
+      actor_discord_id: approverId,
+      actor_username: approverName,
+      target_discord_id: existing.target_discord_id,
+      action: "ban",
+      reason: `[Multi-sig] ${existing.reason} | Approved by: ${approvals.map((a: Record<string, unknown>) => a.username).join(", ")}`,
+      created_at: new Date().toISOString(),
+    });
+
+    return { executed: true, targetId: existing.target_discord_id };
+  } else {
+    // Just update approvals
+    await sb.from("pending_bans").update({ approvals }).eq("id", pendingBanId);
+    return { executed: false, approvalsCount: approvals.length };
+  }
+}
+
 export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
@@ -42,6 +143,60 @@ export async function POST(req: Request) {
 
   const actorId = admin.discord_id ?? "unknown";
   const actorName = admin.username ?? "Admin";
+  const isOwner = isOwnerSession(actorId);
+
+  // Check if target is an admin/owner - regular admins cannot ban other admins
+  if (action === "ban" && !isOwner) {
+    const targetIsAdmin = await checkIfAdmin(targetDiscordId);
+    if (targetIsAdmin) {
+      return NextResponse.json({ ok: false, error: "You cannot ban other admins. Only owners can ban admins." }, { status: 403 });
+    }
+  }
+
+  // Multi-signature ban for non-owner admins
+  if (action === "ban" && !isOwner) {
+    const sb = getSupabase();
+
+    // Try to get target username from guild_members
+    const { data: targetMember } = await sb.from("guild_members").select("username, display_name").eq("discord_id", targetDiscordId).single();
+    const targetName = targetMember?.display_name || targetMember?.username || null;
+
+    const { data: pendingBan, error } = await createPendingBan(sb, targetDiscordId, targetName, reason, actorId, actorName);
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: `Failed to create pending ban: ${error.message}` }, { status: 500 });
+    }
+
+    // Send Discord webhook notification about pending ban
+    await fetch(MOD_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "NewHopeGGN Moderation",
+        embeds: [{
+          author: { name: "NewHopeGGN · Multi-Sig Ban Pending" },
+          title: "⏳ Ban Proposal Created",
+          description: `A ban has been proposed and requires **1 more approval** to execute.`,
+          color: 0xf59e0b,
+          fields: [
+            { name: "👤 Target", value: `<@${targetDiscordId}>${targetName ? ` (${targetName})` : ""}`, inline: true },
+            { name: "📝 Proposed By", value: actorName, inline: true },
+            { name: "📋 Reason", value: reason },
+            { name: "Status", value: `🟡 Pending (1/2 approvals)`, inline: true },
+          ],
+          footer: { text: "Visit Admin Panel → Mod Log to approve" },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => {});
+
+    return NextResponse.json({
+      ok: true,
+      pending: true,
+      message: "Ban proposal created. Requires 1 more admin approval to execute.",
+      pendingBanId: pendingBan?.id,
+    });
+  }
 
   let discordResult = { ok: true, status: 0, body: "" };
 
@@ -178,12 +333,116 @@ export async function GET() {
   if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
 
   const sb = getSupabase();
-  const { data, error } = await sb
-    .from("admin_actions")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(100);
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, actions: data ?? [] });
+  const [{ data: actions, error: actionsErr }, { data: pendingBans, error: pendingErr }] = await Promise.all([
+    sb.from("admin_actions").select("*").order("created_at", { ascending: false }).limit(100),
+    sb.from("pending_bans").select("*").order("proposed_at", { ascending: false }).limit(50),
+  ]);
+
+  if (actionsErr) return NextResponse.json({ ok: false, error: actionsErr.message }, { status: 500 });
+
+  return NextResponse.json({
+    ok: true,
+    actions: actions ?? [],
+    pendingBans: pendingBans ?? [],
+    pendingError: pendingErr?.message,
+  });
+}
+
+export async function PATCH(req: Request) {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const { pendingBanId, action, note }: { pendingBanId?: string; action?: "approve" | "reject"; note?: string } = body;
+
+  if (!pendingBanId || !action || !["approve", "reject"].includes(action)) {
+    return NextResponse.json({ ok: false, error: "Missing pendingBanId or invalid action (approve/reject)." }, { status: 400 });
+  }
+
+  const actorId = admin.discord_id ?? "unknown";
+  const actorName = admin.username ?? "Admin";
+
+  const sb = getSupabase();
+
+  if (action === "reject") {
+    // Only owners or the original proposer can reject
+    const { data: existing } = await sb.from("pending_bans").select("*").eq("id", pendingBanId).single();
+    if (!existing) return NextResponse.json({ ok: false, error: "Pending ban not found." }, { status: 404 });
+    if (existing.status !== "pending") return NextResponse.json({ ok: false, error: "Ban is no longer pending." }, { status: 400 });
+
+    const isOwner = isOwnerSession(actorId);
+    const isProposer = existing.proposed_by_discord_id === actorId;
+
+    if (!isOwner && !isProposer) {
+      return NextResponse.json({ ok: false, error: "Only owners or the original proposer can reject a ban." }, { status: 403 });
+    }
+
+    await sb.from("pending_bans").update({
+      status: "rejected",
+      rejection_reason: note || "Rejected by admin",
+      rejected_by_discord_id: actorId,
+      rejected_by_username: actorName,
+      rejected_at: new Date().toISOString(),
+    }).eq("id", pendingBanId);
+
+    // Notify webhook
+    await fetch(MOD_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "NewHopeGGN Moderation",
+        embeds: [{
+          author: { name: "NewHopeGGN · Ban Proposal Rejected" },
+          title: "❌ Ban Proposal Rejected",
+          description: `A pending ban proposal has been rejected.`,
+          color: 0x6b7280,
+          fields: [
+            { name: "👤 Target", value: `<@${existing.target_discord_id}>`, inline: true },
+            { name: "📝 Rejected By", value: actorName, inline: true },
+            { name: "📋 Reason", value: existing.reason },
+            ...(note ? [{ name: "Rejection Note", value: note }] : []),
+          ],
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => {});
+
+    return NextResponse.json({ ok: true, rejected: true });
+  }
+
+  // Approve flow
+  const result = await approvePendingBan(sb, pendingBanId, actorId, actorName, note);
+
+  if (result.error) {
+    return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+  }
+
+  if (result.executed) {
+    // Notify that ban was executed
+    await fetch(MOD_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "NewHopeGGN Moderation",
+        embeds: [{
+          author: { name: "NewHopeGGN · Multi-Sig Ban Executed" },
+          title: "🔨 Ban Executed (Multi-Sig)",
+          description: `The pending ban reached required approvals and has been executed.`,
+          color: 0xef4444,
+          fields: [
+            { name: "👤 Target", value: `<@${result.targetId}>`, inline: true },
+            { name: "✅ Final Approval By", value: actorName, inline: true },
+            { name: "Status", value: "🟢 Executed", inline: true },
+          ],
+          footer: { text: "Multi-signature moderation system" },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => {});
+
+    return NextResponse.json({ ok: true, executed: true, targetId: result.targetId });
+  }
+
+  return NextResponse.json({ ok: true, executed: false, approvalsCount: result.approvalsCount });
 }
