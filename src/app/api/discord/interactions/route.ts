@@ -48,16 +48,26 @@ export async function POST(req: Request) {
 
   const publicKey = process.env.DISCORD_PUBLIC_KEY || "";
   
+  console.log("[discord-interactions] publicKey present:", !!publicKey, "sig:", signature?.slice(0,10), "ts:", timestamp);
+
   if (publicKey) {
     const isValid = await verifyDiscordSignature(publicKey, signature, timestamp, rawBody);
+    console.log("[discord-interactions] signature valid:", isValid);
     if (!isValid) {
       return new Response("Invalid signature", { status: 401 });
     }
+  } else {
+    console.log("[discord-interactions] WARNING: No DISCORD_PUBLIC_KEY set, skipping verification");
   }
 
-  const body = JSON.parse(rawBody);
+  let body: any;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
   
-  console.log("[discord-interactions] Received:", body.type);
+  console.log("[discord-interactions] type:", body.type, "custom_id:", body.data?.custom_id);
   
   // PING verification (type 1)
   if (body.type === 1) {
