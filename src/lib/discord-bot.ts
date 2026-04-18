@@ -8,7 +8,7 @@ const GUILD_ID = env.discordGuildId();
 const ADMIN_IDS = [
   "940804710267486249",   // Kilo
   "1310794181190352997",  // Buzzworthy
-  "145278391166173185",   // Zeus
+  "145278391166173185",   // Hope
 ];
 
 type TicketChannel = {
