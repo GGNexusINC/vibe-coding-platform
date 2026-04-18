@@ -283,7 +283,7 @@ export default function CommunityClient() {
   const presenceCount = widget?.presence_count ?? 0;
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl px-3 sm:px-4 py-8 sm:py-12">
+    <div className="relative mx-auto w-full max-w-6xl px-3 sm:px-4 py-8 sm:py-12 overflow-x-hidden">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(88,101,242,0.12),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(88,101,242,0.06),transparent_50%)]" />
@@ -448,8 +448,8 @@ export default function CommunityClient() {
                 </div>
               </div>
 
-              {/* Channel tabs - min-height prevents layout jump while loading */}
-              <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
+              {/* Channel tabs */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 <button
                   onClick={() => setActiveChannel(null)}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
@@ -460,11 +460,11 @@ export default function CommunityClient() {
                 >
                   All
                 </button>
-                {channelList.map((ch) => (
+                {channelList.slice(0, 6).map((ch) => (
                   <button
                     key={ch}
                     onClick={() => setActiveChannel(ch)}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                    className={`rounded-full px-2 py-1 text-[10px] font-semibold transition-all truncate max-w-[100px] ${
                       activeChannel === ch
                         ? "bg-[#5865F2] text-white"
                         : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
@@ -473,6 +473,9 @@ export default function CommunityClient() {
                     #{ch}
                   </button>
                 ))}
+                {channelList.length > 6 && (
+                  <span className="text-[10px] text-slate-600 self-center">+{channelList.length - 6} more</span>
+                )}
               </div>
 
               {/* Message list - fixed height prevents layout shifts */}
