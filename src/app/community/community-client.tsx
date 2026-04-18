@@ -290,9 +290,9 @@ export default function CommunityClient() {
 
       <div className="relative">
         {/* Header - Clean aligned layout */}
-        <div className="flex flex-col gap-5">
-          {/* Top row: Chip + Stats */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-4">
+          {/* Top row: Chip + Stats - Always in a row, never stacked */}
+          <div className="flex items-center justify-between gap-3">
             <div className="rz-chip">🎮 Community Hub</div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
@@ -300,26 +300,26 @@ export default function CommunityClient() {
                 <span className="text-sm font-bold text-emerald-300">{presenceCount} Online</span>
               </div>
               {lastRefresh && (
-                <span className="text-xs text-slate-500">
+                <span className="hidden sm:inline text-xs text-slate-500">
                   Updated {timeAgo(lastRefresh.toISOString())}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Title row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Title row - Side by side on desktop, stacked on mobile */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-black text-white leading-none">
+              <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight">
                 NewHopeGGN <span className="text-[#5865F2]">Discord</span>
               </h1>
-              <p className="mt-2 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
+              <p className="mt-1 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
             </div>
             <a
               href={INVITE}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-all shadow-[0_0_20px_rgba(88,101,242,0.3)] shrink-0"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-all shadow-[0_0_20px_rgba(88,101,242,0.3)] shrink-0 self-start lg:self-center"
             >
               <DiscordIcon />
               Join Discord
