@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 
 // Discord interactions endpoint for button clicks
+export async function GET() {
+  // Discord sometimes checks with GET first
+  return NextResponse.json({ message: "Discord interactions endpoint ready" });
+}
+
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  
+  console.log("[discord-interactions] Received:", body.type, body);
   
   // PING verification (type 1) - Discord sends this to verify the endpoint
   if (body.type === 1) {
+    console.log("[discord-interactions] Sending PONG");
     return NextResponse.json({ type: 1 }); // PONG
   }
   
