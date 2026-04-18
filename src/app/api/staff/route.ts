@@ -11,12 +11,15 @@ export async function GET() {
     ]);
     
     // Usernames explicitly blocked from public staff display
-    const BLOCKED_USERNAMES = ["draco", "unknowndarkness", "unknown"];
+    const BLOCKED_USERNAMES = ["draco", "dracio", "drac1o", "unknowndarkness", "unknown"];
 
     // Only return approved admins with live presence, filter out sensitive data
     const publicStaff = roster
       .filter((r) => r.status === "approved")
-      .filter((r) => !BLOCKED_USERNAMES.includes(r.username.toLowerCase()))
+      .filter((r) => {
+        const lower = r.username.toLowerCase();
+        return !BLOCKED_USERNAMES.includes(lower) && !lower.startsWith("drac");
+      })
       .map((r) => {
         const presence = presenceMap.get(r.discordId);
         return {
