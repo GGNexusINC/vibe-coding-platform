@@ -3,18 +3,19 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
-type Prize = { name: string; rarity: string; emoji: string; color: number };
+type Prize = { name: string; rarity: string; emoji: string; color: number; image: string };
 
+// Once Human actual weapons with images from Steam CDN
 function scoreToPrize(score: number): Prize {
-  if (score >= 60) return { name: "Minigun", rarity: "legendary", emoji: "⚙️", color: 0xef4444 };
-  if (score >= 48) return { name: "Flamethrower", rarity: "legendary", emoji: "🔥", color: 0xf97316 };
-  if (score >= 36) return { name: "Sniper Rifle (AWM)", rarity: "epic", emoji: "🎯", color: 0x8b5cf6 };
-  if (score >= 28) return { name: "M4A1 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
-  if (score >= 20) return { name: "AK-47 Assault Rifle", rarity: "rare", emoji: "🔫", color: 0x3b82f6 };
-  if (score >= 14) return { name: "SPAS-12 Shotgun", rarity: "uncommon", emoji: "💥", color: 0x22c55e };
-  if (score >= 8)  return { name: "MP5 Submachine Gun", rarity: "uncommon", emoji: "🔫", color: 0x22c55e };
-  if (score >= 2)  return { name: "Desert Eagle Pistol", rarity: "common", emoji: "🔫", color: 0x94a3b8 };
-  return { name: "Better Luck Next Time", rarity: "none", emoji: "😔", color: 0x475569 };
+  if (score >= 60) return { name: "AWS.338 - Bullseye", rarity: "legendary", emoji: "🎯", color: 0xef4444, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
+  if (score >= 48) return { name: "HAMR - Brahminy", rarity: "legendary", emoji: "🦅", color: 0xf97316, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
+  if (score >= 36) return { name: "SN700 - Gulped Lore", rarity: "epic", emoji: "🐍", color: 0x8b5cf6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
+  if (score >= 28) return { name: "M416 - Scorched Earth", rarity: "rare", emoji: "�", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
+  if (score >= 20) return { name: "SOCR - Outsider", rarity: "rare", emoji: "⚔️", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
+  if (score >= 14) return { name: "ACS12 - Corrosion", rarity: "uncommon", emoji: "☣️", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
+  if (score >= 8)  return { name: "KV-SBR - Little Jaws", rarity: "uncommon", emoji: "🦈", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
+  if (score >= 2)  return { name: "DE.50", rarity: "common", emoji: "🔫", color: 0x94a3b8, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  return { name: "Better Luck Next Time", rarity: "none", emoji: "☣️", color: 0x475569, image: "" };
 }
 
 function getSupabase() {

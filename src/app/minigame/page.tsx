@@ -28,15 +28,15 @@ const RARITY_STYLE: Record<string, { text: string; border: string; bg: string; g
 };
 
 function scoreToPrize(score: number) {
-  if (score >= 60) return { name: "Minigun",            rarity: "legendary", emoji: "⚙️" };
-  if (score >= 48) return { name: "Flamethrower",       rarity: "legendary", emoji: "🔥" };
-  if (score >= 36) return { name: "Sniper Rifle (AWM)", rarity: "epic",      emoji: "🎯" };
-  if (score >= 28) return { name: "M4A1 Assault Rifle", rarity: "rare",      emoji: "🔫" };
-  if (score >= 20) return { name: "AK-47 Assault Rifle",rarity: "rare",      emoji: "🔫" };
-  if (score >= 14) return { name: "SPAS-12 Shotgun",    rarity: "uncommon",  emoji: "💥" };
-  if (score >= 8)  return { name: "MP5 SMG",            rarity: "uncommon",  emoji: "🔫" };
-  if (score >= 2)  return { name: "Desert Eagle",       rarity: "common",    emoji: "🔫" };
-  return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️" };
+  if (score >= 60) return { name: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
+  if (score >= 48) return { name: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
+  if (score >= 36) return { name: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
+  if (score >= 28) return { name: "M416 - Scorched Earth",rarity: "rare",      emoji: "�", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
+  if (score >= 20) return { name: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
+  if (score >= 14) return { name: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
+  if (score >= 8)  return { name: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
+  if (score >= 2)  return { name: "DE.50",                rarity: "common",    emoji: "🔫", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️", image: "" };
 }
 
 function formatCountdown(ms: number) {
