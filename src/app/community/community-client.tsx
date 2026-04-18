@@ -283,27 +283,27 @@ export default function CommunityClient() {
   const presenceCount = widget?.presence_count ?? 0;
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl px-4 py-12">
+    <div className="relative mx-auto w-full max-w-6xl px-3 sm:px-4 py-8 sm:py-12">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(88,101,242,0.12),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(88,101,242,0.06),transparent_50%)]" />
 
       <div className="relative">
         {/* Header */}
-        <div className="rz-chip mb-4">🎮 Community Hub</div>
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-black text-white leading-tight">
+        <div className="rz-chip mb-3 sm:mb-4 text-xs sm:text-sm">🎮 Community Hub</div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight">
               NewHopeGGN <span className="text-[#5865F2]">Discord</span>
             </h1>
-            <p className="mt-1 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
+            <p className="mt-1 text-slate-400 text-xs sm:text-sm">Live server activity — auto-refreshes every 30s</p>
           </div>
 
           {/* Live stats pills */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-4 py-1.5 sm:py-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-sm font-bold text-emerald-300">{presenceCount} Online</span>
+              <span className="text-xs sm:text-sm font-bold text-emerald-300">{presenceCount} Online</span>
             </div>
           </div>
         </div>
@@ -313,10 +313,11 @@ export default function CommunityClient() {
           href={INVITE}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-5 inline-flex h-12 items-center gap-2.5 rounded-2xl bg-[#5865F2] px-7 text-sm font-bold text-white hover:bg-[#4752c4] active:scale-95 transition-all shadow-[0_0_30px_rgba(88,101,242,0.4)]"
+          className="mt-4 sm:mt-5 inline-flex h-10 sm:h-12 items-center gap-2 rounded-xl sm:rounded-2xl bg-[#5865F2] px-4 sm:px-7 text-xs sm:text-sm font-bold text-white hover:bg-[#4752c4] active:scale-95 transition-all shadow-[0_0_20px_rgba(88,101,242,0.4)]"
         >
           <DiscordIcon />
-          Join Our Discord
+          <span className="sm:hidden">Join Discord</span>
+          <span className="hidden sm:inline">Join Our Discord</span>
         </a>
 
         {/* Wipe Timer */}
@@ -333,11 +334,11 @@ export default function CommunityClient() {
           </div>
         )}
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-[260px_1fr_260px] items-start">
+        <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[220px_1fr_220px] items-start">
 
           {/* ── Left: Text Channels ── */}
-          <div className="space-y-4 lg:self-start">
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+          <div className="space-y-4 order-2 lg:order-1">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 flex items-center gap-2">
                 <span className="text-[#5865F2]">#</span> Text Channels
               </div>
@@ -362,10 +363,10 @@ export default function CommunityClient() {
           </div>
 
           {/* ── Center: Voice Channels (live) + Discord Messages + Activity Feed ── */}
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-5 order-1 lg:order-2">
 
             {/* Voice Channels */}
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
                   <span className="text-emerald-400">🔊</span> Voice Channels
@@ -516,9 +517,9 @@ export default function CommunityClient() {
           </div>
 
           {/* ── Right: Online members ── */}
-          <div className="space-y-4 lg:self-start">
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">
+          <div className="space-y-4 order-3 lg:order-3">
+            <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 sm:mb-4">
                 Members Online — <span className="text-emerald-400">{presenceCount}</span>
               </div>
 
