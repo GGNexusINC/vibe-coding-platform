@@ -1,15 +1,63 @@
 import { NextResponse } from "next/server";
 
+// Verify Discord Ed25519 signature
+async function verifyDiscordSignature(
+  publicKey: string,
+  signature: string,
+  timestamp: string,
+  body: string
+): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const keyData = hexToUint8Array(publicKey);
+    const sigData = hexToUint8Array(signature);
+    const message = encoder.encode(timestamp + body);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "Ed25519" },
+      false,
+      ["verify"]
+    );
+
+    return await crypto.subtle.verify("Ed25519", cryptoKey, sigData, message);
+  } catch (e) {
+    console.error("[discord-interactions] Signature verification error:", e);
+    return false;
+  }
+}
+
+function hexToUint8Array(hex: string): ArrayBuffer {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes.buffer as ArrayBuffer;
+}
+
 // Discord interactions endpoint for button clicks
 export async function GET() {
-  // Discord sometimes checks with GET first
   return NextResponse.json({ message: "Discord interactions endpoint ready" });
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
+  const signature = req.headers.get("x-signature-ed25519") || "";
+  const timestamp = req.headers.get("x-signature-timestamp") || "";
+  const rawBody = await req.text();
+
+  const publicKey = process.env.DISCORD_PUBLIC_KEY || "";
   
-  console.log("[discord-interactions] Received:", body);
+  if (publicKey) {
+    const isValid = await verifyDiscordSignature(publicKey, signature, timestamp, rawBody);
+    if (!isValid) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+  }
+
+  const body = JSON.parse(rawBody);
+  
+  console.log("[discord-interactions] Received:", body.type);
   
   // PING verification (type 1)
   if (body.type === 1) {
