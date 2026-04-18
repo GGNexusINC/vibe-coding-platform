@@ -291,19 +291,21 @@ export default function CommunityClient() {
       <div className="relative">
         {/* Header */}
         <div className="rz-chip mb-3 sm:mb-4 text-xs sm:text-sm">🎮 Community Hub</div>
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight">
+        
+        {/* Title and online - stacked on mobile, side by side on desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0 overflow-hidden">
+            <h1 className="text-xl sm:text-4xl font-black text-white leading-tight truncate">
               NewHopeGGN <span className="text-[#5865F2]">Discord</span>
             </h1>
             <p className="mt-1 text-slate-400 text-xs sm:text-sm">Live server activity — auto-refreshes every 30s</p>
           </div>
 
           {/* Live stats pills */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-start sm:self-auto">
             <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-4 py-1.5 sm:py-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs sm:text-sm font-bold text-emerald-300">{presenceCount} Online</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="text-xs sm:text-sm font-bold text-emerald-300 whitespace-nowrap">{presenceCount} Online</span>
             </div>
           </div>
         </div>
