@@ -474,6 +474,24 @@ export function AdminPanelClient() {
     setRosterActionLoading(null);
   }
 
+  async function handleRosterDelete(discordId: string) {
+    if (!confirm("Permanently delete this entry from the roster?")) return;
+    setRosterActionLoading(discordId + "delete");
+    setRosterError("");
+    const res = await fetch("/api/admin/roster", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ discordId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setRosterError(data?.error || "Delete failed.");
+    } else {
+      setRoster((prev) => prev.filter((e) => e.discordId !== discordId));
+    }
+    setRosterActionLoading(null);
+  }
+
   async function loadModLog() {
     setModLoading(true);
     const res = await fetch("/api/admin/moderate", { cache: "no-store" });
@@ -1012,9 +1030,13 @@ export function AdminPanelClient() {
                             <button type="button" disabled={rosterActionLoading === entry.discordId + "pending"} onClick={() => void handleRosterAction(entry.discordId, "pending")}
                               className="rounded-lg border border-slate-500/20 bg-slate-500/10 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-slate-500/20 disabled:opacity-40 transition">Revoke</button>
                           )}
-                          {entry.status !== "denied" && entry.status !== "approved" && (
+                          {entry.status !== "denied" && (
                             <button type="button" disabled={rosterActionLoading === entry.discordId + "denied"} onClick={() => void handleRosterAction(entry.discordId, "denied")}
-                              className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40 transition">✕</button>
+                              className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40 transition">Deny</button>
+                          )}
+                          {entry.status === "denied" && (
+                            <button type="button" disabled={rosterActionLoading === entry.discordId + "delete"} onClick={() => void handleRosterDelete(entry.discordId)}
+                              className="rounded-lg border border-rose-600/30 bg-rose-600/15 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:bg-rose-600/25 disabled:opacity-40 transition">🗑 Delete</button>
                           )}
                         </div>
                       )}

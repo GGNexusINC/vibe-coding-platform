@@ -150,3 +150,26 @@ export async function POST(req: Request) {
   const roster = await getRoster();
   return NextResponse.json({ ok: true, roster });
 }
+
+export async function DELETE(req: Request) {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const discordId = String(body?.discordId ?? "").trim();
+  if (!discordId) return NextResponse.json({ ok: false, error: "discordId required." }, { status: 400 });
+
+  if (isAdminDiscordId(discordId)) {
+    return NextResponse.json({ ok: false, error: "Owner accounts cannot be deleted." }, { status: 403 });
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (url && key) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(url, key, { auth: { persistSession: false } });
+    await sb.from("admin_roster").delete().eq("discord_id", discordId);
+  }
+
+  return NextResponse.json({ ok: true });
+}
