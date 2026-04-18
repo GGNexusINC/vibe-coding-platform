@@ -116,6 +116,18 @@ export async function sendTicketMessage(
       "<@145278391166173185>",   // Hope
     ].join(" ");
 
+    // Add close button for admins
+    const components = [{
+      type: 1, // ActionRow
+      components: [{
+        type: 2, // Button
+        style: 4, // Danger (red)
+        label: "Close Ticket",
+        emoji: { name: "🔒" },
+        custom_id: `close_ticket_${channelId}`,
+      }]
+    }];
+
     const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: "POST",
       headers: {
@@ -125,6 +137,7 @@ export async function sendTicketMessage(
       body: JSON.stringify({
         content: `🎫 **New Support Ticket**\n${adminMentions}`,
         embeds: [embed],
+        components,
       }),
     });
 
