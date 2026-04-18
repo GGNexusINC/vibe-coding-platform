@@ -44,8 +44,13 @@ export async function POST(req: Request) {
     let ticketChannelId: string | undefined;
     let ticketCreated = false;
 
-    if (env.discordBotToken()) {
+    const botToken = env.discordBotToken();
+    console.log("[ticket] Bot token present:", botToken ? "YES" : "NO");
+
+    if (botToken) {
+      console.log("[ticket] Creating ticket channel for:", user?.username ?? "guest");
       const channel = await createTicketChannel(user?.username ?? "guest", subject);
+      console.log("[ticket] Channel created:", channel ? "YES" : "NO", channel?.id);
       if (channel) {
         ticketChannelId = channel.id;
         ticketCreated = await sendTicketMessage(
@@ -58,6 +63,7 @@ export async function POST(req: Request) {
           subject,
           message
         );
+        console.log("[ticket] Message sent:", ticketCreated);
       }
     }
 
