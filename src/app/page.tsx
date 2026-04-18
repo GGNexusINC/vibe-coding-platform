@@ -78,6 +78,9 @@ export default function Home() {
   const [lang, setLang] = useState<"en" | "es">("en");
   const [staff, setStaff] = useState<AdminEntry[]>([]);
   const [staffLoading, setStaffLoading] = useState(true);
+  const [wipeMs, setWipeMs] = useState<number | null>(null);
+  const [wipeLabel, setWipeLabel] = useState("Server Wipe");
+  const [now, setNow] = useState(Date.now());
 
   const t = translations[lang];
 
@@ -85,19 +88,26 @@ export default function Home() {
     const loadStaff = () => {
       fetch("/api/staff", { cache: "no-store" })
         .then((r) => r.json())
-        .then((data) => {
-          if (data?.staff) {
-            setStaff(data.staff);
-          }
-        })
+        .then((data) => { if (data?.staff) setStaff(data.staff); })
         .catch(() => setStaff([]))
         .finally(() => setStaffLoading(false));
     };
-    
     loadStaff();
-    // Refresh every 30 seconds for live status
     const interval = setInterval(loadStaff, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/wipe-timer")
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.wipeAt) {
+          setWipeMs(new Date(d.wipeAt).getTime());
+          setWipeLabel(d.label ?? "Server Wipe");
+        }
+      }).catch(() => {});
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
   }, []);
 
   return (
@@ -201,6 +211,34 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Wipe Timer */}
+        {wipeMs && (() => {
+          const ms = wipeMs - now;
+          const past = ms <= 0;
+          const abs = Math.abs(ms);
+          const d = Math.floor(abs / 86400000);
+          const h = Math.floor((abs % 86400000) / 3600000);
+          const m = Math.floor((abs % 3600000) / 60000);
+          const s = Math.floor((abs % 60000) / 1000);
+          const fmt = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
+          return (
+            <div className="mt-8 rounded-[2rem] border border-orange-400/30 bg-gradient-to-r from-orange-950/60 to-amber-950/40 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-orange-400/70 mb-1">⏳ {wipeLabel}</div>
+                <div className={`text-3xl font-black ${past ? "text-rose-400" : "text-orange-300"}`}>
+                  {past ? `Wiped ${fmt} ago` : fmt}
+                </div>
+              </div>
+              {!past && (
+                <div className="text-xs text-orange-400/60 text-right">
+                  Get your wipe pack before time runs out!<br />
+                  <a href="/store" className="text-orange-300 underline hover:text-orange-200">🛒 Visit Store</a>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Staff & Admin Team Section */}
         <div className="mt-12 rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">

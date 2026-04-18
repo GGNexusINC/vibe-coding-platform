@@ -21,29 +21,17 @@ export async function GET() {
   const activityMap = new Map(activitySummary.members.map((m) => [m.discordId, m]));
   const rosterMap = new Map(rosterRaw.map((r) => [r.discordId, r]));
 
-  // Any activity member not yet in roster → auto-add as approved (pre-existing user)
+  // Only update username/avatar for members already in roster — never auto-add new entries as approved
   const upsertPromises: Promise<unknown>[] = [];
   for (const member of activitySummary.members) {
-    if (!rosterMap.has(member.discordId)) {
+    if (rosterMap.has(member.discordId)) {
+      // Update existing entry's username/avatar only
       upsertPromises.push(
         upsertAdmin({
           discordId: member.discordId,
           username: member.globalName || member.username,
           avatarUrl: member.avatarUrl,
-          status: "approved",
-        }),
-      );
-    }
-  }
-  // Also add any presence entries not yet in roster
-  for (const [id, p] of presenceMap) {
-    if (!rosterMap.has(id) && !activityMap.has(id)) {
-      upsertPromises.push(
-        upsertAdmin({
-          discordId: id,
-          username: p.globalName || p.username,
-          avatarUrl: p.avatarUrl ?? undefined,
-          status: "approved",
+          status: rosterMap.get(member.discordId)!.status,
         }),
       );
     }
@@ -54,7 +42,8 @@ export async function GET() {
     fresh.forEach((r) => rosterMap.set(r.discordId, r));
   }
 
-  const allIds = new Set([...rosterMap.keys(), ...activityMap.keys(), ...presenceMap.keys()]);
+  // Only show people explicitly in the roster — never auto-populate from activity/presence
+  const allIds = new Set([...rosterMap.keys()]);
   const enriched = [...allIds].map((id) => {
     const r = rosterMap.get(id);
     const a = activityMap.get(id);
