@@ -29,7 +29,19 @@ export const env = {
     const hardcoded = KNOWN_ADMINS.map((a) => a.discordId);
     return new Set([...hardcoded, ...fromEnv]);
   },
-  discordBotToken: () => getEnv("DISCORD_BOT_TOKEN") ?? "",
+  discordBotToken: () => {
+    // Check multiple possible env var names
+    const token = getEnv("DISCORD_BOT_TOKEN") || 
+                  getEnv("BOT_TOKEN") || 
+                  getEnv("DISCORD_TOKEN") ||
+                  getEnv("TOKEN");
+    if (!token) {
+      console.log("[env] No bot token found. Checked: DISCORD_BOT_TOKEN, BOT_TOKEN, DISCORD_TOKEN, TOKEN");
+    } else {
+      console.log("[env] Bot token found (length:", token.length, ")");
+    }
+    return token ?? "";
+  },
   discordGuildId: () => getEnv("DISCORD_GUILD_ID") ?? "1419522458075005023",
   discordTicketsCategory: () => getEnv("DISCORD_TICKETS_CATEGORY") ?? "",
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
