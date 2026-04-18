@@ -4,12 +4,15 @@ import { env } from "./env";
 const BOT_TOKEN = env.discordBotToken();
 const GUILD_ID = env.discordGuildId();
 
-// Admin IDs from KNOWN_ADMINS plus any additional ones
+// Admin IDs who can see ticket channels
 const ADMIN_IDS = [
   "940804710267486249",   // Kilo
   "1310794181190352997",  // Buzzworthy
   "145278391166173185",   // Hope
 ];
+
+// Also allow the bot itself if needed
+const BOT_ID = "1494210689806368798"; // NEWHOPEGGN bot
 
 type TicketChannel = {
   id: string;
@@ -45,18 +48,16 @@ export async function createTicketChannel(
         topic: `Support ticket from ${username}: ${subject.slice(0, 100)}`,
         parent_id: env.discordTicketsCategory() || undefined,
         permission_overwrites: [
-          // Deny @everyone access
-          {
-            id: GUILD_ID,
-            type: 0, // Role
-            deny: "0x400", // VIEW_CHANNEL permission bit
-          },
-          // Allow admins
-          ...ADMIN_IDS.map(id => ({
-            id,
-            type: 1, // User
-            allow: "0x400", // VIEW_CHANNEL
-          })),
+          // Deny @everyone - type 0 = role, 1024 = VIEW_CHANNEL
+          { id: GUILD_ID, type: 0, deny: 1024, allow: 0 },
+          // Allow bot - type 1 = user
+          { id: BOT_ID, type: 1, allow: 1024, deny: 0 },
+          // Allow Kilo
+          { id: "940804710267486249", type: 1, allow: 1024, deny: 0 },
+          // Allow Buzzworthy  
+          { id: "1310794181190352997", type: 1, allow: 1024, deny: 0 },
+          // Allow Hope
+          { id: "145278391166173185", type: 1, allow: 1024, deny: 0 },
         ],
       }),
     });
