@@ -1,15 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
+
+const GUILD_ID = "1419522458075005023";
+const WIDGET_URL = `https://discord.com/api/guilds/${GUILD_ID}/widget.json`;
+
+type WidgetMember = {
+  id: string;
+  username: string;
+  status: string;
+};
+
+type Widget = {
+  members: WidgetMember[];
+};
 
 export default function SupportClient() {
   const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
+  const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
+  const [loadingStaff, setLoadingStaff] = useState(true);
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
+
+  // Fetch real Discord online status
+  useEffect(() => {
+    async function loadStaffStatus() {
+      try {
+        const res = await fetch(WIDGET_URL);
+        if (!res.ok) { setLoadingStaff(false); return; }
+        const data: Widget = await res.json();
+        const online = new Set<string>();
+        data.members?.forEach((m) => {
+          // Check if member username matches any staff (case insensitive)
+          const staffMatch = supportStaff.find(
+            (s) => s.toLowerCase() === m.username.toLowerCase()
+          );
+          if (staffMatch) online.add(staffMatch);
+        });
+        setOnlineStaff(online);
+      } catch {
+        // Silently fail - widget might be disabled
+      } finally {
+        setLoadingStaff(false);
+      }
+    }
+    loadStaffStatus();
+    // Refresh every 30 seconds
+    const interval = setInterval(loadStaffStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function submitTicket(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -113,17 +156,23 @@ export default function SupportClient() {
               <div className="text-sm font-semibold text-white">Support Team</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {supportStaff.map((name, idx) => {
-                const isOnline = idx < 5; // First 5 show as online, last 2 offline
+              {supportStaff.map((name) => {
+                const isOnline = onlineStaff.has(name);
                 return (
                   <span
                     key={name}
-                    className="group relative flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all duration-300 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                    className={`group relative flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:scale-105 ${
+                      isOnline
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                        : "border-white/10 bg-white/5 text-slate-300 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                    }`}
                   >
                     <span className={`h-2 w-2 rounded-full shrink-0 transition-all duration-300 ${
                       isOnline 
                         ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" 
-                        : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                        : loadingStaff
+                          ? "bg-slate-500"
+                          : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
                     }`} />
                     {name}
                   </span>
