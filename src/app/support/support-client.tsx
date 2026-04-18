@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
+import { TicketChat } from "./ticket-chat";
 
 const GUILD_ID = "1419522458075005023";
 const WIDGET_URL = `https://discord.com/api/guilds/${GUILD_ID}/widget.json`;
@@ -25,6 +26,7 @@ export default function SupportClient() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [activeTicket, setActiveTicket] = useState<{id: string, channelId: string} | null>(null);
 
   // Fetch real Discord online status
   useEffect(() => {
@@ -74,7 +76,12 @@ export default function SupportClient() {
 
     setSubject("");
     setMessage("");
-    setStatus("Ticket submitted. Staff was notified on Discord.");
+    setStatus(data?.message || "Ticket submitted!");
+    
+    // Show chat if ticket was created with channel
+    if (data?.ticketId && data?.channelId) {
+      setActiveTicket({ id: data.ticketId, channelId: data.channelId });
+    }
     setLoading(false);
   }
 
@@ -254,10 +261,18 @@ export default function SupportClient() {
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-violet-400 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
 
+            {/* Live Chat - shown after ticket is created */}
+            {activeTicket && (
+              <TicketChat 
+                ticketId={activeTicket.id} 
+                channelId={activeTicket.channelId}
+              />
+            )}
+
             {/* Status Message */}
             {status && (
               <div className={`rounded-xl border px-4 py-3 text-sm ${
-                status.includes("submitted")
+                status.includes("submitted") || status.includes("created")
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
                   : "border-rose-500/30 bg-rose-500/10 text-rose-300"
               }`}>
