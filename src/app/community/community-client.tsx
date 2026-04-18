@@ -289,57 +289,49 @@ export default function CommunityClient() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_80%,rgba(88,101,242,0.06),transparent_50%)]" />
 
       <div className="relative">
-        {/* Header - Clean aligned layout */}
-        <div className="flex flex-col gap-4">
-          {/* Top row: Chip + Stats */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="rz-chip whitespace-nowrap">🎮 Community Hub</div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-3 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-sm font-bold text-emerald-300 whitespace-nowrap">{presenceCount} Online</span>
-              </div>
-              {lastRefresh && (
-                <span className="hidden sm:inline text-xs text-slate-500 whitespace-nowrap">
-                  Updated {timeAgo(lastRefresh.toISOString())}
-                </span>
-              )}
-            </div>
+        {/* Header */}
+        <div className="rz-chip mb-4">🎮 Community Hub</div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-white leading-tight">
+              NewHopeGGN <span className="text-[#5865F2]">Discord</span>
+            </h1>
+            <p className="mt-1 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
           </div>
 
-          {/* Title row - Side by side on desktop, stacked on mobile */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight">
-                NewHopeGGN <span className="text-[#5865F2]">Discord</span>
-              </h1>
-              <p className="mt-1 text-slate-400 text-sm">Live server activity — auto-refreshes every 30s</p>
+          {/* Live stats pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-sm font-bold text-emerald-300">{presenceCount} Online</span>
             </div>
-            <a
-              href={INVITE}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-all shadow-[0_0_20px_rgba(88,101,242,0.3)] shrink-0 self-start lg:self-center w-fit"
-            >
-              <DiscordIcon />
-              Join Discord
-            </a>
           </div>
-
-          {/* Wipe Timer */}
-          {wipeTimer && (
-            <div className="flex items-center gap-3">
-              <WipeCountdown ms={wipeTimer.ms} label={wipeTimer.label} />
-            </div>
-          )}
-
-          {/* Widget disabled notice */}
-          {widgetError && (
-            <div className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 w-fit">
-              ⚠️ Widget disabled — enable in Discord Server Settings
-            </div>
-          )}
         </div>
+
+        {/* Join button */}
+        <a
+          href={INVITE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex h-12 items-center gap-2.5 rounded-2xl bg-[#5865F2] px-7 text-sm font-bold text-white hover:bg-[#4752c4] active:scale-95 transition-all shadow-[0_0_30px_rgba(88,101,242,0.4)]"
+        >
+          <DiscordIcon />
+          Join Our Discord
+        </a>
+
+        {/* Wipe Timer */}
+        {wipeTimer && (
+          <div className="mt-5">
+            <WipeCountdown ms={wipeTimer.ms} label={wipeTimer.label} />
+          </div>
+        )}
+
+        {/* Widget disabled notice */}
+        {widgetError && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
+            ⚠️ Live voice data unavailable — enable Server Widget in Discord Server Settings → Widget
+          </div>
+        )}
 
         <div className="mt-8 grid gap-5 lg:grid-cols-[260px_1fr_260px] items-start">
 
