@@ -87,14 +87,14 @@ function renderContent(content: string) {
   return (
     <>
       {textOnly && (
-        <p className="text-sm text-slate-300 mt-0.5 break-words leading-relaxed">{textOnly}</p>
+        <p className="text-sm text-slate-300 mt-0.5 break-all leading-relaxed overflow-hidden">{textOnly}</p>
       )}
       {imageUrls.map((url) => (
         <img
           key={url}
           src={url}
           alt="media"
-          className="mt-1.5 max-w-[300px] max-h-[240px] rounded-xl object-contain border border-white/8 bg-black/20"
+          className="mt-1.5 max-w-full max-h-[200px] rounded-xl object-contain border border-white/8 bg-black/20"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       ))}
@@ -413,15 +413,15 @@ export default function CommunityClient() {
                     {ch.members.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {ch.members.map((mem) => (
-                          <div key={mem.id} className="flex items-center gap-1.5 rounded-full bg-black/30 border border-white/8 px-2 py-1">
+                          <div key={mem.id} className="flex items-center gap-1.5 rounded-full bg-black/30 border border-white/8 px-2 py-1 max-w-full">
                             <img
                               src={mem.avatar_url}
                               alt={mem.username}
-                              className="h-5 w-5 rounded-full object-cover"
+                              className="h-5 w-5 rounded-full object-cover shrink-0"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                             />
-                            <span className="text-[11px] text-slate-200 font-medium">{mem.username}</span>
-                            <span className={`h-1.5 w-1.5 rounded-full ${
+                            <span className="text-[11px] text-slate-200 font-medium truncate max-w-[80px]">{mem.username}</span>
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                               mem.status === "online" ? "bg-emerald-400" :
                               mem.status === "idle"   ? "bg-amber-400"   :
                               mem.status === "dnd"    ? "bg-rose-500"    : "bg-slate-500"
@@ -491,7 +491,7 @@ export default function CommunityClient() {
                   </div>
                 )}
                 {!msgLoading && messages.map((msg) => (
-                  <div key={msg.id} className="flex items-start gap-2.5 group hover:bg-white/[0.02] rounded-xl px-2 py-1.5 transition">
+                  <div key={msg.id} className="flex items-start gap-2.5 group hover:bg-white/[0.02] rounded-xl px-2 py-1.5 transition overflow-hidden">
                     {msg.author_avatar ? (
                       <img
                         src={msg.author_avatar}
@@ -504,13 +504,13 @@ export default function CommunityClient() {
                         {msg.author_username[0]?.toUpperCase()}
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-white">{msg.author_username}</span>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-baseline gap-2 flex-wrap overflow-hidden">
+                        <span className="text-xs font-bold text-white truncate max-w-[120px]">{msg.author_username}</span>
                         {!activeChannel && (
-                          <span className="text-[10px] text-[#5865F2] font-semibold">#{msg.channel_name}</span>
+                          <span className="text-[10px] text-[#5865F2] font-semibold truncate max-w-[80px]">#{msg.channel_name}</span>
                         )}
-                        <span className="text-[10px] text-slate-600">{timeAgo(msg.created_at)}</span>
+                        <span className="text-[10px] text-slate-600 shrink-0">{timeAgo(msg.created_at)}</span>
                       </div>
                       {renderContent(msg.content)}
                     </div>
