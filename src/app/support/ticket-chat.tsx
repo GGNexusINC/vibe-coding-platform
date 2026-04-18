@@ -167,8 +167,11 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
                     : "bg-gray-800 text-gray-200"
                 }`}
               >
-                <div className="text-xs opacity-75 mb-1">
-                  {msg.author_username}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs opacity-75">{msg.author_username}</span>
+                  <span className="text-xs opacity-50">
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
                 <div>{msg.content}</div>
               </div>

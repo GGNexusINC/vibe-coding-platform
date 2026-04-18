@@ -15,14 +15,15 @@ export async function GET(req: Request) {
   const sb = getClient();
   if (!sb) return NextResponse.json({ ok: false, messages: [], channels: [] });
 
-  // Return distinct channel names
+  // Return distinct channel names (exclude ticket channels)
   if (searchParams.get("channels") === "1") {
     const { data } = await sb
       .from("discord_messages")
       .select("channel_name")
       .order("created_at", { ascending: false })
       .limit(500);
-    const unique = [...new Set((data ?? []).map((r: { channel_name: string }) => r.channel_name))];
+    const unique = [...new Set((data ?? []).map((r: { channel_name: string }) => r.channel_name))]
+      .filter(name => !name?.startsWith("ticket-")); // Exclude ticket channels
     return NextResponse.json({ ok: true, channels: unique });
   }
 
