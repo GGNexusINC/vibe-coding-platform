@@ -113,14 +113,22 @@ export default function SupportClient() {
               <div className="text-sm font-semibold text-white">Support Team</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {supportStaff.map((name) => (
-                <span
-                  key={name}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300"
-                >
-                  {name}
-                </span>
-              ))}
+              {supportStaff.map((name, idx) => {
+                const isOnline = idx < 5; // First 5 show as online, last 2 offline
+                return (
+                  <span
+                    key={name}
+                    className="group relative flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all duration-300 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                  >
+                    <span className={`h-2 w-2 rounded-full shrink-0 transition-all duration-300 ${
+                      isOnline 
+                        ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" 
+                        : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                    }`} />
+                    {name}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
