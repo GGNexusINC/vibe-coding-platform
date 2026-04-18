@@ -4,9 +4,14 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   
-  // Check if it's a button interaction
+  // PING verification (type 1) - Discord sends this to verify the endpoint
+  if (body.type === 1) {
+    return NextResponse.json({ type: 1 }); // PONG
+  }
+  
+  // Check if it's a button interaction (type 3)
   if (body.type !== 3 || !body.data?.custom_id?.startsWith("close_ticket_")) {
-    return NextResponse.json({ type: 1 }); // Pong for other interactions
+    return NextResponse.json({ type: 1 });
   }
 
   const channelId = body.data.custom_id.replace("close_ticket_", "");
@@ -20,34 +25,41 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Send closing message
-    await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bot ${botToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        content: "🔒 **Ticket Closed by Staff** - This channel will be deleted in 5 seconds.",
-      }),
-    });
-
-    // Delete channel after 5 seconds
-    setTimeout(async () => {
-      await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bot ${botToken}` },
-      });
-    }, 5000);
-
-    // Acknowledge the interaction
-    return NextResponse.json({
+    // Acknowledge immediately (Discord requires response within 3 seconds)
+    const responsePromise = NextResponse.json({
       type: 4,
       data: { 
-        content: "✅ Ticket closed! Channel will be deleted in 5 seconds.",
+        content: "✅ Closing ticket... Channel will be deleted in 5 seconds.",
         flags: 64 // Ephemeral (only visible to clicker)
       }
     });
+
+    // Fire and forget: send closing message then delete channel
+    (async () => {
+      try {
+        await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bot ${botToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: "🔒 **Ticket Closed by Staff** - This channel will be deleted in 5 seconds.",
+          }),
+        });
+
+        await new Promise(r => setTimeout(r, 5000));
+        
+        await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bot ${botToken}` },
+        });
+      } catch (e) {
+        console.error("[discord-interactions] Error closing:", e);
+      }
+    })();
+
+    return responsePromise;
   } catch (e) {
     console.error("[discord-interactions] Error:", e);
     return NextResponse.json({
