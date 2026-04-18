@@ -10,9 +10,13 @@ export async function GET() {
       getPresenceMap(),
     ]);
     
+    // Usernames explicitly blocked from public staff display
+    const BLOCKED_USERNAMES = ["draco", "unknowndarkness", "unknown"];
+
     // Only return approved admins with live presence, filter out sensitive data
     const publicStaff = roster
       .filter((r) => r.status === "approved")
+      .filter((r) => !BLOCKED_USERNAMES.includes(r.username.toLowerCase()))
       .map((r) => {
         const presence = presenceMap.get(r.discordId);
         return {
