@@ -526,18 +526,18 @@ export default function MinigamePage() {
 
             {/* Prize table */}
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🔫 Weapon Rewards</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🔫 Once Human Weapons</div>
               <div className="space-y-1">
                 {[
-                  { score: "30+", prize: "Minigun",      rarity: "legendary", emoji: "⚙️" },
-                  { score: "24+", prize: "Flamethrower", rarity: "legendary", emoji: "🔥" },
-                  { score: "18+", prize: "Sniper (AWM)", rarity: "epic",      emoji: "🎯" },
-                  { score: "14+", prize: "M4A1",         rarity: "rare",      emoji: "🔫" },
-                  { score: "10+", prize: "AK-47",        rarity: "rare",      emoji: "🔫" },
-                  { score: "7+",  prize: "SPAS-12",      rarity: "uncommon",  emoji: "💥" },
-                  { score: "4+",  prize: "MP5",          rarity: "uncommon",  emoji: "🔫" },
-                  { score: "1+",  prize: "Desert Eagle", rarity: "common",    emoji: "🔫" },
-                  { score: "0",   prize: "No reward",    rarity: "none",      emoji: "☣️" },
+                  { score: "60+", prize: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯" },
+                  { score: "48+", prize: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅" },
+                  { score: "36+", prize: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍" },
+                  { score: "28+", prize: "M416 - Scorched Earth",rarity: "rare",      emoji: "�" },
+                  { score: "20+", prize: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️" },
+                  { score: "14+", prize: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️" },
+                  { score: "8+",  prize: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈" },
+                  { score: "2+",  prize: "DE.50",                rarity: "common",    emoji: "🔫" },
+                  { score: "0-1", prize: "No reward",            rarity: "none",      emoji: "☣️" },
                 ].map((t) => {
                   const rs = RARITY_STYLE[t.rarity];
                   return (
