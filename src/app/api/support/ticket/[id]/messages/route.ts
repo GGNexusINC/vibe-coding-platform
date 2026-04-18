@@ -26,8 +26,9 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Ticket not found" }, { status: 404 });
   }
 
-  // Check ownership
-  if (ticket.user_id && ticket.user_id !== user?.id) {
+  // Check ownership (allow guests with matching email, or authenticated users)
+  const userId = (user as any)?.id;
+  if (ticket.user_id && ticket.user_id !== userId) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
