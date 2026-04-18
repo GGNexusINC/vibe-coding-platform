@@ -29,6 +29,9 @@ export const env = {
     const hardcoded = KNOWN_ADMINS.map((a) => a.discordId);
     return new Set([...hardcoded, ...fromEnv]);
   },
+  discordBotToken: () => getEnv("DISCORD_BOT_TOKEN") ?? "",
+  discordGuildId: () => getEnv("DISCORD_GUILD_ID") ?? "1419522458075005023",
+  discordTicketsCategory: () => getEnv("DISCORD_TICKETS_CATEGORY") ?? "",
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
     const MINIGAME_WEBHOOK = "https://discord.com/api/webhooks/1494545044621754368/ozdRWCpgTAYD8JHHvNLtoPwAZQRCnIy0KRrgQcallOkrnpmaKHSPQs6F5erFj-H2xVCM";
@@ -44,6 +47,7 @@ export const env = {
       "ban-page":     "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
       "general-chat": "https://discord.com/api/webhooks/1494441156543778946/8HQYfkDh-GpQN_O9pmkd-_21dQV01TU3qrV3nxfMJbls8T_pStfNdnKt3WA9Y9ol6b8m",
       "staff-page":   "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5",
+      "support":      "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5",
       "script-hook":  MINIGAME_WEBHOOK,
       "minigame":     MINIGAME_WEBHOOK,
     };

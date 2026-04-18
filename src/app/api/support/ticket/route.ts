@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { sendDiscordWebhook } from "@/lib/discord";
 import { logActivity } from "@/lib/activity-log";
+import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
+import { env } from "@/lib/env";
 
 export async function POST(req: Request) {
   const now = new Date().toISOString();
@@ -26,9 +27,6 @@ export async function POST(req: Request) {
   }
 
   const user = await getSession();
-  const userLabel = user
-    ? `User / Usuario: **${user.username}**\nDiscord ID: \`${user.discord_id}\``
-    : "User / Usuario: **Guest / Invitado (sin sesion)**";
 
   try {
     await logActivity({
@@ -42,31 +40,59 @@ export async function POST(req: Request) {
       details: `Ticket submitted: ${subject}`,
     });
 
-    await sendDiscordWebhook(
-      {
-        username: "NewHopeGGN Support",
-        avatar_url: user?.avatar_url ?? undefined,
-        content:
-          `🎫 **New Support Ticket / Nuevo Ticket de Soporte**\n` +
-          `Subject / Asunto: **${subject}**\n` +
-          `${userLabel}\n` +
-          `Time / Hora (UTC): \`${now}\`\n` +
-          `Route / Ruta: \`/api/support/ticket\`\n` +
-          `IP (x-forwarded-for): \`${forwardedFor}\`\n` +
-          `Message length / Largo del mensaje: \`${message.length}\`\n\n` +
-          `**Message / Mensaje**\n${message}\n\n` +
-          `UA: \`${userAgent.slice(0, 180)}\``,
-      },
-      { required: true },
-    );
+    // Try to create private Discord channel for this ticket
+    let ticketChannelId: string | undefined;
+    let ticketCreated = false;
+
+    if (env.discordBotToken()) {
+      const channel = await createTicketChannel(user?.username ?? "guest", subject);
+      if (channel) {
+        ticketChannelId = channel.id;
+        ticketCreated = await sendTicketMessage(
+          channel.id,
+          {
+            username: user?.username ?? "Guest",
+            discord_id: user?.discord_id,
+            avatar_url: user?.avatar_url ?? undefined,
+          },
+          subject,
+          message
+        );
+      }
+    }
+
+    // Also send to logs webhook as backup
+    const webhookUrl = env.discordWebhookUrlForPage("support");
+    if (webhookUrl) {
+      await sendTicketToWebhook(
+        webhookUrl,
+        {
+          username: user?.username ?? "Guest",
+          discord_id: user?.discord_id,
+          avatar_url: user?.avatar_url ?? undefined,
+        },
+        subject,
+        message,
+        ticketChannelId
+      );
+    }
+
+    return NextResponse.json({ 
+      ok: true, 
+      ticketCreated,
+      channelId: ticketChannelId,
+      message: ticketCreated 
+        ? "Ticket created! A private channel has been created for you and the staff team." 
+        : "Ticket submitted. Staff will review it shortly."
+    });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown error";
+    console.error("[ticket] Error:", e);
     return NextResponse.json(
       { ok: false, error: `Failed to send ticket: ${msg}` },
       { status: 502 },
     );
   }
-
-  return NextResponse.json({ ok: true });
 }
 
