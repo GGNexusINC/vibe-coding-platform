@@ -5,9 +5,9 @@ import { getSession } from "@/lib/session";
 // Get messages for a ticket
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const ticketId = params.id;
+  const { id: ticketId } = await params;
   const user = await getSession();
 
   const supabase = createClient(
@@ -57,9 +57,9 @@ export async function GET(
 // Send message to Discord
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const ticketId = params.id;
+  const { id: ticketId } = await params;
   const body = await req.json().catch(() => ({}));
   const content = String(body?.message ?? "").trim();
 
