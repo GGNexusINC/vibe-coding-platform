@@ -4,15 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 export default function SupportClient() {
-  const supportStaff = [
-    { name: "Kilo", role: "Owner", color: "amber" },
-    { name: "Buzzworthy", role: "Admin", color: "cyan" },
-    { name: "Zeus", role: "Admin", color: "violet" },
-    { name: "Hope", role: "Moderator", color: "emerald" },
-    { name: "Encriptado", role: "Moderator", color: "rose" },
-    { name: "Jon", role: "Support", color: "blue" },
-    { name: "Cortez", role: "Support", color: "fuchsia" },
-  ];
+  const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -43,15 +35,6 @@ export default function SupportClient() {
     setLoading(false);
   }
 
-  const colorClasses: Record<string, { border: string; bg: string; text: string }> = {
-    amber:   { border: "border-amber-500/30", bg: "bg-amber-500/10", text: "text-amber-300" },
-    cyan:    { border: "border-cyan-500/30", bg: "bg-cyan-500/10", text: "text-cyan-300" },
-    violet:  { border: "border-violet-500/30", bg: "bg-violet-500/10", text: "text-violet-300" },
-    emerald: { border: "border-emerald-500/30", bg: "bg-emerald-500/10", text: "text-emerald-300" },
-    rose:    { border: "border-rose-500/30", bg: "bg-rose-500/10", text: "text-rose-300" },
-    blue:    { border: "border-blue-500/30", bg: "bg-blue-500/10", text: "text-blue-300" },
-    fuchsia: { border: "border-fuchsia-500/30", bg: "bg-fuchsia-500/10", text: "text-fuchsia-300" },
-  };
 
   return (
     <div className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:py-14">
@@ -130,18 +113,14 @@ export default function SupportClient() {
               <div className="text-sm font-semibold text-white">Support Team</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {supportStaff.map((member) => {
-                const colors = colorClasses[member.color];
-                return (
-                  <div
-                    key={member.name}
-                    className={`flex items-center gap-2 rounded-lg border ${colors.border} ${colors.bg} px-3 py-1.5`}
-                  >
-                    <span className={`text-xs font-semibold ${colors.text}`}>{member.name}</span>
-                    <span className="text-[10px] text-slate-400">{member.role}</span>
-                  </div>
-                );
-              })}
+              {supportStaff.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300"
+                >
+                  {name}
+                </span>
+              ))}
             </div>
           </div>
         </div>
