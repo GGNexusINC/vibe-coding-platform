@@ -77,8 +77,8 @@ export async function POST(req: Request) {
     const { data: ticket, error: dbError } = await supabase
       .from("tickets")
       .insert({
-        user_id: user?.id,
-        guest_username: user?.username ?? "Guest",
+        user_id: (user as any)?.id,
+        guest_username: (user as any)?.username ?? "Guest",
         subject,
         message,
         discord_channel_id: ticketChannelId,
