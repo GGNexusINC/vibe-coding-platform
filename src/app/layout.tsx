@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import { MobileNav } from "@/app/_components/mobile-nav";
 import { Heartbeat } from "@/app/_components/heartbeat";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "NewHopeGGN | Once Human Community",
