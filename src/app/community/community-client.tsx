@@ -291,16 +291,16 @@ export default function CommunityClient() {
       <div className="relative">
         {/* Header - Clean aligned layout */}
         <div className="flex flex-col gap-4">
-          {/* Top row: Chip + Stats - Always in a row, never stacked */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="rz-chip">🎮 Community Hub</div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-sm font-bold text-emerald-300">{presenceCount} Online</span>
+          {/* Top row: Chip + Stats */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="rz-chip whitespace-nowrap">🎮 Community Hub</div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-3 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-sm font-bold text-emerald-300 whitespace-nowrap">{presenceCount} Online</span>
               </div>
               {lastRefresh && (
-                <span className="hidden sm:inline text-xs text-slate-500">
+                <span className="hidden sm:inline text-xs text-slate-500 whitespace-nowrap">
                   Updated {timeAgo(lastRefresh.toISOString())}
                 </span>
               )}
@@ -319,7 +319,7 @@ export default function CommunityClient() {
               href={INVITE}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-all shadow-[0_0_20px_rgba(88,101,242,0.3)] shrink-0 self-start lg:self-center"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-all shadow-[0_0_20px_rgba(88,101,242,0.3)] shrink-0 self-start lg:self-center w-fit"
             >
               <DiscordIcon />
               Join Discord
