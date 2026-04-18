@@ -4,7 +4,7 @@ import { logActivity } from "@/lib/activity-log";
 import { env } from "@/lib/env";
 import type { DiscordWebhookPayload } from "@/lib/discord";
 
-const allowedTargets = ["ban-page", "general-chat"];
+const allowedTargets = ["ban-page", "general-chat", "staff-page"];
 
 function parseDiscordColor(input: string) {
   const raw = input.trim().replace("#", "");
@@ -123,6 +123,7 @@ export async function POST(req: Request) {
     const targetLabel: Record<string, string> = {
       "general-chat": "💬 General Chat",
       "ban-page": "🔨 Ban Page",
+      "staff-page": "🛡️ Staff Page",
     };
 
     const payload: DiscordWebhookPayload = {

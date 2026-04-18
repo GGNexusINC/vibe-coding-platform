@@ -35,6 +35,7 @@ export const env = {
     const pageMap: Record<string, string> = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
+      "staff-page":   "DISCORD_WEBHOOK_URL_STAFF_PAGE",
       "script-hook":  "DISCORD_WEBHOOK_URL_SCRIPT_HOOK",
       "minigame":     "DISCORD_WEBHOOK_URL_MINIGAME",
     };
@@ -42,6 +43,7 @@ export const env = {
     const hardcodedFallbacks: Record<string, string> = {
       "ban-page":     "https://discord.com/api/webhooks/1494440796781416509/XlClx_S7OOOfwlurlnN3FWCnBbpyVFmnbv-LDdbz63Yh4zFoU3uwXAwNbv1gsDMjY4D-",
       "general-chat": "https://discord.com/api/webhooks/1494441156543778946/8HQYfkDh-GpQN_O9pmkd-_21dQV01TU3qrV3nxfMJbls8T_pStfNdnKt3WA9Y9ol6b8m",
+      "staff-page":   "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5",
       "script-hook":  MINIGAME_WEBHOOK,
       "minigame":     MINIGAME_WEBHOOK,
     };

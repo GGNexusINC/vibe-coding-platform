@@ -98,6 +98,7 @@ type AdminEntry = {
 const pageOptions = [
   { value: "general-chat", label: "General Chat", note: "Public updates and major server posts." },
   { value: "ban-page", label: "Ban Page", note: "Punishments, warnings, and moderation notices." },
+  { value: "staff-page", label: "Staff Page", note: "Staff-only announcements and internal alerts." },
 ];
 
 const broadcastPresets = [
