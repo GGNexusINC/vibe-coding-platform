@@ -48,16 +48,15 @@ export async function POST(req: Request) {
 
   const publicKey = process.env.DISCORD_PUBLIC_KEY || "";
   
-  console.log("[discord-interactions] publicKey present:", !!publicKey, "sig:", signature?.slice(0,10), "ts:", timestamp);
+  console.log("[discord-interactions] HIT! publicKey present:", !!publicKey, "rawBody length:", rawBody.length);
 
-  if (publicKey) {
+  if (publicKey && signature && timestamp) {
     const isValid = await verifyDiscordSignature(publicKey, signature, timestamp, rawBody);
     console.log("[discord-interactions] signature valid:", isValid);
     if (!isValid) {
+      console.log("[discord-interactions] REJECTED - invalid signature");
       return new Response("Invalid signature", { status: 401 });
     }
-  } else {
-    console.log("[discord-interactions] WARNING: No DISCORD_PUBLIC_KEY set, skipping verification");
   }
 
   let body: any;
