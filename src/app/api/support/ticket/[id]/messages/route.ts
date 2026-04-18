@@ -63,27 +63,17 @@ export async function POST(
   const { id: ticketId } = await params;
   const body = await req.json().catch(() => ({}));
   const content = String(body?.message ?? "").trim();
+  const channelId = String(body?.channelId ?? "").trim();
 
   if (!content) {
     return NextResponse.json({ ok: false, error: "Message is required" }, { status: 400 });
   }
 
-  const user = await getSession();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Get ticket
-  const { data: ticket } = await supabase
-    .from("tickets")
-    .select("*")
-    .eq("id", ticketId)
-    .single();
-
-  if (!ticket || !ticket.discord_channel_id) {
-    return NextResponse.json({ ok: false, error: "Ticket channel not found" }, { status: 404 });
+  if (!channelId) {
+    return NextResponse.json({ ok: false, error: "Channel ID required" }, { status: 400 });
   }
+
+  const user = await getSession();
 
   // Send to Discord
   const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
@@ -92,7 +82,7 @@ export async function POST(
   }
 
   try {
-    const res = await fetch(`https://discord.com/api/v10/channels/${ticket.discord_channel_id}/messages`, {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: "POST",
       headers: {
         "Authorization": `Bot ${botToken}`,
@@ -111,16 +101,24 @@ export async function POST(
 
     const message = await res.json();
 
-    // Store in database
-    await supabase.from("discord_messages").insert({
-      id: message.id,
-      channel_id: ticket.discord_channel_id,
-      channel_name: "ticket-channel",
-      author_id: user?.discord_id || "guest",
-      author_username: user?.username || "Guest",
-      author_avatar: user?.avatar_url,
-      content,
-    });
+    // Store in database (optional - ignore errors)
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      await supabase.from("discord_messages").insert({
+        id: message.id,
+        channel_id: channelId,
+        channel_name: "ticket-channel",
+        author_id: user?.discord_id || "guest",
+        author_username: user?.username || "Guest",
+        author_avatar: user?.avatar_url,
+        content,
+      });
+    } catch {
+      // Ignore DB errors
+    }
 
     return NextResponse.json({ ok: true, messageId: message.id });
   } catch (e) {

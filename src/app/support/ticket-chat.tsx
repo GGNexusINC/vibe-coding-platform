@@ -15,14 +15,17 @@ interface TicketChatProps {
   ticketId: string;
   channelId: string;
   userId?: string;
+  onClose?: () => void;
 }
 
-export function TicketChat({ ticketId, channelId, userId }: TicketChatProps) {
+export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closed, setClosed] = useState(false);
 
   // Fetch messages
   const fetchMessages = useCallback(async () => {
@@ -58,7 +61,7 @@ export function TicketChat({ ticketId, channelId, userId }: TicketChatProps) {
       const res = await fetch(`/api/support/ticket/${ticketId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage }),
+        body: JSON.stringify({ message: newMessage, channelId }),
       });
 
       const data = await res.json();
@@ -75,16 +78,70 @@ export function TicketChat({ ticketId, channelId, userId }: TicketChatProps) {
     }
   };
 
+  // Close ticket
+  const closeTicket = async () => {
+    if (!confirm("Close this ticket? The channel will be deleted.")) return;
+    
+    setClosing(true);
+    try {
+      const res = await fetch(`/api/support/ticket/${ticketId}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId }),
+      });
+      
+      if (res.ok) {
+        setClosed(true);
+        onClose?.();
+      } else {
+        setError("Failed to close ticket");
+      }
+    } catch (e) {
+      setError("Failed to close ticket");
+    } finally {
+      setClosing(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-gray-400">Loading chat...</div>;
   }
 
+  if (closed) {
+    return (
+      <div className="bg-gray-900 rounded-lg border border-gray-700 p-4 mt-4">
+        <div className="text-center text-gray-400 py-8">
+          <p className="text-lg mb-2">🔒 Ticket Closed</p>
+          <p className="text-sm">This ticket has been closed and the Discord channel deleted.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-900 rounded-lg border border-gray-700 p-4 mt-4">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-        Live Chat with Staff
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          Live Chat with Staff
+        </h3>
+        <button
+          onClick={closeTicket}
+          disabled={closing}
+          className="bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white text-sm px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1"
+        >
+          {closing ? (
+            "Closing..."
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Close Ticket
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Messages */}
       <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
