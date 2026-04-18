@@ -30,7 +30,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
   // Fetch messages
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await fetch(`/api/support/ticket/${ticketId}/messages`);
+      const res = await fetch(`/api/support/ticket/${ticketId}/messages?channelId=${channelId}`);
       const data = await res.json();
       if (data.ok) {
         setMessages(data.messages || []);
@@ -40,7 +40,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
     } finally {
       setLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, channelId]);
 
   // Poll for new messages every 5 seconds
   useEffect(() => {

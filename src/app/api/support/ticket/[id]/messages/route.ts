@@ -2,57 +2,62 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/session";
 
-// Get messages for a ticket
+// Get messages for a ticket (fetch directly from Discord)
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: ticketId } = await params;
-  const user = await getSession();
+  const url = new URL(req.url);
+  const channelId = url.searchParams.get("channelId");
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Get ticket to find Discord channel
-  const { data: ticket } = await supabase
-    .from("tickets")
-    .select("*, discord_messages(*)")
-    .eq("id", ticketId)
-    .single();
-
-  if (!ticket) {
-    return NextResponse.json({ ok: false, error: "Ticket not found" }, { status: 404 });
+  if (!channelId) {
+    return NextResponse.json({ ok: false, error: "channelId required" }, { status: 400 });
   }
 
-  // Check ownership (allow guests with matching email, or authenticated users)
-  const userId = (user as any)?.id;
-  if (ticket.user_id && ticket.user_id !== userId) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+  const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+  if (!botToken) {
+    return NextResponse.json({ ok: false, error: "Bot not configured" }, { status: 500 });
   }
 
-  // Fetch Discord messages for this channel
-  let discordMessages = [];
-  if (ticket.discord_channel_id) {
-    const { data: messages } = await supabase
-      .from("discord_messages")
-      .select("*")
-      .eq("channel_id", ticket.discord_channel_id)
-      .order("created_at", { ascending: true });
-    discordMessages = messages || [];
-  }
+  try {
+    // Fetch messages directly from Discord
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=50`, {
+      headers: {
+        "Authorization": `Bot ${botToken}`,
+      },
+    });
 
-  return NextResponse.json({
-    ok: true,
-    ticket: {
-      id: ticket.id,
-      subject: ticket.subject,
-      status: ticket.status,
-      channelId: ticket.discord_channel_id,
-    },
-    messages: discordMessages,
-  });
+    if (!res.ok) {
+      return NextResponse.json({ ok: false, error: "Failed to fetch messages" }, { status: 500 });
+    }
+
+    const discordMessages = await res.json();
+    
+    // Transform to our format
+    const messages = discordMessages.map((msg: any) => ({
+      id: msg.id,
+      author_id: msg.author.id,
+      author_username: msg.author.username,
+      author_avatar: msg.author.avatar 
+        ? `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.png`
+        : undefined,
+      content: msg.content,
+      created_at: msg.timestamp,
+    })).reverse(); // Oldest first
+
+    return NextResponse.json({
+      ok: true,
+      ticket: {
+        id: ticketId,
+        channelId: channelId,
+      },
+      messages,
+    });
+  } catch (e) {
+    console.error("[ticket-messages] Error fetching:", e);
+    return NextResponse.json({ ok: false, error: "Failed to fetch" }, { status: 500 });
+  }
 }
 
 // Send message to Discord
