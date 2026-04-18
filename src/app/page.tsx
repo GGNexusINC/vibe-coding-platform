@@ -221,21 +221,45 @@ export default function Home() {
           const h = Math.floor((abs % 86400000) / 3600000);
           const m = Math.floor((abs % 3600000) / 60000);
           const s = Math.floor((abs % 60000) / 1000);
-          const fmt = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const segments = d > 0
+            ? [{ val: pad(d), label: "DAYS" }, { val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }]
+            : [{ val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }, { val: pad(s), label: "SEC" }];
           return (
-            <div className="mt-8 rounded-[2rem] border border-orange-400/30 bg-gradient-to-r from-orange-950/60 to-amber-950/40 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-widest text-orange-400/70 mb-1">⏳ {wipeLabel}</div>
-                <div className={`text-3xl font-black ${past ? "text-rose-400" : "text-orange-300"}`}>
-                  {past ? `Wiped ${fmt} ago` : fmt}
+            <div className={`mt-8 rounded-[2rem] border overflow-hidden relative ${past ? "border-rose-500/30 bg-gradient-to-r from-rose-950/40 to-slate-950/60" : "border-orange-500/25 bg-gradient-to-r from-orange-950/30 to-amber-950/20"}`}>
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(249,115,22,0.04),transparent_60%)]" />
+              <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6 px-7 py-6">
+                <div>
+                  <div className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-3 ${past ? "text-rose-400/70" : "text-orange-400/70"}`}>
+                    {past ? "⚠ SERVER WIPED" : `⏳ ${wipeLabel}`}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {segments.map((seg, i) => (
+                      <div key={seg.label} className="flex items-center gap-1">
+                        {i > 0 && <span className={`text-2xl font-black mb-3 ${past ? "text-rose-500/50" : "text-orange-500/50"}`}>:</span>}
+                        <div className="flex flex-col items-center">
+                          <div className={`font-mono text-4xl font-black tracking-tighter tabular-nums leading-none px-2 py-1 rounded-xl ${past ? "text-rose-300 bg-rose-500/10 border border-rose-500/20" : "text-orange-200 bg-orange-500/10 border border-orange-500/15"}`}>
+                            {seg.val}
+                          </div>
+                          <div className={`text-[9px] font-bold tracking-[0.2em] mt-1 ${past ? "text-rose-500/60" : "text-orange-500/50"}`}>{seg.label}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center sm:items-end gap-2">
+                  {!past ? (
+                    <>
+                      <p className="text-xs text-orange-300/60 text-center sm:text-right">Wipe incoming — grab your pack now</p>
+                      <a href="/store" className="inline-flex items-center gap-2 rounded-xl border border-orange-400/25 bg-orange-400/10 px-4 py-2 text-xs font-bold text-orange-300 hover:bg-orange-400/20 transition">
+                        🛒 Wipe Store
+                      </a>
+                    </>
+                  ) : (
+                    <p className="text-xs text-rose-300/50">New wipe timer will be set soon</p>
+                  )}
                 </div>
               </div>
-              {!past && (
-                <div className="text-xs text-orange-400/60 text-right">
-                  Get your wipe pack before time runs out!<br />
-                  <a href="/store" className="text-orange-300 underline hover:text-orange-200">🛒 Visit Store</a>
-                </div>
-              )}
             </div>
           );
         })()}
