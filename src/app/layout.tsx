@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
 import { MobileNav } from "@/app/_components/mobile-nav";
 import { Heartbeat } from "@/app/_components/heartbeat";
 import "./globals.css";
@@ -167,6 +168,7 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        <Analytics />
       </body>
     </html>
   );
