@@ -4,6 +4,7 @@ import { logActivity } from "@/lib/activity-log";
 import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
 import { env } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
   const now = new Date().toISOString();
@@ -68,24 +69,26 @@ export async function POST(req: Request) {
       }
     }
 
+    // Generate ticket ID for chat (even if DB fails)
+    const ticketId = randomUUID();
+    
     // Save ticket to database
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data: ticket, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from("tickets")
       .insert({
+        id: ticketId,
         user_id: (user as any)?.id,
         guest_username: (user as any)?.username ?? "Guest",
         subject,
         message,
         discord_channel_id: ticketChannelId,
         status: "open",
-      })
-      .select()
-      .single();
+      });
 
     if (dbError) {
       console.error("[ticket] Failed to save ticket:", dbError);
@@ -97,9 +100,9 @@ export async function POST(req: Request) {
       await sendTicketToWebhook(
         webhookUrl,
         {
-          username: user?.username ?? "Guest",
-          discord_id: user?.discord_id,
-          avatar_url: user?.avatar_url ?? undefined,
+          username: (user as any)?.username ?? "Guest",
+          discord_id: (user as any)?.discord_id,
+          avatar_url: (user as any)?.avatar_url ?? undefined,
         },
         subject,
         message,
@@ -109,11 +112,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       ok: true, 
-      ticketId: ticket?.id,
+      ticketId,
       ticketCreated,
       channelId: ticketChannelId,
       message: ticketCreated 
-        ? "Ticket created! A private channel has been created for you and the staff team." 
+        ? "Ticket created! A private channel has been created. Use the chat below to talk with staff." 
         : "Ticket submitted. Staff will review it shortly."
     });
 

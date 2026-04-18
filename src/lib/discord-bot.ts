@@ -106,6 +106,13 @@ export async function sendTicketMessage(
       footer: { text: "Ticket System • Reply here to respond" },
     };
 
+    // Mention all admin users directly by ID
+    const adminMentions = [
+      "<@940804710267486249>",   // Kilo
+      "<@1310794181190352997>",  // Buzzworthy
+      "<@145278391166173185>",   // Hope
+    ].join(" ");
+
     const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: "POST",
       headers: {
@@ -113,7 +120,7 @@ export async function sendTicketMessage(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        content: `🎫 **New Ticket from ${user.username}**\n<@&admin> <@&moderator>`,
+        content: `🎫 **New Support Ticket**\n${adminMentions}`,
         embeds: [embed],
       }),
     });
