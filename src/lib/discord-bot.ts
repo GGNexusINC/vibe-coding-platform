@@ -32,7 +32,10 @@ export async function createTicketChannel(
     return null;
   }
 
-  const channelName = `ticket-${username.toLowerCase().replace(/[^a-z0-9]/g, "")}-${Date.now().toString(36).slice(-4)}`;
+  // Clean channel name: website-ticket-001 format
+  const cleanName = username.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 15);
+  const ticketNum = Math.floor(Math.random() * 900 + 100); // 100-999
+  const channelName = `website-ticket-${ticketNum}`;
   
   try {
     // 1. Create the channel
