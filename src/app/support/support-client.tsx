@@ -261,14 +261,6 @@ export default function SupportClient() {
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-violet-400 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
 
-            {/* Live Chat - shown after ticket is created */}
-            {activeTicket && (
-              <TicketChat 
-                ticketId={activeTicket.id} 
-                channelId={activeTicket.channelId}
-              />
-            )}
-
             {/* Status Message */}
             {status && (
               <div className={`rounded-xl border px-4 py-3 text-sm ${
@@ -291,6 +283,14 @@ export default function SupportClient() {
               </div>
             )}
           </form>
+
+          {/* Live Chat - shown after ticket is created (outside form) */}
+          {activeTicket && (
+            <TicketChat 
+              ticketId={activeTicket.id} 
+              channelId={activeTicket.channelId}
+            />
+          )}
         </div>
       </div>
 
