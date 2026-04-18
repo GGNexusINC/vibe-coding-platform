@@ -31,11 +31,12 @@ function scoreToPrize(score: number) {
   if (score >= 60) return { name: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
   if (score >= 48) return { name: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
   if (score >= 36) return { name: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
-  if (score >= 28) return { name: "M416 - Scorched Earth",rarity: "rare",      emoji: "�", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
+  if (score >= 28) return { name: "M416 - Scorched Earth",rarity: "rare",      emoji: "🔥", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
   if (score >= 20) return { name: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
   if (score >= 14) return { name: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
-  if (score >= 8)  return { name: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
-  if (score >= 2)  return { name: "DE.50",                rarity: "common",    emoji: "🔫", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  if (score >= 10)  return { name: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
+  if (score >= 6)  return { name: "DE.50",                rarity: "rare",      emoji: "🔫", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  if (score >= 2)  return { name: "20 Bandage Pack",      rarity: "common",    emoji: "🩹", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_9.jpg" };
   return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️", image: "" };
 }
 
@@ -532,11 +533,12 @@ export default function MinigamePage() {
                   { score: "60+", prize: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯" },
                   { score: "48+", prize: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅" },
                   { score: "36+", prize: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍" },
-                  { score: "28+", prize: "M416 - Scorched Earth",rarity: "rare",      emoji: "�" },
+                  { score: "28+", prize: "M416 - Scorched Earth",rarity: "rare",      emoji: "🔥" },
                   { score: "20+", prize: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️" },
                   { score: "14+", prize: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️" },
-                  { score: "8+",  prize: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈" },
-                  { score: "2+",  prize: "DE.50",                rarity: "common",    emoji: "🔫" },
+                  { score: "10+", prize: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈" },
+                  { score: "6+",  prize: "DE.50",                rarity: "rare",      emoji: "🔫" },
+                  { score: "2+",  prize: "20 Bandage Pack",      rarity: "common",    emoji: "🩹" },
                   { score: "0-1", prize: "No reward",            rarity: "none",      emoji: "☣️" },
                 ].map((t) => {
                   const rs = RARITY_STYLE[t.rarity];

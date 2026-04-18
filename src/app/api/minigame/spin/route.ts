@@ -10,11 +10,12 @@ function scoreToPrize(score: number): Prize {
   if (score >= 60) return { name: "AWS.338 - Bullseye", rarity: "legendary", emoji: "🎯", color: 0xef4444, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
   if (score >= 48) return { name: "HAMR - Brahminy", rarity: "legendary", emoji: "🦅", color: 0xf97316, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
   if (score >= 36) return { name: "SN700 - Gulped Lore", rarity: "epic", emoji: "🐍", color: 0x8b5cf6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
-  if (score >= 28) return { name: "M416 - Scorched Earth", rarity: "rare", emoji: "�", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
+  if (score >= 28) return { name: "M416 - Scorched Earth", rarity: "rare", emoji: "🔥", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
   if (score >= 20) return { name: "SOCR - Outsider", rarity: "rare", emoji: "⚔️", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
   if (score >= 14) return { name: "ACS12 - Corrosion", rarity: "uncommon", emoji: "☣️", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
-  if (score >= 8)  return { name: "KV-SBR - Little Jaws", rarity: "uncommon", emoji: "🦈", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
-  if (score >= 2)  return { name: "DE.50", rarity: "common", emoji: "🔫", color: 0x94a3b8, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  if (score >= 10)  return { name: "KV-SBR - Little Jaws", rarity: "uncommon", emoji: "🦈", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
+  if (score >= 6)  return { name: "DE.50", rarity: "rare", emoji: "🔫", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
+  if (score >= 2)  return { name: "20 Bandage Pack", rarity: "common", emoji: "🩹", color: 0x94a3b8, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_9.jpg" };
   return { name: "Better Luck Next Time", rarity: "none", emoji: "☣️", color: 0x475569, image: "" };
 }
 
