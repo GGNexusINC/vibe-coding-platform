@@ -1,40 +1,64 @@
 "use client";
 
-function playTone(
-  frequency: number,
-  duration: number,
-  type: OscillatorType = "sine",
-  gain = 0.18,
-  fadeOut = true
-) {
-  if (typeof window === "undefined") return;
+// Shared AudioContext — created once and reused so it survives the browser's autoplay policy
+let _ctx: AudioContext | null = null;
+
+function getCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const vol = ctx.createGain();
-    osc.connect(vol);
-    vol.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
-    vol.gain.setValueAtTime(gain, ctx.currentTime);
-    if (fadeOut) vol.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + duration);
-    osc.onended = () => ctx.close();
+    if (!_ctx) {
+      _ctx = new (window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    // Resume if suspended (browser blocks audio until user gesture)
+    if (_ctx.state === "suspended") {
+      _ctx.resume().catch(() => {});
+    }
+    return _ctx;
   } catch {
-    // audio not supported
+    return null;
   }
 }
 
+// Unlock audio context on first user interaction — call once from the page
+export function unlockAudio() {
+  const ctx = getCtx();
+  if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+}
+
+function playTone(
+  ctx: AudioContext,
+  frequency: number,
+  startAt: number,
+  duration: number,
+  type: OscillatorType = "sine",
+  gain = 0.15
+) {
+  const osc = ctx.createOscillator();
+  const vol = ctx.createGain();
+  osc.connect(vol);
+  vol.connect(ctx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, startAt);
+  vol.gain.setValueAtTime(gain, startAt);
+  vol.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  osc.start(startAt);
+  osc.stop(startAt + duration);
+}
+
 export function playSendSound() {
-  // Rising two-tone "sent" beep
-  playTone(880, 0.08, "sine", 0.12);
-  setTimeout(() => playTone(1100, 0.1, "sine", 0.10), 80);
+  const ctx = getCtx();
+  if (!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime;
+  playTone(ctx, 880,  t,        0.07, "sine", 0.12);
+  playTone(ctx, 1100, t + 0.07, 0.10, "sine", 0.10);
 }
 
 export function playReceiveSound() {
-  // Descending soft chime "incoming"
-  playTone(1200, 0.1, "sine", 0.13);
-  setTimeout(() => playTone(900, 0.12, "sine", 0.11), 90);
-  setTimeout(() => playTone(660, 0.18, "sine", 0.09), 180);
+  const ctx = getCtx();
+  if (!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime;
+  playTone(ctx, 1200, t,        0.08, "sine", 0.13);
+  playTone(ctx, 900,  t + 0.09, 0.10, "sine", 0.11);
+  playTone(ctx, 660,  t + 0.19, 0.15, "sine", 0.09);
 }

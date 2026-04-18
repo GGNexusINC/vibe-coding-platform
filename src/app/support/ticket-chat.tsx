@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { playSendSound, playReceiveSound } from "@/lib/sounds";
+import { playSendSound, playReceiveSound, unlockAudio } from "@/lib/sounds";
 
 interface Message {
   id: string;
@@ -216,6 +216,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onFocus={unlockAudio}
             placeholder="Type a message..."
             maxLength={1000}
             className="flex-1 rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:bg-slate-900 transition"

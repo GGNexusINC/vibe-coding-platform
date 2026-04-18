@@ -21,6 +21,7 @@ export default function SupportClient() {
   const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
   const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
   const [loadingStaff, setLoadingStaff] = useState(true);
+  const [guildIconUrl, setGuildIconUrl] = useState<string | null>(null);
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -34,7 +35,11 @@ export default function SupportClient() {
       try {
         const res = await fetch(WIDGET_URL);
         if (!res.ok) { setLoadingStaff(false); return; }
-        const data: Widget = await res.json();
+        const data: Widget & { icon?: string; id?: string } = await res.json();
+        // Grab guild icon if available
+        if (data.id && data.icon) {
+          setGuildIconUrl(`https://cdn.discordapp.com/icons/${data.id}/${data.icon}.png?size=64`);
+        }
         const online = new Set<string>();
         data.members?.forEach((m) => {
           // Check if member username matches any staff (case insensitive)
@@ -204,11 +209,18 @@ export default function SupportClient() {
           {/* Staff Team Card */}
           <div className="rz-surface rz-panel-border rounded-[1.5rem] p-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
-                <svg className="h-5 w-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
+              {/* Server logo from Discord CDN */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {guildIconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={guildIconUrl} alt="NewHopeGGN" className="h-10 w-10 rounded-xl object-cover ring-1 ring-violet-500/30" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
+                  <svg className="h-5 w-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              )}
               <div className="text-sm font-semibold text-white">Support Team</div>
             </div>
             <div className="flex flex-wrap gap-2">
