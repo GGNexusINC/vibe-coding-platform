@@ -393,6 +393,12 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                         + Create Team
                       </button>
                     )}
+                    {event.registration_open && !session?.discord_id && (
+                      <span className="text-xs text-slate-500">Sign in to create team</span>
+                    )}
+                    {event.registration_open && userTeam && (
+                      <span className="text-xs text-emerald-400">✓ You're in a team</span>
+                    )}
                   </div>
 
                   {showCreateTeam && (
@@ -660,7 +666,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
       {!session?.discord_id && (
         <div className="px-4 py-3 border-t border-white/10 bg-slate-950/50">
           <p className="text-xs text-center text-slate-400">
-            <a href="/auth/discord" className="text-amber-400 hover:underline">Sign in with Discord</a> to join teams
+            <a href="/auth/discord" className="text-amber-400 hover:underline font-semibold">Sign in with Discord</a> to create or join teams
           </p>
         </div>
       )}
