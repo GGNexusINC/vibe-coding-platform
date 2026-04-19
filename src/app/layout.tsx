@@ -18,8 +18,12 @@ export const metadata: Metadata = {
   description:
     "NewHopeGGN — your Once Human private server community. Wipe packs, VIP perks, live Discord feed, support tickets, and more.",
   icons: {
-    icon: "/raidzone-bg.png",
-    apple: "/raidzone-bg.png",
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/raidzone-bg.png", sizes: "any" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   themeColor: "#0a0d06",
   applicationName: "NewHopeGGN",

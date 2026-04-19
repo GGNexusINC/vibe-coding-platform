@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const EXT_MAP: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+};
 
 export async function POST(req: Request) {
   const admin = await getAdminSession();
@@ -35,8 +44,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-  const dataUrl = `data:${file.type};base64,${base64}`;
+  // Save to /public/uploads/ with a unique filename
+  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  await fs.mkdir(uploadsDir, { recursive: true });
 
-  return NextResponse.json({ ok: true, dataUrl, name: file.name, type: file.type });
+  const ext = EXT_MAP[file.type] || ".png";
+  const uniqueId = crypto.randomBytes(8).toString("hex");
+  const filename = `${uniqueId}${ext}`;
+  const filePath = path.join(uploadsDir, filename);
+
+  await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+
+  const url = `/uploads/${filename}`;
+
+  return NextResponse.json({ ok: true, url, name: file.name, type: file.type });
 }

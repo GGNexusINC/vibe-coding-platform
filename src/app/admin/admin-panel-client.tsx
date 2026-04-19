@@ -914,6 +914,17 @@ export function AdminPanelClient() {
     }
   }
 
+  async function handleUploadEventImage(eventId: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: form });
+    const uploadData = await uploadRes.json();
+    if (!uploadData.ok) { alert(uploadData.error || "Upload failed"); return; }
+    // Now set the image_url on the event
+    await handleUpdateEventImage(eventId, uploadData.url);
+    setSelectedArenaEvent((prev: any) => ({ ...prev, image_url: uploadData.url }));
+  }
+
   async function handleToggleRegistration(eventId: string, open: boolean) {
     const res = await fetch("/api/arena/events", {
       method: "PATCH",
@@ -2024,7 +2035,13 @@ export function AdminPanelClient() {
                   {/* Event Image Upload */}
                   <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
                     <h3 className="text-sm font-semibold text-cyan-400 mb-3">📸 Event Image</h3>
-                    <div className="flex gap-3">
+                    {selectedArenaEvent.image_url && (
+                      <div className="mb-3 flex items-center gap-3">
+                        <img src={selectedArenaEvent.image_url} alt="Event" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
+                        <span className="text-xs text-slate-400 truncate flex-1">{selectedArenaEvent.image_url}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2 mb-2">
                       <input
                         type="text"
                         value={selectedArenaEvent.image_url || ""}
@@ -2037,10 +2054,28 @@ export function AdminPanelClient() {
                         disabled={!selectedArenaEvent.image_url}
                         className="px-4 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 disabled:opacity-40"
                       >
-                        Update
+                        Set URL
                       </button>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-2">Paste a direct image URL. Recommended: 512x512px</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-600 uppercase tracking-widest">or</span>
+                      <label className="flex-1 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) await handleUploadEventImage(selectedArenaEvent.id, file);
+                            e.target.value = "";
+                          }}
+                        />
+                        <div className="h-10 rounded-xl border border-dashed border-cyan-500/30 bg-cyan-500/5 flex items-center justify-center gap-2 text-sm text-cyan-400 font-semibold hover:bg-cyan-500/10 transition">
+                          📁 Upload from Computer
+                        </div>
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2">JPEG, PNG, GIF, or WebP — max 8 MB. Recommended: 512×512px</p>
                   </div>
 
                   {/* Event Controls */}
