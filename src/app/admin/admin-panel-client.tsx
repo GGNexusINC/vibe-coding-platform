@@ -429,6 +429,8 @@ export function AdminPanelClient() {
   });
   const [givePackageLoading, setGivePackageLoading] = useState(false);
   const [showGivePackageModal, setShowGivePackageModal] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -775,6 +777,8 @@ export function AdminPanelClient() {
         item_name: "",
         reason: "",
       });
+      setUserSearchQuery("");
+      setShowUserDropdown(false);
       await loadInventory();
       await loadPackageLogs();
     } else {
@@ -2408,26 +2412,78 @@ export function AdminPanelClient() {
                     
                     <form onSubmit={handleGivePackage} className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">User Discord ID *</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Search User *</label>
                         <input
                           type="text"
-                          required
-                          placeholder="123456789012345678"
-                          value={givePackageForm.user_id}
-                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, user_id: e.target.value }))}
+                          placeholder="Type name or Discord ID..."
+                          value={userSearchQuery}
+                          onChange={(e) => {
+                            setUserSearchQuery(e.target.value);
+                            setShowUserDropdown(true);
+                            if (!e.target.value) {
+                              setGivePackageForm(prev => ({ ...prev, user_id: "", user_name: "" }));
+                            }
+                          }}
+                          onFocus={() => setShowUserDropdown(true)}
                           className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
                         />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">User Name (optional)</label>
-                        <input
-                          type="text"
-                          placeholder="Username"
-                          value={givePackageForm.user_name}
-                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, user_name: e.target.value }))}
-                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
-                        />
+                        {showUserDropdown && userSearchQuery.length >= 1 && (
+                          <div className="relative">
+                            <div className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-slate-800 border border-white/10 shadow-xl">
+                              {(stats?.summary.members || [])
+                                .filter((m: MemberSummary) => {
+                                  const q = userSearchQuery.toLowerCase();
+                                  return (
+                                    m.discordId.includes(q) ||
+                                    m.username?.toLowerCase().includes(q) ||
+                                    m.globalName?.toLowerCase().includes(q)
+                                  );
+                                })
+                                .slice(0, 10)
+                                .map((m: MemberSummary) => {
+                                  const name = m.globalName || m.username;
+                                  return (
+                                    <button
+                                      key={m.discordId}
+                                      type="button"
+                                      onClick={() => {
+                                        setGivePackageForm(prev => ({ ...prev, user_id: m.discordId, user_name: name }));
+                                        setUserSearchQuery(`${name} (${m.discordId})`);
+                                        setShowUserDropdown(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 border-b border-white/5 last:border-0"
+                                    >
+                                      <div className="font-medium text-white">{name}</div>
+                                      <div className="text-xs text-slate-500 font-mono">{m.discordId}</div>
+                                    </button>
+                                  );
+                                })}
+                              {(stats?.summary.members || []).filter((m: MemberSummary) => {
+                                const q = userSearchQuery.toLowerCase();
+                                return m.discordId.includes(q) || m.username?.toLowerCase().includes(q) || m.globalName?.toLowerCase().includes(q);
+                              }).length === 0 && (
+                                <div className="px-3 py-3 text-sm text-slate-500">
+                                  No users found. You can still paste a Discord ID directly.
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setGivePackageForm(prev => ({ ...prev, user_id: userSearchQuery, user_name: userSearchQuery }));
+                                      setShowUserDropdown(false);
+                                    }}
+                                    className="mt-2 block text-cyan-400 hover:text-cyan-300"
+                                  >
+                                    Use "{userSearchQuery}" as Discord ID →
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {givePackageForm.user_id && (
+                          <div className="mt-2 text-xs text-emerald-400">
+                            ✓ Selected: {givePackageForm.user_name} (<span className="font-mono">{givePackageForm.user_id}</span>)
+                          </div>
+                        )}
                       </div>
                       
                       <div>
