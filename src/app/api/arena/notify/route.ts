@@ -4,11 +4,10 @@ import { sendDiscordWebhook } from "@/lib/discord";
 import { createClient } from "@supabase/supabase-js";
 
 // Send DM to a Discord user
-async function sendDiscordDM(userId: string, message: string) {
+async function sendDiscordDM(userId: string, message: string): Promise<{success: boolean; error?: string}> {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!botToken) {
-    console.error("DISCORD_BOT_TOKEN not set");
-    return false;
+    return { success: false, error: "DISCORD_BOT_TOKEN not set in environment" };
   }
 
   try {
@@ -23,8 +22,9 @@ async function sendDiscordDM(userId: string, message: string) {
     });
 
     if (!dmRes.ok) {
-      console.error("Failed to create DM channel:", await dmRes.text());
-      return false;
+      const errorText = await dmRes.text();
+      console.error("Failed to create DM channel:", errorText);
+      return { success: false, error: `DM channel failed: ${errorText}` };
     }
 
     const dmChannel = await dmRes.json();
@@ -40,14 +40,15 @@ async function sendDiscordDM(userId: string, message: string) {
     });
 
     if (!msgRes.ok) {
-      console.error("Failed to send DM:", await msgRes.text());
-      return false;
+      const errorText = await msgRes.text();
+      console.error("Failed to send DM:", errorText);
+      return { success: false, error: `Send message failed: ${errorText}` };
     }
 
-    return true;
+    return { success: true };
   } catch (e) {
     console.error("Error sending DM:", e);
-    return false;
+    return { success: false, error: String(e) };
   }
 }
 
@@ -118,18 +119,22 @@ export async function POST(req: Request) {
     // Send DMs
     const dmResults = await Promise.all(
       discordIds.map(async (id) => {
-        const success = await sendDiscordDM(id, `🏟️ **NewHopeGGN Arena**\n\n${message}`);
-        return { id, success };
+        const result = await sendDiscordDM(id, `🏟️ **NewHopeGGN Arena**\n\n${message}`);
+        return { id, ...result };
       })
     );
 
     const successful = dmResults.filter(r => r.success).length;
+    const failed = dmResults.filter(r => !r.success);
 
+    // Return detailed results
     return NextResponse.json({ 
       ok: true, 
       message: "Notification sent",
       dms_sent: successful,
-      total_recipients: discordIds.length
+      total_recipients: discordIds.length,
+      errors: failed.length > 0 ? failed.map(f => ({ id: f.id, error: f.error })) : undefined,
+      bot_token_set: !!process.env.DISCORD_BOT_TOKEN
     });
   } catch (e) {
     console.error("Failed to send notification:", e);

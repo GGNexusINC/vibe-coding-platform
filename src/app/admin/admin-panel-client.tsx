@@ -820,6 +820,7 @@ export function AdminPanelClient() {
   }
 
   async function handleNotifyMatch(match: any, team: 'team1' | 'team2') {
+    const teamId = team === 'team1' ? match.team1_id : match.team2_id;
     const teamName = team === 'team1' ? match.team1_name : match.team2_name;
     const opponentName = team === 'team1' ? match.team2_name : match.team1_name;
     const vc = team === 'team1' ? match.team1_vc : match.team2_vc;
@@ -831,13 +832,15 @@ export function AdminPanelClient() {
         match_id: match.match_number,
         message: `🎮 It's your turn! You're fighting **${opponentName}**. Join **${vc}** now!`,
         team_name: teamName,
+        teams: [teamId], // Pass team ID to find members
       }),
     });
     const data = await res.json();
     if (data.ok) {
-      alert(`Notified ${teamName}`);
+      const status = `📨 ${teamName}: ${data.dms_sent}/${data.total_recipients} DMs sent`;
+      alert(data.bot_token_set ? status : `${status}\n\n⚠️ DISCORD_BOT_TOKEN not set - add it to .env for DMs to work!`);
     } else {
-      alert(data.error || "Failed to notify");
+      alert(`❌ Failed: ${data.error || "Unknown error"}`);
     }
   }
 
@@ -849,13 +852,15 @@ export function AdminPanelClient() {
         match_id: match.match_number,
         message: `⚔️ **MATCH STARTING!**\n\n${match.team1_name} vs ${match.team2_name}\n\nBoth teams join your voice channels NOW!`,
         broadcast: true,
+        teams: [match.team1_id, match.team2_id], // Both teams
       }),
     });
     const data = await res.json();
     if (data.ok) {
-      alert("Match started! Both teams notified.");
+      const status = `📨 Match DMs: ${data.dms_sent}/${data.total_recipients} sent\n🔧 Bot token: ${data.bot_token_set ? '✅' : '❌ Not set'}`;
+      alert(status);
     } else {
-      alert(data.error || "Failed to start match");
+      alert(`❌ Failed: ${data.error || "Unknown error"}`);
     }
   }
 
@@ -871,9 +876,14 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      alert("All teams notified!");
+      const status = `📨 DMs: ${data.dms_sent}/${data.total_recipients} sent\n🔧 Bot token: ${data.bot_token_set ? '✅ Set' : '❌ Not set'}`;
+      if (data.errors && data.errors.length > 0) {
+        alert(`${status}\n\n❌ Errors:\n${data.errors.slice(0, 3).map((e: any) => `${e.id.slice(0,8)}: ${e.error.slice(0, 50)}`).join('\n')}`);
+      } else {
+        alert(status);
+      }
     } else {
-      alert(data.error || "Failed to notify teams");
+      alert(`❌ Failed: ${data.error || "Unknown error"}\n\nBot token set: ${data.bot_token_set ? 'Yes' : 'NO - Add DISCORD_BOT_TOKEN to env'}`);
     }
   }
 
