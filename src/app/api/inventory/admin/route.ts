@@ -10,56 +10,68 @@ function getSupabase() {
   );
 }
 
+// Discord embed colors per action
+const ACTION_COLORS: Record<string, number> = {
+  admin_given:    0x22c55e, // green
+  user_used:      0xf59e0b, // amber
+  user_saved:     0x06b6d4, // cyan
+  admin_revoked:  0xef4444, // red
+  admin_restored: 0xa855f7, // violet
+};
+
+const ACTION_TITLES: Record<string, string> = {
+  admin_given:    "📦 Package Given",
+  user_used:      "✅ Package Used",
+  user_saved:     "💾 Package Saved for Next Wipe",
+  admin_revoked:  "🗑️ Package Revoked",
+  admin_restored: "♻️ Package Restored",
+};
+
 // Discord webhook for package logs
 async function logToDiscord(
   action: string,
   itemName: string,
+  itemType: string,
   userId: string,
-  adminName: string,
+  actorName: string,
   details?: Record<string, any>
 ) {
-  const icons: Record<string, string> = {
-    admin_given: "🎁",
-    user_used: "✅",
-    user_saved: "💾",
-    admin_revoked: "🗑️",
-    admin_restored: "♻️",
-    status_changed: "📝",
-  };
+  const title = ACTION_TITLES[action] || `� ${action}`;
+  const color = ACTION_COLORS[action] ?? 0x64748b;
 
-  const actionLabels: Record<string, string> = {
-    admin_given: "Package Given",
-    user_used: "Package Used",
-    user_saved: "Package Saved",
-    admin_revoked: "Package Revoked",
-    admin_restored: "Package Restored",
-    status_changed: "Status Changed",
-  };
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    { name: "Item", value: `\`${itemName}\``, inline: true },
+    { name: "Type", value: `\`${itemType}\``, inline: true },
+    { name: "User", value: `<@${userId}>`, inline: true },
+    { name: "Discord ID", value: `\`${userId}\``, inline: true },
+    { name: "Action By", value: actorName, inline: true },
+  ];
 
-  const icon = icons[action] || "📦";
-  const label = actionLabels[action] || action;
-
-  let content = `${icon} **${label}**\n\n`;
-  content += `**Item:** ${itemName}\n`;
-  content += `**User:** <@${userId}> (\`${userId}\`)\n`;
-  content += `**By:** ${adminName}\n`;
-  
-  if (details?.reason) {
-    content += `**Reason:** ${details.reason}\n`;
-  }
   if (details?.wipe_cycle) {
-    content += `**Wipe:** ${details.wipe_cycle}\n`;
+    fields.push({ name: "Wipe Cycle", value: `\`${details.wipe_cycle}\``, inline: true });
+  }
+  if (details?.reason && details.reason !== "Admin given" && details.reason !== "User initiated") {
+    fields.push({ name: "Reason", value: details.reason, inline: false });
   }
   if (details?.old_status && details?.new_status) {
-    content += `**Change:** ${details.old_status} → ${details.new_status}\n`;
+    fields.push({ name: "Status Change", value: `${details.old_status} → ${details.new_status}`, inline: true });
   }
-  
-  content += `\n<:yellow:STAFF_ROLE_ID> **Package Log**`;
+
+  const isInsuranceClaim = action === "user_used" && itemType === "insurance";
 
   try {
     await sendDiscordWebhook({
-      username: "NewHopeGGN Packages",
-      content,
+      username: "NewHope Package System",
+      content: isInsuranceClaim ? `🛡️ <@&${process.env.DISCORD_STAFF_ROLE_ID || "STAFF_ROLE_ID"}> **Insurance claim — staff action required!**` : undefined,
+      embeds: [
+        {
+          title,
+          color,
+          fields,
+          footer: { text: "NewHopeGGN · Package System" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
     });
     return true;
   } catch (e) {
@@ -223,6 +235,7 @@ export async function PUT(req: Request) {
   const discordNotified = await logToDiscord(
     "admin_given",
     itemDisplayName,
+    item_type,
     user_id,
     adminName,
     { reason: reason || "Admin given", wipe_cycle: currentWipe }

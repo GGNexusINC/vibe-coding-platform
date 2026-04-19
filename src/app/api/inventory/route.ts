@@ -151,30 +151,48 @@ export async function PATCH(req: Request) {
   // Send Discord notification
   let discordNotified = false;
   try {
-    const actionLabel = action === "use" ? "USED" : "SAVED";
-    const icon = action === "use" ? "✅" : "💾";
-    
-    let content = `${icon} **PACKAGE ${actionLabel}**\n\n`;
-    content += `**Item:** ${item.item_name}\n`;
-    content += `**Type:** ${item.item_type}\n`;
-    content += `**User:** ${user.username} (<@${user.discord_id}>)\n`;
-    content += `**ID:** \`${user.discord_id}\`\n`;
-    if (reason) content += `**Reason:** ${reason}\n`;
-    content += `**Wipe:** ${item.wipe_cycle}\n\n`;
+    const isUse = action === "use";
+    const isInsurance = item.item_type === "insurance";
 
-    // Extra alert for insurance usage
-    if (action === "use" && item.item_type === "insurance") {
-      content += `🛡️ **INSURANCE CLAIM - STAFF ACTION REQUIRED**\n`;
-      content += `Purchased: ${new Date(item.purchase_date).toLocaleDateString()}\n\n`;
-      content += `⚠️ <@&STAFF_ROLE_ID> Please process this insurance claim!`;
-    } else {
-      content += `📦 **Package Log**`;
+    const ACTION_COLORS: Record<string, number> = {
+      use:  0xf59e0b,  // amber
+      save: 0x06b6d4,  // cyan
+    };
+
+    const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+      { name: "Item", value: `\`${item.item_name}\``, inline: true },
+      { name: "Type", value: `\`${item.item_type}\``, inline: true },
+      { name: "User", value: `<@${user.discord_id}>`, inline: true },
+      { name: "Discord ID", value: `\`${user.discord_id}\``, inline: true },
+      { name: "Wipe Cycle", value: `\`${item.wipe_cycle}\``, inline: true },
+    ];
+
+    if (isInsurance) {
+      fields.push({ name: "Purchased", value: new Date(item.purchase_date).toLocaleDateString(), inline: true });
+    }
+    if (reason) {
+      fields.push({ name: "Reason", value: reason, inline: false });
     }
 
+    const title = isUse
+      ? (isInsurance ? "🛡️ Insurance Claimed" : "✅ Package Used")
+      : "� Package Saved for Next Wipe";
+
     await sendDiscordWebhook({
-      username: "NewHopeGGN Packages",
+      username: "NewHope Package System",
       avatar_url: user.avatar_url || undefined,
-      content,
+      content: isInsurance && isUse
+        ? `<@&${process.env.DISCORD_STAFF_ROLE_ID || "STAFF_ROLE_ID"}> **Insurance claim — staff action required!**`
+        : undefined,
+      embeds: [
+        {
+          title,
+          color: ACTION_COLORS[action] ?? 0x64748b,
+          fields,
+          footer: { text: "NewHopeGGN · Package System" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
     });
     discordNotified = true;
   } catch (e) {
