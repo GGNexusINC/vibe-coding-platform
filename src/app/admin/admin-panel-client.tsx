@@ -1793,7 +1793,7 @@ export function AdminPanelClient() {
                       placeholder="Description (optional)"
                       className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                     />
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <select
                         value={arenaNewEvent.game_mode}
                         onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, game_mode: e.target.value })}
@@ -2101,18 +2101,18 @@ export function AdminPanelClient() {
                                 <span className="text-xs font-bold text-amber-400">Match #{match.match_number}</span>
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">● Live</span>
                               </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <div className="flex-1 text-left">
-                                  <span className="font-semibold text-white">{match.team1_name}</span>
-                                  <span className="text-xs text-violet-400 block">{match.team1_vc}</span>
+                              <div className="flex items-center justify-between text-sm gap-2">
+                                <div className="flex-1 min-w-0 text-left">
+                                  <span className="font-semibold text-white truncate block">{match.team1_name}</span>
+                                  <span className="text-xs text-violet-400 block truncate">{match.team1_vc}</span>
                                 </div>
-                                <span className="px-2 text-amber-400 font-bold">VS</span>
-                                <div className="flex-1 text-right">
-                                  <span className="font-semibold text-white">{match.team2_name}</span>
-                                  <span className="text-xs text-violet-400 block">{match.team2_vc}</span>
+                                <span className="shrink-0 px-2 text-amber-400 font-bold">VS</span>
+                                <div className="flex-1 min-w-0 text-right">
+                                  <span className="font-semibold text-white truncate block">{match.team2_name}</span>
+                                  <span className="text-xs text-violet-400 block truncate">{match.team2_vc}</span>
                                 </div>
                               </div>
-                              <div className="mt-2 flex gap-2">
+                              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                                 <button
                                   onClick={async () => await handleNotifyMatch(match, 'team1')}
                                   className="flex-1 py-1 rounded bg-violet-500/20 text-violet-300 text-xs hover:bg-violet-500/30"
@@ -2141,7 +2141,7 @@ export function AdminPanelClient() {
                     {/* Admin Actions */}
                     <div className="pt-3 border-t border-white/10">
                       <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Broadcast Actions</h4>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <button
                           onClick={async () => await handleNotifyAllTeams(selectedArenaEvent.id, "🎮 It's your turn in the arena! Join your assigned voice channel NOW!")}
                           className="py-2 rounded bg-amber-500/20 text-amber-300 text-sm font-semibold hover:bg-amber-500/30"
@@ -2437,8 +2437,8 @@ export function AdminPanelClient() {
 
               {/* Give Package Modal */}
               {showGivePackageModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-                  <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-black/70 overflow-y-auto">
+                  <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 sm:p-6 shadow-2xl my-auto">
                     <h3 className="text-xl font-bold text-white mb-4">Give Package to User</h3>
                     
                     <form onSubmit={handleGivePackage} className="space-y-4">

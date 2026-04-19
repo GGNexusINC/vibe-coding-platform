@@ -190,10 +190,36 @@ export default function Home() {
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
                 />
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/60 pointer-events-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/50 pointer-events-none">
                   <div className="text-3xl font-black text-white tracking-widest drop-shadow-lg">😺𝑾𝒊𝒑𝒆</div>
                   <div className="mt-1 text-xs text-slate-300 uppercase tracking-[0.2em]">New Season Starting</div>
                 </div>
+                {/* Wipe Timer — top right corner */}
+                {wipeMs && (() => {
+                  const ms = wipeMs - now;
+                  const past = ms <= 0;
+                  const abs = Math.abs(ms);
+                  const d = Math.floor(abs / 86400000);
+                  const h = Math.floor((abs % 86400000) / 3600000);
+                  const m = Math.floor((abs % 3600000) / 60000);
+                  const s = Math.floor((abs % 60000) / 1000);
+                  const pad = (n: number) => String(n).padStart(2, "0");
+                  const display = d > 0
+                    ? `${pad(d)}d ${pad(h)}h ${pad(m)}m`
+                    : `${pad(h)}:${pad(m)}:${pad(s)}`;
+                  return (
+                    <div className={`absolute top-3 right-3 flex flex-col items-end gap-0.5 rounded-xl px-3 py-1.5 backdrop-blur-md pointer-events-none ${
+                      past ? "bg-rose-950/80 border border-rose-500/30" : "bg-slate-950/80 border border-orange-500/25"
+                    }`}>
+                      <div className={`text-[9px] font-bold uppercase tracking-[0.2em] ${
+                        past ? "text-rose-400/80" : "text-orange-400/70"
+                      }`}>{past ? "⚠ WIPED" : `⏳ ${wipeLabel}`}</div>
+                      <div className={`font-mono text-base font-black tabular-nums leading-none ${
+                        past ? "text-rose-300" : "text-orange-200"
+                      }`}>{display}</div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
