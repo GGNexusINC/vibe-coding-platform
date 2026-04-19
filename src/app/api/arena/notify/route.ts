@@ -5,9 +5,9 @@ import { createClient } from "@supabase/supabase-js";
 
 // Send DM to a Discord user
 async function sendDiscordDM(userId: string, message: string): Promise<{success: boolean; error?: string}> {
-  // Force read env var at runtime
-  const botToken = process.env.DISCORD_BOT_TOKEN || process.env.discord_bot_token;
-  console.log("DEBUG: DISCORD_BOT_TOKEN present?", !!botToken, "Length:", botToken?.length);
+  // Force read env var at runtime - check multiple possible names
+  const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || process.env.discord_bot_token || process.env.bot_token;
+  console.log("DEBUG: Token check - DISCORD_BOT_TOKEN:", !!process.env.DISCORD_BOT_TOKEN, "BOT_TOKEN:", !!process.env.BOT_TOKEN, "Length:", botToken?.length);
   
   if (!botToken) {
     return { success: false, error: "DISCORD_BOT_TOKEN not set in environment. Check Vercel env vars." };
@@ -142,8 +142,8 @@ export async function POST(req: Request) {
       errors: failed.length > 0 ? failed.map(f => ({ id: f.id, error: f.error })) : undefined,
       bot_token_set: tokenPresent,
       env_debug: {
-        token_from_upper: !!process.env.DISCORD_BOT_TOKEN,
-        token_from_lower: !!process.env.discord_bot_token,
+        discord_bot_token: !!process.env.DISCORD_BOT_TOKEN,
+        bot_token: !!process.env.BOT_TOKEN,
         node_env: process.env.NODE_ENV
       }
     });

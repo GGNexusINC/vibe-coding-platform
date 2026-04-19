@@ -881,7 +881,7 @@ export function AdminPanelClient() {
       // Show debug info if token not working
       let debugInfo = '';
       if (data.env_debug) {
-        debugInfo = `\n\nDEBUG:\nUppercase: ${data.env_debug.token_from_upper ? '✅' : '❌'}\nLowercase: ${data.env_debug.token_from_lower ? '✅' : '❌'}\nNode Env: ${data.env_debug.node_env}`;
+        debugInfo = `\n\nDEBUG:\nDISCORD_BOT_TOKEN: ${data.env_debug.discord_bot_token ? '✅' : '❌'}\nBOT_TOKEN: ${data.env_debug.bot_token ? '✅' : '❌'}\nNode Env: ${data.env_debug.node_env}`;
       }
       
       if (data.errors && data.errors.length > 0) {
