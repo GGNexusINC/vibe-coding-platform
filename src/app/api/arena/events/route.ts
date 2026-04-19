@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/session";
+import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { env } from "@/lib/env";
 
@@ -25,7 +26,14 @@ export async function GET() {
 
 // POST create new event (admin only)
 export async function POST(req: Request) {
-  const session = await getSession();
+  // Check for admin session first, then regular session
+  const [adminSession, userSession] = await Promise.all([
+    getAdminSession(),
+    getSession()
+  ]);
+  
+  const session = adminSession || userSession;
+  
   if (!session?.discord_id) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
