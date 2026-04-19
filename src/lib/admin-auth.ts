@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { env } from "@/lib/env";
+import { getAdminByDiscordId } from "@/lib/admin-roster";
 
 const ADMIN_COOKIE_NAME = "nh_admin_session";
 const ADMIN_PASSWORD_FALLBACK = "Hopeggnx762738";
@@ -66,6 +67,20 @@ export async function getAdminSession() {
   try {
     const { payload } = await jwtVerify(token, getAdminSecret());
     if (payload.role !== "admin") return null;
+
+    // Validate user is still approved in roster (prevents removed admins from using old sessions)
+    const discordId = payload.discord_id as string | undefined;
+    if (discordId) {
+      const isOwner = isAdminDiscordId(discordId);
+      if (!isOwner) {
+        const rosterEntry = await getAdminByDiscordId(discordId);
+        if (!rosterEntry || rosterEntry.status !== "approved") {
+          // Session exists but user is no longer approved - revoke it
+          return null;
+        }
+      }
+    }
+
     return payload as unknown as AdminSessionPayload;
   } catch {
     return null;
