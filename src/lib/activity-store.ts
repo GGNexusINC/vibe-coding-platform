@@ -42,6 +42,7 @@ function mapRowToEntry(row: Record<string, unknown>): ActivityLogEntry {
     discriminator: (row.discriminator as string | null) ?? undefined,
     profile: (row.profile as Record<string, unknown> | null) ?? undefined,
     details: String(row.details ?? ""),
+    metadata: (row.metadata as ActivityLogEntry["metadata"] | null) ?? undefined,
   };
 }
 
@@ -57,6 +58,7 @@ function mapEntryToRow(entry: ActivityLogEntry) {
     discriminator: entry.discriminator ?? null,
     profile: entry.profile ?? null,
     details: entry.details,
+    metadata: entry.metadata ?? null,
   };
 }
 
