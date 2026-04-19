@@ -351,7 +351,7 @@ export function AdminPanelClient() {
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena">("dashboard");
   const [wipeAt, setWipeAt] = useState("");
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [wipeSaving, setWipeSaving] = useState(false);
@@ -383,6 +383,23 @@ export function AdminPanelClient() {
   const [lotteryPrize, setLotteryPrize] = useState("Once Human Supply Pack (Rare Gear + Resources)");
   const [lotteryDrawing, setLotteryDrawing] = useState(false);
   const [lotteryStatus, setLotteryStatus] = useState("");
+
+  // Arena Events state
+  const [arenaEvents, setArenaEvents] = useState<any[]>([]);
+  const [arenaLoading, setArenaLoading] = useState(false);
+  const [arenaCreating, setArenaCreating] = useState(false);
+  const [arenaNewEvent, setArenaNewEvent] = useState({
+    name: "",
+    description: "",
+    game_mode: "PvP",
+    max_teams: 16,
+    team_size: 4,
+    start_time: "",
+  });
+  const [selectedArenaEvent, setSelectedArenaEvent] = useState<any>(null);
+  const [arenaVoteOptions, setArenaVoteOptions] = useState<any[]>([]);
+  const [arenaNewVoteOption, setArenaNewVoteOption] = useState({ name: "", icon: "🎯", description: "" });
+  const [arenaVoteResults, setArenaVoteResults] = useState<any[]>([]);
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -631,6 +648,79 @@ export function AdminPanelClient() {
     setLotteryLoading(false);
   }
 
+  async function loadArena() {
+    setArenaLoading(true);
+    const res = await fetch("/api/arena/events", { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setArenaEvents(data.events || []);
+    setArenaLoading(false);
+  }
+
+  async function handleCreateArenaEvent() {
+    if (!arenaNewEvent.name.trim()) return;
+    setArenaCreating(true);
+    const res = await fetch("/api/arena/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: arenaNewEvent.name,
+        description: arenaNewEvent.description,
+        game_mode: arenaNewEvent.game_mode,
+        max_teams: arenaNewEvent.max_teams,
+        team_size: arenaNewEvent.team_size,
+        start_time: arenaNewEvent.start_time || null,
+      }),
+    });
+    const data = await res.json();
+    setArenaCreating(false);
+    if (data.ok) {
+      setArenaNewEvent({ name: "", description: "", game_mode: "PvP", max_teams: 16, team_size: 4, start_time: "" });
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to create event");
+    }
+  }
+
+  async function handleAddVoteOption(eventId: string) {
+    if (!arenaNewVoteOption.name.trim()) return;
+    const res = await fetch("/api/arena/vote-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: eventId,
+        name: arenaNewVoteOption.name,
+        icon: arenaNewVoteOption.icon,
+        description: arenaNewVoteOption.description,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setArenaNewVoteOption({ name: "", icon: "🎯", description: "" });
+      // Refresh vote options
+      const votesRes = await fetch(`/api/arena/votes?eventId=${eventId}`);
+      const votesData = await votesRes.json();
+      if (votesData?.ok) {
+        setArenaVoteOptions(votesData.options || []);
+        setArenaVoteResults(votesData.results || []);
+      }
+    }
+  }
+
+  async function handleFinalizeVotes(eventId: string) {
+    if (!confirm("Finalize votes and announce winner to Discord?")) return;
+    const res = await fetch("/api/arena/votes/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Winner: ${data.winner.name} (${data.winner.percentage}%)`);
+    } else {
+      alert(data.error || "Failed to finalize");
+    }
+  }
+
   async function handleDrawWinner() {
     setLotteryDrawing(true);
     setLotteryStatus("");
@@ -770,6 +860,7 @@ export function AdminPanelClient() {
     { id: "broadcast" as const, label: "Broadcast",  icon: "◎" },
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
     { id: "lottery"   as const, label: "Lottery",    icon: "◆" },
+    { id: "arena"     as const, label: "Arena",      icon: "⚔️" },
     { id: "modlog" as const, label: "Mod Log", icon: "⚑" },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
   ] as const;
@@ -782,6 +873,7 @@ export function AdminPanelClient() {
     if (id === "streamers") void loadStreamers();
     if (id === "lottery") void loadLottery();
     if (id === "modlog")  void loadModLog();
+    if (id === "arena")   void loadArena();
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -1310,6 +1402,195 @@ export function AdminPanelClient() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ════ ARENA EVENTS ════ */}
+          {activeTab === "arena" && (
+            <div className="grid gap-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Arena Events</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Create tournaments and manage team voting.</p>
+                </div>
+                <button type="button" onClick={() => setSelectedArenaEvent(null)}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-amber-500/15 hover:opacity-90 transition">
+                  ⚔️ New Event
+                </button>
+              </div>
+
+              {/* Create New Event Form */}
+              {!selectedArenaEvent && (
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
+                  <h2 className="text-lg font-bold text-white mb-4">Create Arena Event</h2>
+                  <div className="grid gap-4 max-w-lg">
+                    <input
+                      value={arenaNewEvent.name}
+                      onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, name: e.target.value })}
+                      placeholder="Event Name"
+                      className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                    />
+                    <input
+                      value={arenaNewEvent.description}
+                      onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, description: e.target.value })}
+                      placeholder="Description (optional)"
+                      className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                    />
+                    <div className="grid grid-cols-3 gap-3">
+                      <select
+                        value={arenaNewEvent.game_mode}
+                        onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, game_mode: e.target.value })}
+                        className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-3 text-sm text-white outline-none focus:border-cyan-400/30 transition"
+                      >
+                        <option value="PvP">PvP</option>
+                        <option value="PvE">PvE</option>
+                        <option value="Battle Royale">Battle Royale</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={arenaNewEvent.max_teams}
+                        onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, max_teams: parseInt(e.target.value) || 16 })}
+                        placeholder="Max Teams"
+                        className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                      />
+                      <input
+                        type="number"
+                        value={arenaNewEvent.team_size}
+                        onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, team_size: parseInt(e.target.value) || 4 })}
+                        placeholder="Team Size"
+                        className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                      />
+                    </div>
+                    <input
+                      type="datetime-local"
+                      value={arenaNewEvent.start_time}
+                      onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, start_time: e.target.value })}
+                      className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none focus:border-cyan-400/30 transition"
+                    />
+                    <button
+                      onClick={() => void handleCreateArenaEvent()}
+                      disabled={arenaCreating || !arenaNewEvent.name.trim()}
+                      className="h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white shadow-lg shadow-amber-500/10 transition hover:opacity-90 hover:scale-[1.01] disabled:opacity-40"
+                    >
+                      {arenaCreating ? "Creating..." : "Create Event"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Events List */}
+              <div className="grid gap-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Active Events</h2>
+                {arenaLoading ? (
+                  <div className="text-sm text-slate-500">Loading...</div>
+                ) : arenaEvents.length === 0 ? (
+                  <div className="text-sm text-slate-600">No events yet. Create one above!</div>
+                ) : (
+                  arenaEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedArenaEvent(event)}
+                      className={`rounded-2xl border p-4 cursor-pointer transition ${
+                        selectedArenaEvent?.id === event.id
+                          ? "border-amber-500/50 bg-amber-500/10"
+                          : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-white">{event.name}</h3>
+                          <p className="text-xs text-slate-400">{event.game_mode} • {event.arena_teams?.[0]?.count || 0}/{event.max_teams} teams</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          event.registration_open
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-rose-500/20 text-rose-300"
+                        }`}>
+                          {event.registration_open ? "Open" : "Closed"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selected Event Management */}
+              {selectedArenaEvent && (
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-white">{selectedArenaEvent.name}</h2>
+                    <button
+                      onClick={() => setSelectedArenaEvent(null)}
+                      className="text-xs text-slate-400 hover:text-white"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  {/* Vote Options Management */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-violet-400 mb-3">🗳️ Voting Options</h3>
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        value={arenaNewVoteOption.name}
+                        onChange={(e) => setArenaNewVoteOption({ ...arenaNewVoteOption, name: e.target.value })}
+                        placeholder="Option name (e.g., Bows Only)"
+                        className="flex-1 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                      />
+                      <input
+                        value={arenaNewVoteOption.icon}
+                        onChange={(e) => setArenaNewVoteOption({ ...arenaNewVoteOption, icon: e.target.value })}
+                        placeholder="🎯"
+                        className="w-16 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-2 text-center text-sm text-white outline-none focus:border-cyan-400/30 transition"
+                      />
+                      <button
+                        onClick={() => void handleAddVoteOption(selectedArenaEvent.id)}
+                        disabled={!arenaNewVoteOption.name.trim()}
+                        className="px-4 h-10 rounded-xl bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 disabled:opacity-40"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {/* Current Vote Results */}
+                    <div className="space-y-2">
+                      {arenaVoteResults.length === 0 ? (
+                        <p className="text-xs text-slate-500">No votes yet. Add options above!</p>
+                      ) : (
+                        arenaVoteResults.map((result: any, index: number) => (
+                          <div key={result.option_id} className="flex items-center gap-3 p-2 rounded-lg bg-slate-950/50">
+                            <span className="text-lg">{result.option_icon}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className={`text-sm ${index === 0 ? "text-amber-400 font-semibold" : "text-white"}`}>
+                                  {result.option_name}
+                                  {index === 0 && " 👑"}
+                                </span>
+                                <span className="text-xs text-slate-400">{result.vote_count} votes ({result.percentage}%)</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-slate-800 overflow-hidden mt-1">
+                                <div
+                                  className={`h-full rounded-full ${index === 0 ? "bg-amber-500" : "bg-violet-500"}`}
+                                  style={{ width: `${result.percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {arenaVoteResults.length > 0 && (
+                      <button
+                        onClick={() => void handleFinalizeVotes(selectedArenaEvent.id)}
+                        className="mt-4 w-full h-10 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-sm font-bold text-white shadow-lg shadow-violet-500/15 hover:opacity-90 transition"
+                      >
+                        🏆 Finalize & Announce Winner
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
