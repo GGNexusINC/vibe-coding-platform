@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(500);
     const unique = [...new Set((data ?? []).map((r: { channel_name: string }) => r.channel_name))]
-      .filter(name => !name?.startsWith("ticket-")); // Exclude ticket channels
+      .filter(name => !name?.toLowerCase().includes("ticket")); // Exclude ticket channels
     return NextResponse.json({ ok: true, channels: unique });
   }
 
@@ -39,8 +39,9 @@ export async function GET(req: Request) {
   if (channel) {
     query = query.eq("channel_name", channel);
   } else {
-    // When showing "All", exclude ticket channels
-    query = query.not("channel_name", "like", "ticket-%");
+    // When showing "All", exclude ticket channels (any variant)
+    query = query
+      .not("channel_name", "ilike", "%ticket%");
   }
 
   const { data, error } = await query;

@@ -348,7 +348,12 @@ export default function CommunityClient() {
           </div>
         )}
 
-        <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[220px_1fr_220px] items-start">
+        {/* ── Arena Events (full-width, above grid) ── */}
+        <div className="mt-6 sm:mt-8">
+          <ArenaEventsWidget session={session} />
+        </div>
+
+        <div className="mt-4 sm:mt-5 grid gap-4 sm:gap-5 lg:grid-cols-[220px_1fr_220px] items-start">
 
           {/* ── Left: Text Channels ── */}
           <div className="space-y-4 order-2 lg:order-1">
@@ -472,7 +477,7 @@ export default function CommunityClient() {
                 >
                   All
                 </button>
-                {channelList.slice(0, 6).map((ch) => (
+                {channelList.filter(ch => !ch.toLowerCase().includes("ticket")).slice(0, 6).map((ch) => (
                   <button
                     key={ch}
                     onClick={() => setActiveChannel(ch)}
@@ -502,7 +507,7 @@ export default function CommunityClient() {
                     <div className="text-[11px] text-slate-500">Messages from Discord will appear here once members start chatting.</div>
                   </div>
                 )}
-                {!msgLoading && messages.map((msg) => (
+                {!msgLoading && messages.filter(msg => !msg.channel_name?.toLowerCase().includes("ticket")).map((msg) => (
                   <div key={msg.id} className="flex items-start gap-2.5 group hover:bg-white/[0.02] rounded-xl px-2 py-1.5 transition overflow-hidden">
                     {msg.author_avatar ? (
                       <img
@@ -533,11 +538,8 @@ export default function CommunityClient() {
             </div>
           </div>
 
-          {/* ── Right: Arena Events + Online members ── */}
+          {/* ── Right: Online members ── */}
           <div className="space-y-4 order-3 lg:order-3">
-            {/* Arena Events Widget */}
-            <ArenaEventsWidget session={session} />
-
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 sm:mb-4">
                 Members Online — <span className="text-emerald-400">{presenceCount}</span>
