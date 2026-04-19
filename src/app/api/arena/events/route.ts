@@ -499,5 +499,52 @@ Teams advance to your next matches. Check brackets and join your voice channels!
     }
   }
 
+  if (action === "set_winner") {
+    const { match_number, winner_id, winner_name, loser_name } = body;
+    if (!match_number || !winner_id || !winner_name) {
+      return NextResponse.json({ ok: false, error: "Missing match_number, winner_id, or winner_name" }, { status: 400 });
+    }
+
+    // Update the match row in arena_matches
+    await supabase
+      .from("arena_matches")
+      .update({ status: "completed", winner_id })
+      .eq("event_id", event_id)
+      .eq("match_number", match_number);
+
+    // Patch metadata matches array
+    const existingMatches: any[] = event.metadata?.matches || [];
+    const updatedMatches = existingMatches.map((m: any) =>
+      m.match_number === match_number
+        ? { ...m, status: "completed", winner_id, winner_name }
+        : m
+    );
+
+    const { data: updatedEvent } = await supabase
+      .from("arena_events")
+      .update({ metadata: { ...(event.metadata || {}), matches: updatedMatches } })
+      .eq("id", event_id)
+      .select()
+      .single();
+
+    try {
+      await sendDiscordWebhook({
+        username: "NewHopeGGN Arena",
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `🏆 Match ${match_number} Result`,
+          description: `**${winner_name}** wins!${loser_name ? `\n${loser_name} has been eliminated.` : ""}`,
+          color: 0xf59e0b,
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
+      });
+    } catch (e) {
+      console.error("Discord webhook failed:", e);
+    }
+
+    return NextResponse.json({ ok: true, event: updatedEvent, matches: updatedMatches });
+  }
+
   return NextResponse.json({ ok: true, event });
 }

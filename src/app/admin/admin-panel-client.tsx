@@ -1030,6 +1030,31 @@ export function AdminPanelClient() {
     }
   }
 
+  async function handleSetWinner(match: any, winnerId: string, winnerName: string) {
+    const loserName = match.team1_id === winnerId ? match.team2_name : match.team1_name;
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: selectedArenaEvent!.id,
+        action: "set_winner",
+        match_number: match.match_number,
+        winner_id: winnerId,
+        winner_name: winnerName,
+        loser_name: loserName,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent((prev: any) => ({
+        ...prev,
+        metadata: { ...prev.metadata, matches: data.matches },
+      }));
+    } else {
+      alert(data.error || "Failed to set winner");
+    }
+  }
+
   async function handleNotifyAllTeams(eventId: string, message: string) {
     const res = await fetch("/api/arena/notify", {
       method: "POST",
@@ -2119,43 +2144,71 @@ export function AdminPanelClient() {
                               {/* Match header */}
                               <div className="flex items-center justify-between px-4 py-2 border-b border-amber-500/15 bg-amber-500/5">
                                 <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">⚔️ Match {match.match_number}</span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">● LIVE</span>
+                                {match.status === "completed"
+                                  ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-400 font-semibold">✓ Done</span>
+                                  : <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">● LIVE</span>
+                                }
                               </div>
                               {/* VS card */}
-                              <div className="grid grid-cols-[1fr_auto_1fr] gap-2 p-3 items-center">
-                                {/* Team 1 */}
-                                <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
-                                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg font-black text-amber-300">
-                                    {match.team1_name?.[0]?.toUpperCase()}
+                              {match.status === "completed" ? (
+                                <div className="flex items-center justify-center gap-3 p-4">
+                                  <span className="text-2xl">🏆</span>
+                                  <div className="text-center">
+                                    <div className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Winner</div>
+                                    <div className="text-base font-black text-amber-300">{match.winner_name}</div>
                                   </div>
-                                  <span className="text-sm font-bold text-white text-center leading-tight">{match.team1_name}</span>
-                                  <span className="text-[10px] text-violet-400 font-mono">{match.team1_vc}</span>
                                   <button
-                                    onClick={async () => await handleNotifyMatch(match, "team1")}
-                                    className="mt-1 w-full py-1 rounded-lg bg-violet-500/20 text-violet-300 text-[10px] hover:bg-violet-500/30 transition"
-                                  >📢 Notify</button>
+                                    onClick={() => setSelectedArenaEvent((prev: any) => ({
+                                      ...prev,
+                                      metadata: { ...prev.metadata, matches: prev.metadata.matches.map((m: any) => m.match_number === match.match_number ? { ...m, status: "live", winner_id: null, winner_name: null } : m) }
+                                    }))}
+                                    className="ml-2 text-[10px] text-slate-500 hover:text-slate-300 underline"
+                                  >Undo</button>
                                 </div>
-                                {/* VS */}
-                                <div className="flex flex-col items-center gap-0.5">
-                                  <span className="text-xl font-black text-amber-400">VS</span>
-                                  <button
-                                    onClick={async () => await handleStartMatch(match)}
-                                    className="mt-1 px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold hover:bg-emerald-500/30 transition whitespace-nowrap"
-                                  >▶ Start</button>
-                                </div>
-                                {/* Team 2 */}
-                                <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
-                                  <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-lg font-black text-rose-300">
-                                    {match.team2_name?.[0]?.toUpperCase()}
+                              ) : (
+                                <div className="grid grid-cols-[1fr_auto_1fr] gap-2 p-3 items-center">
+                                  {/* Team 1 */}
+                                  <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg font-black text-amber-300">
+                                      {match.team1_name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <span className="text-sm font-bold text-white text-center leading-tight">{match.team1_name}</span>
+                                    <span className="text-[10px] text-violet-400 font-mono">{match.team1_vc}</span>
+                                    <button
+                                      onClick={async () => await handleNotifyMatch(match, "team1")}
+                                      className="mt-1 w-full py-1 rounded-lg bg-violet-500/20 text-violet-300 text-[10px] hover:bg-violet-500/30 transition"
+                                    >📢 Notify</button>
+                                    <button
+                                      onClick={async () => await handleSetWinner(match, match.team1_id, match.team1_name)}
+                                      className="w-full py-1 rounded-lg bg-amber-500/25 text-amber-300 text-[10px] font-bold hover:bg-amber-500/40 transition"
+                                    >🏆 Won</button>
                                   </div>
-                                  <span className="text-sm font-bold text-white text-center leading-tight">{match.team2_name}</span>
-                                  <span className="text-[10px] text-violet-400 font-mono">{match.team2_vc}</span>
-                                  <button
-                                    onClick={async () => await handleNotifyMatch(match, "team2")}
-                                    className="mt-1 w-full py-1 rounded-lg bg-rose-500/20 text-rose-300 text-[10px] hover:bg-rose-500/30 transition"
-                                  >📢 Notify</button>
+                                  {/* VS */}
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-xl font-black text-amber-400">VS</span>
+                                    <button
+                                      onClick={async () => await handleStartMatch(match)}
+                                      className="mt-1 px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold hover:bg-emerald-500/30 transition whitespace-nowrap"
+                                    >▶ Start</button>
+                                  </div>
+                                  {/* Team 2 */}
+                                  <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-lg font-black text-rose-300">
+                                      {match.team2_name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <span className="text-sm font-bold text-white text-center leading-tight">{match.team2_name}</span>
+                                    <span className="text-[10px] text-violet-400 font-mono">{match.team2_vc}</span>
+                                    <button
+                                      onClick={async () => await handleNotifyMatch(match, "team2")}
+                                      className="mt-1 w-full py-1 rounded-lg bg-rose-500/20 text-rose-300 text-[10px] hover:bg-rose-500/30 transition"
+                                    >📢 Notify</button>
+                                    <button
+                                      onClick={async () => await handleSetWinner(match, match.team2_id, match.team2_name)}
+                                      className="w-full py-1 rounded-lg bg-amber-500/25 text-amber-300 text-[10px] font-bold hover:bg-amber-500/40 transition"
+                                    >🏆 Won</button>
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                           ))}
                         </div>
