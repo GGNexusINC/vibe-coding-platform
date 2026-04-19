@@ -45,6 +45,32 @@ interface UserSession {
   avatar_url?: string;
 }
 
+interface VoteOption {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  arena_votes?: { count: number }[];
+}
+
+interface VoteResult {
+  option_id: string;
+  option_name: string;
+  option_icon: string;
+  vote_count: number;
+  percentage: number;
+}
+
+interface Vote {
+  id: string;
+  team_id: string;
+  option_id: string;
+  voted_by_discord_id: string;
+  voted_by_username: string;
+  team?: { name: string; tag?: string };
+  option?: { name: string; icon: string };
+}
+
 export function ArenaEventsWidget({ session }: { session: UserSession | null }) {
   const [events, setEvents] = useState<ArenaEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<ArenaEvent | null>(null);
@@ -57,6 +83,13 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
   const [creating, setCreating] = useState(false);
   const [joiningTeamId, setJoiningTeamId] = useState<string | null>(null);
   const [kickingMemberId, setKickingMemberId] = useState<string | null>(null);
+  
+  // Voting state
+  const [voteOptions, setVoteOptions] = useState<VoteOption[]>([]);
+  const [voteResults, setVoteResults] = useState<VoteResult[]>([]);
+  const [votes, setVotes] = useState<Vote[]>([]);
+  const [voting, setVoting] = useState<string | null>(null);
+  const [showVoting, setShowVoting] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -84,6 +117,20 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
     }
   }, []);
 
+  const fetchVotes = useCallback(async (eventId: string) => {
+    try {
+      const res = await fetch(`/api/arena/votes?eventId=${eventId}`);
+      const data = await res.json();
+      if (data.ok) {
+        setVoteOptions(data.options || []);
+        setVoteResults(data.results || []);
+        setVotes(data.votes || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch votes:", e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEvents();
     const interval = setInterval(fetchEvents, 30000); // Refresh every 30s
@@ -93,8 +140,23 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
   useEffect(() => {
     if (selectedEvent) {
       fetchTeams(selectedEvent.id);
+      if (showVoting) {
+        fetchVotes(selectedEvent.id);
+      }
     }
-  }, [selectedEvent, fetchTeams]);
+  }, [selectedEvent, fetchTeams, showVoting, fetchVotes]);
+
+  // Poll votes when voting section is open
+  useEffect(() => {
+    if (!selectedEvent || !showVoting) return;
+    
+    fetchVotes(selectedEvent.id);
+    const interval = setInterval(() => {
+      fetchVotes(selectedEvent.id);
+    }, 5000); // Refresh votes every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [selectedEvent, showVoting, fetchVotes]);
 
   const handleCreateTeam = async () => {
     if (!session?.discord_id) {
@@ -201,6 +263,37 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
     }
   };
 
+  const handleVote = async (optionId: string) => {
+    if (!session?.discord_id) {
+      alert("Please sign in with Discord to vote");
+      return;
+    }
+    if (!selectedEvent || !userTeam) return;
+
+    setVoting(optionId);
+    try {
+      const res = await fetch("/api/arena/votes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: selectedEvent.id,
+          option_id: optionId,
+          team_id: userTeam.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        fetchVotes(selectedEvent.id);
+      } else {
+        alert(data.error || "Failed to vote");
+      }
+    } catch (e) {
+      alert("Failed to vote");
+    } finally {
+      setVoting(null);
+    }
+  };
+
   const getUserTeam = () => {
     if (!session?.discord_id) return null;
     return teams.find(team => 
@@ -218,6 +311,14 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
   };
 
   const userTeam = getUserTeam();
+
+  const getUserVote = () => {
+    if (!userTeam) return null;
+    return votes.find(v => v.team_id === userTeam.id);
+  };
+
+  const userVote = getUserVote();
+  const totalVotes = voteResults.reduce((sum, r) => sum + r.vote_count, 0);
 
   if (loading) {
     return (
@@ -418,6 +519,124 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                     )}
                   </div>
                 </div>
+
+                {/* Voting Section */}
+                {userTeam && isTeamLeader(userTeam) && (
+                  <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-violet-400">🗳️ Vote Next Round Loot</h4>
+                      <button
+                        onClick={() => setShowVoting(!showVoting)}
+                        className="text-xs px-2 py-1 rounded bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition"
+                      >
+                        {showVoting ? "Hide" : "Vote"}
+                      </button>
+                    </div>
+
+                    {showVoting && (
+                      <div className="space-y-3">
+                        {voteOptions.length === 0 ? (
+                          <p className="text-xs text-slate-500 text-center py-2">No voting options yet. Admin will add them soon!</p>
+                        ) : (
+                          <>
+                            {/* Current Results */}
+                            <div className="space-y-2">
+                              {voteResults.map((result, index) => (
+                                <div 
+                                  key={result.option_id} 
+                                  className={`p-2 rounded-lg border ${
+                                    userVote?.option_id === result.option_id 
+                                      ? "border-violet-500/50 bg-violet-500/10" 
+                                      : "border-white/5 bg-slate-900/30"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{result.option_icon}</span>
+                                      <span className={`text-sm font-medium ${
+                                        index === 0 ? "text-amber-400" : "text-white"
+                                      }`}>
+                                        {result.option_name}
+                                        {index === 0 && <span className="ml-1">👑</span>}
+                                      </span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-xs font-bold text-white">{result.vote_count}</span>
+                                      <span className="text-xs text-slate-500 ml-1">({result.percentage}%)</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Progress Bar */}
+                                  <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full transition-all duration-500 ${
+                                        index === 0 ? "bg-amber-500" : "bg-violet-500"
+                                      }`}
+                                      style={{ width: `${result.percentage}%` }}
+                                    />
+                                  </div>
+
+                                  {/* Vote Button */}
+                                  {isTeamLeader(userTeam) && (
+                                    <button
+                                      onClick={() => handleVote(result.option_id)}
+                                      disabled={voting === result.option_id || userVote?.option_id === result.option_id}
+                                      className={`mt-2 w-full py-1 rounded text-xs font-semibold transition ${
+                                        userVote?.option_id === result.option_id
+                                          ? "bg-emerald-500/20 text-emerald-300 cursor-default"
+                                          : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 disabled:opacity-50"
+                                      }`}
+                                    >
+                                      {userVote?.option_id === result.option_id 
+                                        ? "✓ Your Team's Vote" 
+                                        : voting === result.option_id 
+                                          ? "Voting..." 
+                                          : "Vote for This"
+                                      }
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Total Votes */}
+                            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                              <span className="text-xs text-slate-400">Total Votes Cast</span>
+                              <span className="text-sm font-bold text-violet-400">{totalVotes} / {teams.length} teams</span>
+                            </div>
+
+                            {/* Vote Log */}
+                            {votes.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-white/10">
+                                <h5 className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Recent Votes</h5>
+                                <div className="space-y-1 max-h-[100px] overflow-y-auto text-xs">
+                                  {votes.slice(0, 5).map((vote) => (
+                                    <div key={vote.id} className="flex items-center gap-2 text-slate-400">
+                                      <span>{vote.option?.icon}</span>
+                                      <span className="text-slate-300">{vote.team?.name}</span>
+                                      <span className="text-slate-500">voted for</span>
+                                      <span className="text-violet-300">{vote.option?.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {!showVoting && userVote && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                        <span className="text-lg">{userVote.option?.icon}</span>
+                        <div>
+                          <p className="text-xs text-slate-400">Your team voted for:</p>
+                          <p className="text-sm font-semibold text-violet-300">{userVote.option?.name}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   onClick={() => setSelectedEvent(null)}
