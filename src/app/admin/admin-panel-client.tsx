@@ -965,9 +965,8 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      setSelectedArenaEvent({ ...selectedArenaEvent, current_round: data.event.current_round });
+      setSelectedArenaEvent((prev: any) => ({ ...prev, current_round: data.event.current_round }));
       await loadArena();
-      alert(`Round ${data.event.current_round} started!`);
     } else {
       alert(data.error || "Failed to advance round");
     }
@@ -2277,6 +2276,32 @@ export function AdminPanelClient() {
                         <p className="text-xs text-slate-600 mt-1">Hit <span className="text-amber-400">🚀 START</span> to generate the bracket and assign voice channels.</p>
                       </div>
                     )}
+
+                    {/* ── Next Round Banner ── */}
+                    {(() => {
+                      const matches = selectedArenaEvent.metadata?.matches || [];
+                      const allDone = matches.length > 0 && matches.every((m: any) => m.status === "completed");
+                      return allDone ? (
+                        <div className="mb-4 relative rounded-2xl overflow-hidden border border-emerald-500/40 bg-gradient-to-br from-emerald-950/60 via-slate-950/80 to-slate-900/60 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+                          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/80 to-transparent" />
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">✅</div>
+                              <div>
+                                <div className="text-xs text-emerald-400/70 uppercase tracking-widest mb-0.5">Round {selectedArenaEvent.current_round || 1} Complete</div>
+                                <div className="text-sm font-black text-emerald-300">All matches finished — advance the bracket</div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={async () => await handleNextRound(selectedArenaEvent.id)}
+                              className="shrink-0 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/40 to-cyan-500/30 border border-emerald-400/50 text-emerald-200 text-sm font-black hover:from-emerald-500/60 hover:to-cyan-500/50 transition shadow-[0_0_15px_rgba(16,185,129,0.25)] whitespace-nowrap"
+                            >
+                              ➡️ Advance to Round {(selectedArenaEvent.current_round || 1) + 1}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
 
                     {/* Admin Actions */}
                     <div className="pt-3 border-t border-white/10">

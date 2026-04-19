@@ -453,7 +453,20 @@ export default function CommunityClient() {
             </div>
 
             {/* Discord Messages */}
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-5">
+            <div className="relative rz-panel-border rounded-[2rem] p-5 overflow-hidden">
+              {/* Video background */}
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none"
+                src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
+              />
+              {/* Dark overlay so text stays readable */}
+              <div className="absolute inset-0 bg-slate-950/80 pointer-events-none" />
+              {/* Content sits above video */}
+              <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[#5865F2] font-bold text-base">#</span>
@@ -535,6 +548,7 @@ export default function CommunityClient() {
                 ))}
                 <div ref={msgBottomRef} />
               </div>
+              </div>{/* end relative z-10 */}
             </div>
           </div>
 
