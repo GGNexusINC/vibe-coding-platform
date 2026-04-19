@@ -278,5 +278,65 @@ Teams advance to your next matches. Check brackets and join your voice channels!
     return NextResponse.json({ ok: true, event: { ...event, current_round: newRound } });
   }
 
+  if (action === "shuffle_matches") {
+    // Get all teams and re-shuffle match pairings
+    const { data: teams } = await supabase
+      .from("arena_teams")
+      .select("*")
+      .eq("event_id", event_id);
+
+    if (teams && teams.length > 1) {
+      // Shuffle teams randomly
+      const shuffled = [...teams].sort(() => Math.random() - 0.5);
+      
+      // Generate new matches
+      const newMatches = [];
+      for (let i = 0; i < shuffled.length; i += 2) {
+        if (i + 1 < shuffled.length) {
+          const team1 = shuffled[i];
+          const team2 = shuffled[i + 1];
+          newMatches.push({
+            event_id,
+            round: event.current_round || 1,
+            match_number: Math.floor(i / 2) + 1,
+            team1_id: team1.id,
+            team1_name: team1.name,
+            team1_vc: `RaidZone-${i + 1}`,
+            team2_id: team2.id,
+            team2_name: team2.name,
+            team2_vc: `RaidZone-${i + 2}`,
+            status: "pending",
+          });
+        }
+      }
+
+      // Update event metadata with new matches
+      const { data: updatedEvent } = await supabase
+        .from("arena_events")
+        .update({
+          metadata: { 
+            ...(event.metadata || {}),
+            matches: newMatches 
+          }
+        })
+        .eq("id", event_id)
+        .select()
+        .single();
+
+      // Notify about shuffle
+      try {
+        await sendDiscordWebhook({
+          content: `🔀 **Matches Shuffled!**\n\nNew pairings have been generated. Check the bracket and join your assigned voice channels!`,
+          username: "NewHopeGGN Arena",
+          avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        });
+      } catch (e) {
+        console.error("Discord webhook failed:", e);
+      }
+
+      return NextResponse.json({ ok: true, event: updatedEvent, matches: newMatches });
+    }
+  }
+
   return NextResponse.json({ ok: true, event });
 }

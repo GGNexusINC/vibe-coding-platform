@@ -400,6 +400,7 @@ export function AdminPanelClient() {
   const [arenaVoteOptions, setArenaVoteOptions] = useState<any[]>([]);
   const [arenaNewVoteOption, setArenaNewVoteOption] = useState({ name: "", icon: "🎯", description: "" });
   const [arenaVoteResults, setArenaVoteResults] = useState<any[]>([]);
+  const [arenaTeams, setArenaTeams] = useState<any[]>([]);
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -656,6 +657,12 @@ export function AdminPanelClient() {
     setArenaLoading(false);
   }
 
+  async function fetchArenaTeams(eventId: string) {
+    const res = await fetch(`/api/arena/teams?eventId=${eventId}`, { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setArenaTeams(data.teams || []);
+  }
+
   async function handleCreateArenaEvent() {
     if (!arenaNewEvent.name.trim()) return;
     setArenaCreating(true);
@@ -797,6 +804,92 @@ export function AdminPanelClient() {
       alert(`Round ${data.event.current_round} started!`);
     } else {
       alert(data.error || "Failed to advance round");
+    }
+  }
+
+  // Live Panel Handlers
+  async function handleRemoveTeam(eventId: string, teamId: string) {
+    const res = await fetch(`/api/arena/teams?teamId=${teamId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.ok) {
+      await fetchArenaTeams(eventId);
+      alert("Team removed");
+    } else {
+      alert(data.error || "Failed to remove team");
+    }
+  }
+
+  async function handleNotifyMatch(match: any, team: 'team1' | 'team2') {
+    const teamName = team === 'team1' ? match.team1_name : match.team2_name;
+    const opponentName = team === 'team1' ? match.team2_name : match.team1_name;
+    const vc = team === 'team1' ? match.team1_vc : match.team2_vc;
+    
+    const res = await fetch("/api/arena/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        match_id: match.match_number,
+        message: `🎮 It's your turn! You're fighting **${opponentName}**. Join **${vc}** now!`,
+        team_name: teamName,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Notified ${teamName}`);
+    } else {
+      alert(data.error || "Failed to notify");
+    }
+  }
+
+  async function handleStartMatch(match: any) {
+    const res = await fetch("/api/arena/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        match_id: match.match_number,
+        message: `⚔️ **MATCH STARTING!**\n\n${match.team1_name} vs ${match.team2_name}\n\nBoth teams join your voice channels NOW!`,
+        broadcast: true,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert("Match started! Both teams notified.");
+    } else {
+      alert(data.error || "Failed to start match");
+    }
+  }
+
+  async function handleNotifyAllTeams(eventId: string, message: string) {
+    const res = await fetch("/api/arena/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: eventId,
+        message,
+        broadcast: true,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert("All teams notified!");
+    } else {
+      alert(data.error || "Failed to notify teams");
+    }
+  }
+
+  async function handleShuffleTeams(eventId: string) {
+    if (!confirm("Shuffle all matches? This will re-pair all teams randomly.")) return;
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "shuffle_matches" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent({ ...selectedArenaEvent, metadata: { ...selectedArenaEvent.metadata, matches: data.matches } });
+      alert("Matches shuffled! New pairings generated.");
+    } else {
+      alert(data.error || "Failed to shuffle");
     }
   }
 
@@ -1568,7 +1661,7 @@ export function AdminPanelClient() {
                   arenaEvents.map((event) => (
                     <div
                       key={event.id}
-                      onClick={() => setSelectedArenaEvent(event)}
+                      onClick={() => { setSelectedArenaEvent(event); fetchArenaTeams(event.id); }}
                       className={`rounded-2xl border p-4 cursor-pointer transition ${
                         selectedArenaEvent?.id === event.id
                           ? "border-amber-500/50 bg-amber-500/10"
@@ -1633,7 +1726,7 @@ export function AdminPanelClient() {
                         className="flex-1 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                       />
                       <button
-                        onClick={() => void handleUpdateEventImage(selectedArenaEvent.id, selectedArenaEvent.image_url)}
+                        onClick={async () => await handleUpdateEventImage(selectedArenaEvent.id, selectedArenaEvent.image_url)}
                         disabled={!selectedArenaEvent.image_url}
                         className="px-4 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 disabled:opacity-40"
                       >
@@ -1648,7 +1741,7 @@ export function AdminPanelClient() {
                     <h3 className="text-sm font-semibold text-amber-400 mb-3">⚡ Event Controls</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
-                        onClick={() => void handleToggleRegistration(selectedArenaEvent.id, !selectedArenaEvent.registration_open)}
+                        onClick={async () => await handleToggleRegistration(selectedArenaEvent.id, !selectedArenaEvent.registration_open)}
                         className={`h-10 rounded-xl text-sm font-semibold transition ${
                           selectedArenaEvent.registration_open
                             ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
@@ -1659,7 +1752,7 @@ export function AdminPanelClient() {
                       </button>
                       
                       <button
-                        onClick={() => void handleStartEvent(selectedArenaEvent.id)}
+                        onClick={async () => await handleStartEvent(selectedArenaEvent.id)}
                         disabled={!selectedArenaEvent.registration_open}
                         className="h-10 rounded-xl bg-amber-500 text-amber-950 text-sm font-bold hover:bg-amber-400 disabled:opacity-40 transition"
                       >
@@ -1667,14 +1760,14 @@ export function AdminPanelClient() {
                       </button>
                       
                       <button
-                        onClick={() => void handleAssignVCs(selectedArenaEvent.id)}
+                        onClick={async () => await handleAssignVCs(selectedArenaEvent.id)}
                         className="h-10 rounded-xl bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 transition"
                       >
                         🔊 Assign VCs
                       </button>
                       
                       <button
-                        onClick={() => void handleNextRound(selectedArenaEvent.id)}
+                        onClick={async () => await handleNextRound(selectedArenaEvent.id)}
                         className="h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
                       >
                         ➡️ Next Round
@@ -1717,7 +1810,7 @@ export function AdminPanelClient() {
                         className="w-16 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-2 text-center text-sm text-white outline-none focus:border-cyan-400/30 transition"
                       />
                       <button
-                        onClick={() => void handleAddVoteOption(selectedArenaEvent.id)}
+                        onClick={async () => await handleAddVoteOption(selectedArenaEvent.id)}
                         disabled={!arenaNewVoteOption.name.trim()}
                         className="px-4 h-10 rounded-xl bg-amber-500/20 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 disabled:opacity-40"
                       >
@@ -1753,12 +1846,143 @@ export function AdminPanelClient() {
 
                     {arenaVoteResults.length > 0 && (
                       <button
-                        onClick={() => void handleFinalizeVotes(selectedArenaEvent.id)}
+                        onClick={async () => await handleFinalizeVotes(selectedArenaEvent.id)}
                         className="w-full h-10 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-sm font-bold text-white shadow-lg shadow-violet-500/15 hover:opacity-90 transition"
                       >
                         🏆 Finalize & Announce Winner
                       </button>
                     )}
+                  </div>
+
+                  {/* 🔴 LIVE ADMIN MONITORING PANEL */}
+                  <div className="mt-6 p-4 rounded-xl bg-gradient-to-b from-rose-950/50 to-slate-950/80 border-2 border-rose-500/30">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-rose-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        🔴 LIVE Command Center
+                      </h3>
+                      <span className="text-xs px-2 py-1 rounded-full bg-rose-500/20 text-rose-300">
+                        Event Active
+                      </span>
+                    </div>
+
+                    {/* Live Teams Status */}
+                    <div className="mb-4">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Team Status</h4>
+                      <div className="grid gap-2 max-h-48 overflow-y-auto">
+                        {arenaTeams.map((team: any) => (
+                          <div key={team.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-white/5">
+                            <div className="flex items-center gap-2">
+                              {team.logo_url ? (
+                                <img src={team.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                                  {team.name[0]}
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-sm font-semibold text-white">{team.name}</p>
+                                <p className="text-[10px] text-slate-500">
+                                  {team.arena_team_members?.length || 0} members • 👑 {team.leader_username}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className={`w-2 h-2 rounded-full ${team.arena_team_members?.length > 0 ? "bg-emerald-500" : "bg-slate-500"}`}></span>
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Remove team "${team.name}"? This cannot be undone.`)) {
+                                    await handleRemoveTeam(selectedArenaEvent.id, team.id);
+                                  }
+                                }}
+                                className="ml-2 px-2 py-1 rounded bg-rose-500/20 text-rose-400 text-xs hover:bg-rose-500/30"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Live Matches */}
+                    {selectedArenaEvent.metadata?.matches && selectedArenaEvent.metadata.matches.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Live Matches</h4>
+                        <div className="grid gap-2">
+                          {selectedArenaEvent.metadata.matches.map((match: any) => (
+                            <div key={match.match_number} className="p-3 rounded-lg bg-slate-900/60 border border-amber-500/20">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-amber-400">Match #{match.match_number}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">● Live</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex-1 text-left">
+                                  <span className="font-semibold text-white">{match.team1_name}</span>
+                                  <span className="text-xs text-violet-400 block">{match.team1_vc}</span>
+                                </div>
+                                <span className="px-2 text-amber-400 font-bold">VS</span>
+                                <div className="flex-1 text-right">
+                                  <span className="font-semibold text-white">{match.team2_name}</span>
+                                  <span className="text-xs text-violet-400 block">{match.team2_vc}</span>
+                                </div>
+                              </div>
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  onClick={async () => await handleNotifyMatch(match, 'team1')}
+                                  className="flex-1 py-1 rounded bg-violet-500/20 text-violet-300 text-xs hover:bg-violet-500/30"
+                                >
+                                  📢 Notify {match.team1_name}
+                                </button>
+                                <button
+                                  onClick={async () => await handleNotifyMatch(match, 'team2')}
+                                  className="flex-1 py-1 rounded bg-rose-500/20 text-rose-300 text-xs hover:bg-rose-500/30"
+                                >
+                                  📢 Notify {match.team2_name}
+                                </button>
+                                <button
+                                  onClick={async () => await handleStartMatch(match)}
+                                  className="flex-1 py-1 rounded bg-emerald-500/20 text-emerald-300 text-xs hover:bg-emerald-500/30"
+                                >
+                                  ▶️ Start Match
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Actions */}
+                    <div className="pt-3 border-t border-white/10">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Broadcast Actions</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={async () => await handleNotifyAllTeams(selectedArenaEvent.id, "🎮 It's your turn in the arena! Join your assigned voice channel NOW!")}
+                          className="py-2 rounded bg-amber-500/20 text-amber-300 text-sm font-semibold hover:bg-amber-500/30"
+                        >
+                          📢 Notify All: Your Turn
+                        </button>
+                        <button
+                          onClick={async () => await handleNotifyAllTeams(selectedArenaEvent.id, "⏰ Match starting in 5 minutes! Get ready!")}
+                          className="py-2 rounded bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30"
+                        >
+                          ⏰ 5 Min Warning
+                        </button>
+                        <button
+                          onClick={async () => await handleNotifyAllTeams(selectedArenaEvent.id, "⚔️ Fight! The round has started! May the best team win!")}
+                          className="py-2 rounded bg-rose-500/20 text-rose-300 text-sm font-semibold hover:bg-rose-500/30"
+                        >
+                          ⚔️ Round Start
+                        </button>
+                        <button
+                          onClick={async () => await handleShuffleTeams(selectedArenaEvent.id)}
+                          className="py-2 rounded bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30"
+                        >
+                          🔀 Shuffle Matches
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

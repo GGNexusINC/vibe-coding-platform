@@ -12,6 +12,7 @@ const translations = {
     staffBtn: "Staff Login",
     highlights: [
       { title: "Once Human Server", copy: "A dedicated Once Human community — wipes, events, and base-building with real players." },
+      { title: "Arena Events", copy: "PvP tournaments with auto-matchmaking. Form teams, get assigned voice channels, and fight! Discord DMs notify you when it's your turn." },
       { title: "Fast Support", copy: "Open a ticket and staff respond directly through Discord. No waiting around." },
       { title: "Wipe Packs & VIP", copy: "Buy packs each wipe to get resources and VIP perks tied to the current season." },
     ],
