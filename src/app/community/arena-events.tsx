@@ -31,6 +31,9 @@ interface ArenaEvent {
       team2_name: string;
       team2_vc: string;
       match_number: number;
+      status?: string;
+      winner_id?: string;
+      winner_name?: string;
     }[];
   };
 }
@@ -671,112 +674,123 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                   </div>
                 </div>
 
-                {/* Tournament Pyramid Bracket - Professional View */}
-                {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (
-                  <div className="rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/80 to-slate-950/90 p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
-                        <span>🏆</span>
-                        <span>Tournament Bracket - Round {event.current_round || 1}</span>
-                      </h4>
-                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 animate-pulse">● Live</span>
-                    </div>
-                    
-                    {/* Pyramid Layout */}
-                    <div className="space-y-3">
-                      {event.metadata.matches.map((match: any, index: number) => {
-                        const isUsersMatch = userTeam && (match.team1_id === userTeam.id || match.team2_id === userTeam.id);
-                        return (
-                          <div 
-                            key={match.match_number}
-                            onClick={() => setSelectedMatch(isUsersMatch ? null : match)}
-                            className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.02] ${
-                              isUsersMatch 
-                                ? "border-amber-500 bg-gradient-to-r from-amber-500/20 to-rose-500/10 shadow-lg shadow-amber-500/20" 
-                                : "border-white/10 bg-slate-900/60 hover:border-amber-500/50 hover:bg-slate-900/80"
-                            }`}
-                          >
-                            {/* Match Header */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-500">#{match.match_number}</span>
-                                {isUsersMatch && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-bold">YOUR MATCH</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span className="text-[10px] text-emerald-400 font-medium">IN PROGRESS</span>
-                              </div>
-                            </div>
+                {/* Tournament Bracket */}
+                {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (() => {
+                  const matches = event.metadata.matches!;
+                  const allDone = matches.every((m: any) => m.status === "completed");
+                  const winners = matches.filter((m: any) => m.status === "completed" && m.winner_name).map((m: any) => m.winner_name);
+                  const isChampion = allDone && winners.length === 1;
 
-                            {/* VS Battle Display */}
-                            <div className="flex items-stretch gap-2">
-                              {/* Team 1 */}
-                              <div className={`flex-1 p-2.5 rounded-lg ${
-                                isUsersMatch && match.team1_id === userTeam?.id
-                                  ? "bg-amber-500/20 border border-amber-500/40" 
-                                  : "bg-slate-800/60 border border-white/5"
-                              }`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold">
-                                    {match.team1_name[0]}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-bold text-white truncate">{match.team1_name}</p>
-                                    <p className="text-[10px] text-violet-400 flex items-center gap-1">
-                                      <span>🔊</span>{match.team1_vc}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* VS Center */}
-                              <div className="flex flex-col items-center justify-center px-1">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                                  <span className="text-xs font-black text-amber-950">VS</span>
-                                </div>
-                              </div>
-
-                              {/* Team 2 */}
-                              <div className={`flex-1 p-2.5 rounded-lg ${
-                                isUsersMatch && match.team2_id === userTeam?.id
-                                  ? "bg-amber-500/20 border border-amber-500/40" 
-                                  : "bg-slate-800/60 border border-white/5"
-                              }`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500/30 to-red-500/30 flex items-center justify-center text-sm font-bold">
-                                    {match.team2_name[0]}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-bold text-white truncate">{match.team2_name}</p>
-                                    <p className="text-[10px] text-violet-400 flex items-center gap-1">
-                                      <span>🔊</span>{match.team2_vc}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Click hint */}
-                            <p className="text-[10px] text-center text-slate-500 mt-2">
-                              {isUsersMatch ? "⚔️ Click to view match details" : "👆 Click to view match details"}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Pyramid visualization hint */}
-                    <div className="mt-4 pt-3 border-t border-white/10">
-                      <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500">
-                        <span>🏆</span>
-                        <span>Winners advance to next round</span>
-                        <span>→</span>
+                  return (
+                    <div className="rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/80 to-slate-950/90 p-4">
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
+                          <span>🏆</span>
+                          <span>Bracket — Round {event.current_round || 1}</span>
+                        </h4>
+                        {allDone
+                          ? <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/30">✓ Round Complete</span>
+                          : <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE</span>
+                        }
                       </div>
+
+                      {/* Champion banner */}
+                      {isChampion && (
+                        <div className="mb-4 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-amber-500/20 p-4 text-center shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                          <div className="text-3xl mb-2">🏆</div>
+                          <div className="text-xs text-amber-400/70 uppercase tracking-widest mb-1">Tournament Champion</div>
+                          <div className="text-xl font-black text-amber-300">{winners[0]}</div>
+                        </div>
+                      )}
+
+                      {/* Match cards */}
+                      <div className="space-y-3">
+                        {matches.map((match: any) => {
+                          const isDone = match.status === "completed";
+                          const isUsersMatch = userTeam && (match.team1_id === userTeam.id || match.team2_id === userTeam.id);
+
+                          if (isDone) {
+                            return (
+                              <div key={match.match_number} className="p-3 rounded-xl border border-slate-700/50 bg-slate-900/60 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-500">#{match.match_number}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/30">✓ Done</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-black text-amber-300">
+                                    {match.winner_name?.[0]?.toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] text-slate-500">Winner</div>
+                                    <div className="text-sm font-black text-amber-300">{match.winner_name}</div>
+                                  </div>
+                                  <span className="text-base">🏆</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={match.match_number}
+                              onClick={() => setSelectedMatch(match)}
+                              className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.01] ${
+                                isUsersMatch
+                                  ? "border-amber-500 bg-gradient-to-r from-amber-500/20 to-rose-500/10 shadow-lg shadow-amber-500/20"
+                                  : "border-white/10 bg-slate-900/60 hover:border-amber-500/40"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-500">Match #{match.match_number}</span>
+                                  {isUsersMatch && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-bold">YOUR MATCH</span>}
+                                </div>
+                                <span className="text-[10px] text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE</span>
+                              </div>
+                              <div className="flex items-stretch gap-2">
+                                <div className={`flex-1 p-2.5 rounded-lg ${
+                                  isUsersMatch && match.team1_id === userTeam?.id ? "bg-amber-500/20 border border-amber-500/40" : "bg-slate-800/60 border border-white/5"
+                                }`}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold">{match.team1_name[0]}</div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-white truncate">{match.team1_name}</p>
+                                      <p className="text-[10px] text-violet-400">🔊 {match.team1_vc}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-center px-1">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                                    <span className="text-[10px] font-black text-amber-950">VS</span>
+                                  </div>
+                                </div>
+                                <div className={`flex-1 p-2.5 rounded-lg ${
+                                  isUsersMatch && match.team2_id === userTeam?.id ? "bg-amber-500/20 border border-amber-500/40" : "bg-slate-800/60 border border-white/5"
+                                }`}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500/30 to-red-500/30 flex items-center justify-center text-sm font-bold">{match.team2_name[0]}</div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-white truncate">{match.team2_name}</p>
+                                      <p className="text-[10px] text-violet-400">🔊 {match.team2_vc}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-center text-slate-500 mt-2">👆 Tap for match details</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {!allDone && (
+                        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-center gap-1 text-[10px] text-slate-500">
+                          <span>🏆</span><span>Winners advance to next round</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Match Detail Modal */}
                 {selectedMatch && (

@@ -2286,11 +2286,27 @@ export function AdminPanelClient() {
                       </div>
                     )}
 
-                    {/* ── Next Round Banner ── */}
+                    {/* ── Round Complete Banner ── */}
                     {(() => {
                       const matches = selectedArenaEvent.metadata?.matches || [];
                       const allDone = matches.length > 0 && matches.every((m: any) => m.status === "completed");
-                      return allDone ? (
+                      if (!allDone) return null;
+                      const winners = matches.filter((m: any) => m.winner_name).map((m: any) => m.winner_name);
+                      const isChampion = winners.length === 1;
+
+                      if (isChampion) {
+                        return (
+                          <div className="mb-4 relative rounded-2xl overflow-hidden border border-amber-400/50 bg-gradient-to-br from-amber-950/60 via-slate-950/80 to-slate-900/60 shadow-[0_0_30px_rgba(245,158,11,0.2)] text-center py-6 px-5">
+                            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
+                            <div className="text-3xl mb-2">🏆</div>
+                            <div className="text-xs text-amber-400/70 uppercase tracking-widest mb-1">Tournament Champion</div>
+                            <div className="text-xl font-black text-amber-300">{winners[0]}</div>
+                            <div className="text-xs text-slate-500 mt-2">The tournament is complete!</div>
+                          </div>
+                        );
+                      }
+
+                      return (
                         <div className="mb-4 relative rounded-2xl overflow-hidden border border-emerald-500/40 bg-gradient-to-br from-emerald-950/60 via-slate-950/80 to-slate-900/60 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
                           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/80 to-transparent" />
                           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4">
@@ -2298,7 +2314,7 @@ export function AdminPanelClient() {
                               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">✅</div>
                               <div>
                                 <div className="text-xs text-emerald-400/70 uppercase tracking-widest mb-0.5">Round {selectedArenaEvent.current_round || 1} Complete</div>
-                                <div className="text-sm font-black text-emerald-300">All matches finished — advance the bracket</div>
+                                <div className="text-sm font-black text-emerald-300">{winners.length} teams advancing — generate next bracket</div>
                               </div>
                             </div>
                             <button
@@ -2309,7 +2325,7 @@ export function AdminPanelClient() {
                             </button>
                           </div>
                         </div>
-                      ) : null;
+                      );
                     })()}
 
                     {/* Admin Actions */}
