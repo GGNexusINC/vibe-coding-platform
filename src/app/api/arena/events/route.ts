@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       content: `🎯 **New Arena Event Created!**\n\n**${name}**\n🎮 Mode: ${game_mode || "PvP"}\n👥 Max Teams: ${max_teams || 16}\n📅 Starts: ${start_time ? new Date(start_time).toLocaleString() : "TBA"}\n\nRegister your team now!`,
       username: "NewHopeGGN Arena",
       avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }
@@ -242,7 +242,7 @@ export async function PATCH(req: Request) {
             content: `🔊 **${assignment.team_name}** - Please join your designated voice channel!\n\n**👉 ${assignment.vc_channel}**${opponentText}\n\nRound 1 is starting soon. Good luck! 🎮`,
             username: "NewHopeGGN Arena",
             avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-          });
+          }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
         } catch (e) {
           console.error("Failed to send VC notification:", e);
         }
@@ -281,7 +281,7 @@ export async function PATCH(req: Request) {
           content: bracketText + "Good luck to all teams! ⚔️",
           username: "NewHopeGGN Arena",
           avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-        });
+        }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
       } catch (e) {
         console.error("Failed to send bracket:", e);
       }
@@ -490,7 +490,7 @@ Teams advance to your next matches. Check brackets and join your voice channels!
           content: `🔀 **Matches Shuffled!**\n\nNew pairings have been generated. Check the bracket and join your assigned voice channels!`,
           username: "NewHopeGGN Arena",
           avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-        });
+        }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
       } catch (e) {
         console.error("Discord webhook failed:", e);
       }

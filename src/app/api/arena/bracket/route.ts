@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { env } from "@/lib/env";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
     await sendDiscordWebhook({
       content: `🏆 **${event.name} Bracket Generated!**\n\n${teams.length} teams entered\n${byes} byes assigned\nBracket size: ${bracketSize}\n\nRound 1 begins soon!`,
       username: "NewHopeGGN Arena",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }
@@ -233,7 +234,7 @@ export async function PATCH(req: Request) {
     await sendDiscordWebhook({
       content: `⚔️ **Match Complete!**\n\n🏆 **${winnerTeam?.name || "Unknown"}** advances to the next round!\n📊 Score: ${team1_score || 0}-${team2_score || 0}\n🎮 Event: ${match.arena_events?.name}`,
       username: "NewHopeGGN Arena",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }

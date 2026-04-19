@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/session";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { env } from "@/lib/env";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -211,7 +212,7 @@ export async function DELETE(req: Request) {
         content: `⚠️ **Team Update**\n\n${memberToRemove.username} was kicked from **${team.name}** by ${team.leader_username}`,
         username: "NewHopeGGN Arena",
         avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-      });
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
     } catch (e) {
       console.error("Discord webhook failed:", e);
     }

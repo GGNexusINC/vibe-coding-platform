@@ -118,7 +118,7 @@ export async function POST(req: Request) {
       content: `🎮 **New Team Registered!**\n\n**${name}** ${tag ? `[${tag}]` : ""}\n👤 Leader: ${session.username}\n🏆 Event: Arena Tournament\n\nUse /arena join ${name} to join this team!`,
       username: "NewHopeGGN Arena",
       avatar_url: session.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }

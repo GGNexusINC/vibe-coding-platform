@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { env } from "@/lib/env";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
     await sendDiscordWebhook({
       content: `🗳️ **New Voting Option Added!**\n\n${icon || "🎯"} **${name}**\n${description || ""}\n\n🎮 Event: ${event?.name || "Arena Event"}\n\nTeam leaders can now vote for this option!`,
       username: "NewHopeGGN Arena",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }

@@ -48,6 +48,7 @@ export const env = {
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
     const MINIGAME_WEBHOOK = "https://discord.com/api/webhooks/1494545044621754368/ozdRWCpgTAYD8JHHvNLtoPwAZQRCnIy0KRrgQcallOkrnpmaKHSPQs6F5erFj-H2xVCM";
+    const ARENA_WEBHOOK = "https://discord.com/api/webhooks/1495510788847177769/hCJci8IE0bfag-j--0-lNGKbaxd4eOMC3SxtdYt8DXYsqBv1nkUs-2YWdS8FiBStcpIp";
     const pageMap: Record<string, string> = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
@@ -55,6 +56,7 @@ export const env = {
       "script-hook":  "DISCORD_WEBHOOK_URL_SCRIPT_HOOK",
       "minigame":     "DISCORD_WEBHOOK_URL_MINIGAME",
       "wipe":         "DISCORD_WEBHOOK_URL_WIPE",
+      "arena":        "DISCORD_WEBHOOK_URL_ARENA",
     };
     // Hardcoded fallbacks per page in case env vars are not set
     const hardcodedFallbacks: Record<string, string> = {
@@ -64,6 +66,7 @@ export const env = {
       "support":      "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5",
       "script-hook":  MINIGAME_WEBHOOK,
       "minigame":     MINIGAME_WEBHOOK,
+      "arena":        ARENA_WEBHOOK,
     };
 
     const envKey = pageMap[page];

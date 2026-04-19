@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
 // Send DM to a Discord user
 async function sendDiscordDM(userId: string, message: string): Promise<{success: boolean; error?: string}> {
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
         : `📢 **Team ${team_name || "Notification"}**\n\n${message}`,
       username: "NewHopeGGN Arena",
       avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
 
     // Get Discord IDs to DM
     let discordIds: string[] = [];

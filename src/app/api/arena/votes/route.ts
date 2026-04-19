@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/session";
 import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { env } from "@/lib/env";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -168,7 +169,7 @@ export async function POST(req: Request) {
       content: `🗳️ **Vote Cast!**\n\n${option?.icon || "🎯"} **${team.name}** voted for **${option?.name || "Unknown"}**\n\nTeams can still change their vote until the round starts!`,
       username: "NewHopeGGN Arena",
       avatar_url: session.avatar_url || undefined,
-    });
+    }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
   } catch (e) {
     console.error("Discord webhook failed:", e);
   }
