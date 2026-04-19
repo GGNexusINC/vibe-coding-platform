@@ -384,21 +384,30 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                 {/* Teams Section */}
                 <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-amber-400">Registered Teams</h4>
-                    {event.registration_open && !userTeam && session?.discord_id && (
-                      <button
-                        onClick={() => setShowCreateTeam(true)}
-                        className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition"
-                      >
-                        + Create Team
-                      </button>
-                    )}
-                    {event.registration_open && !session?.discord_id && (
-                      <span className="text-xs text-slate-500">Sign in to create team</span>
-                    )}
-                    {event.registration_open && userTeam && (
-                      <span className="text-xs text-emerald-400">✓ You're in a team</span>
-                    )}
+                    <div>
+                      <h4 className="text-sm font-semibold text-amber-400">Registered Teams</h4>
+                      <p className="text-[10px] text-slate-500">{teams.length} / {event.max_teams} teams • {event.team_size} players per team</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {event.registration_open && !userTeam && session?.discord_id && (
+                        <button
+                          onClick={() => setShowCreateTeam(true)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-amber-950 font-bold hover:bg-amber-400 transition"
+                        >
+                          + Create Team
+                        </button>
+                      )}
+                      {event.registration_open && !session?.discord_id && (
+                        <a href="/auth/discord" className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 font-semibold hover:bg-slate-700 transition">
+                          Sign in
+                        </a>
+                      )}
+                      {userTeam && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">
+                          ✓ You're in [GGN] Admin
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {showCreateTeam && (
@@ -435,93 +444,137 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                     </div>
                   )}
 
-                  {/* Teams Grid */}
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {/* All Teams List */}
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {teams.length === 0 ? (
                       <p className="text-sm text-slate-500 text-center py-4">No teams yet. Be the first!</p>
                     ) : (
-                      teams.map((team) => (
-                        <div 
-                          key={team.id} 
-                          className={`p-3 rounded-lg border ${
-                            isTeamMember(team) 
-                              ? "border-amber-500/30 bg-amber-500/10" 
-                              : "border-white/5 bg-slate-900/30"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              {team.leader_avatar_url ? (
-                                <img src={team.leader_avatar_url} alt="" className="w-8 h-8 rounded-full border border-white/10" />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
-                                  {team.name[0]}
-                                </div>
-                              )}
-                              <div>
-                                <div className="font-semibold text-white text-sm">
-                                  {team.tag && <span className="text-amber-400 mr-1">[{team.tag}]</span>}
-                                  {team.name}
-                                </div>
-                                <div className="text-xs text-slate-400">
-                                  Leader: {team.leader_username}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-slate-500">{team.arena_team_members.length}/{event.team_size}</span>
-                              {isTeamMember(team) ? (
-                                <button
-                                  onClick={() => handleLeaveTeam(team.id)}
-                                  className="text-xs px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition"
-                                >
-                                  Leave
-                                </button>
-                              ) : event.registration_open && !userTeam && joiningTeamId !== team.id ? (
-                                <button
-                                  onClick={() => handleJoinTeam(team.id)}
-                                  className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition"
-                                >
-                                  Join
-                                </button>
-                              ) : joiningTeamId === team.id ? (
-                                <span className="text-xs text-slate-500">Joining...</span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {/* Team Members */}
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {team.arena_team_members.map((member) => (
-                              <div 
-                                key={member.id}
-                                className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800 text-xs"
-                              >
-                                {member.avatar_url ? (
-                                  <img src={member.avatar_url} alt="" className="w-4 h-4 rounded-full" />
-                                ) : (
-                                  <div className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center text-[8px]">
-                                    {member.username[0]}
+                      teams.map((team) => {
+                        const isMyTeam = isTeamMember(team);
+                        const isLeader = isTeamLeader(team);
+                        const isFull = team.arena_team_members.length >= event.team_size;
+                        
+                        return (
+                          <div 
+                            key={team.id} 
+                            className={`rounded-lg border overflow-hidden ${
+                              isMyTeam 
+                                ? "border-amber-500/50 bg-gradient-to-r from-amber-500/10 to-slate-900/50" 
+                                : "border-white/5 bg-slate-900/30 hover:bg-slate-900/50"
+                            }`}
+                          >
+                            {/* Team Header */}
+                            <div className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {team.leader_avatar_url ? (
+                                    <img src={team.leader_avatar_url} alt="" className="w-8 h-8 rounded-full border border-white/10" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
+                                      {team.name[0]}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="font-semibold text-white text-sm flex items-center gap-2">
+                                      {team.tag && <span className="text-amber-400">[{team.tag}]</span>}
+                                      {team.name}
+                                      {isMyTeam && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-bold">YOU</span>}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                                      <span>👑 {team.leader_username}</span>
+                                      <span>•</span>
+                                      <span>{team.arena_team_members.length}/{event.team_size} members</span>
+                                      {isFull && <span className="text-rose-400">(FULL)</span>}
+                                    </div>
                                   </div>
-                                )}
-                                <span className={member.role === "leader" ? "text-amber-400" : "text-slate-300"}>
-                                  {member.username}
-                                </span>
-                                {member.role === "leader" && <span className="text-amber-400">👑</span>}
-                                {isTeamLeader(team) && member.role !== "leader" && (
-                                  <button
-                                    onClick={() => handleKickMember(team.id, member.id)}
-                                    disabled={kickingMemberId === member.id}
-                                    className="ml-1 text-rose-400 hover:text-rose-300"
-                                  >
-                                    {kickingMemberId === member.id ? "..." : "×"}
-                                  </button>
-                                )}
+                                </div>
+                                
+                                {/* Action Button */}
+                                <div>
+                                  {isMyTeam ? (
+                                    <button
+                                      onClick={() => handleLeaveTeam(team.id)}
+                                      className="text-xs px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition"
+                                    >
+                                      Leave
+                                    </button>
+                                  ) : event.registration_open && !userTeam && !isFull && joiningTeamId !== team.id ? (
+                                    <button
+                                      onClick={() => handleJoinTeam(team.id)}
+                                      className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500 text-emerald-950 font-bold hover:bg-emerald-400 transition"
+                                    >
+                                      Join
+                                    </button>
+                                  ) : joiningTeamId === team.id ? (
+                                    <span className="text-xs text-slate-500">Joining...</span>
+                                  ) : isFull ? (
+                                    <span className="text-xs text-rose-400 font-medium">Full</span>
+                                  ) : null}
+                                </div>
                               </div>
-                            ))}
+                            </div>
+                            
+                            {/* Team Members Roster */}
+                            <div className={`px-3 pb-3 ${isMyTeam ? 'block' : 'hidden'}`}>
+                              <div className="flex flex-wrap gap-1.5">
+                                {team.arena_team_members.map((member) => (
+                                  <div 
+                                    key={member.id}
+                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                                      member.role === "leader" 
+                                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" 
+                                        : "bg-slate-800 text-slate-300 border border-white/5"
+                                    }`}
+                                  >
+                                    {member.avatar_url ? (
+                                      <img src={member.avatar_url} alt="" className="w-4 h-4 rounded-full" />
+                                    ) : (
+                                      <div className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center text-[8px]">
+                                        {member.username[0]}
+                                      </div>
+                                    )}
+                                    <span className={member.role === "leader" ? "font-semibold" : ""}>
+                                      {member.username}
+                                    </span>
+                                    {member.role === "leader" && <span>👑</span>}
+                                    {isLeader && member.role !== "leader" && (
+                                      <button
+                                        onClick={() => handleKickMember(team.id, member.id)}
+                                        disabled={kickingMemberId === member.id}
+                                        className="ml-1 w-4 h-4 flex items-center justify-center rounded-full bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                                        title="Kick member"
+                                      >
+                                        {kickingMemberId === member.id ? "..." : "×"}
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {isLeader && (
+                                <p className="text-[10px] text-slate-500 mt-2">
+                                  Click × to kick a member
+                                </p>
+                              )}
+                            </div>
+                            
+                            {/* Show member count for other teams */}
+                            {!isMyTeam && team.arena_team_members.length > 0 && (
+                              <div className="px-3 pb-3">
+                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                  <span>Roster:</span>
+                                  {team.arena_team_members.slice(0, 3).map((m) => (
+                                    <span key={m.id} className="text-slate-400">{m.username}</span>
+                                  ))}
+                                  {team.arena_team_members.length > 3 && (
+                                    <span className="text-slate-500">+{team.arena_team_members.length - 3} more</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
