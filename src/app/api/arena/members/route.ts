@@ -31,10 +31,12 @@ export async function POST(req: Request) {
     .single();
 
   if (existingMembership) {
+    // Get team name from the array (arena_teams is an array from the join)
+    const teamInfo = (existingMembership.arena_teams as unknown as { name: string }[])?.[0];
     return NextResponse.json({ 
       ok: false, 
       error: "You are already in a team for this event",
-      currentTeam: existingMembership.arena_teams?.name
+      currentTeam: teamInfo?.name
     }, { status: 409 });
   }
 
