@@ -298,3 +298,16 @@ body {
 .rz-panel-border {
   border: 1px solid var(--line);
 }
+
+/* Shine animation for gold support icon */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  50% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+}

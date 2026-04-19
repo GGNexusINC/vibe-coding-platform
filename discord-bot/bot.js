@@ -10,6 +10,9 @@
  * Requires bot permissions: Read Messages, Read Message History, View Channels
  */
 
+// Immediate startup log
+process.stderr.write("[bot] Starting...\n");
+
 require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
 
@@ -19,7 +22,14 @@ const SITE_URL      = process.env.SITE_URL      || "https://newhopeggn.vercel.ap
 const INGEST_SECRET = process.env.INGEST_SECRET || "newhopeggn-bot-secret";
 const GUILD_ID      = process.env.GUILD_ID      || "1419522458075005023";
 
-if (!BOT_TOKEN) { console.error("[bot] ERROR: BOT_TOKEN not set in .env"); process.exit(1); }
+process.stderr.write(`[bot] BOT_TOKEN present: ${!!BOT_TOKEN}\n`);
+process.stderr.write(`[bot] SITE_URL: ${SITE_URL}\n`);
+
+if (!BOT_TOKEN) {
+  process.stderr.write("[bot] FATAL: BOT_TOKEN not set in environment\n");
+  process.stderr.write(`[bot] Available env vars: ${Object.keys(process.env).filter(k => !k.includes("TOKEN")).join(", ")}\n`);
+  process.exit(1);
+}
 
 // Relay ALL channels (whitelist is empty = no filter)
 const CHANNEL_WHITELIST = [];
@@ -160,4 +170,21 @@ client.on("messageUpdate", (oldMsg, newMsg) => {
   }
 });
 
-client.login(BOT_TOKEN);
+// Error handlers to prevent crashes
+process.on("uncaughtException", (err) => {
+  console.error("[bot] Uncaught Exception:", err.message);
+  // Don't exit — keep running
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[bot] Unhandled Rejection:", reason);
+  // Don't exit — keep running
+});
+
+client.on("error", (err) => {
+  console.error("[bot] Discord client error:", err.message);
+});
+
+client.login(BOT_TOKEN).catch((err) => {
+  console.error("[bot] Login failed:", err.message);
+  process.exit(1);
+});

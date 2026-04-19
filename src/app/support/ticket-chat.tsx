@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { playSendSound, playReceiveSound, unlockAudio } from "@/lib/sounds";
 
 interface Message {
   id: string;
@@ -26,21 +27,34 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [closed, setClosed] = useState(false);
+  const knownIds = useRef<Set<string>>(new Set());
+  const isFirst = useRef(true);
 
-  // Fetch messages
+  // Fetch messages with sound notifications
   const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/support/ticket/${ticketId}/messages?channelId=${channelId}`);
       const data = await res.json();
       if (data.ok) {
-        setMessages(data.messages || []);
+        const msgs: Message[] = data.messages || [];
+        // Play sound for new incoming messages (not on first load)
+        if (!isFirst.current) {
+          const newOnes = msgs.filter(m => !knownIds.current.has(m.id));
+          if (newOnes.length > 0) {
+            const hasIncoming = newOnes.some(m => m.author_id !== userId);
+            if (hasIncoming) playReceiveSound();
+          }
+        }
+        msgs.forEach(m => knownIds.current.add(m.id));
+        isFirst.current = false;
+        setMessages(msgs);
       }
     } catch (e) {
       console.error("Failed to fetch messages:", e);
     } finally {
       setLoading(false);
     }
-  }, [ticketId, channelId]);
+  }, [ticketId, channelId, userId]);
 
   // Poll for new messages every 5 seconds
   useEffect(() => {
@@ -56,6 +70,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
 
     setSending(true);
     setError(null);
+    unlockAudio(); // Ensure audio is unlocked on send
 
     try {
       const res = await fetch(`/api/support/ticket/${ticketId}/messages`, {
@@ -67,6 +82,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
       const data = await res.json();
       if (data.ok) {
         setNewMessage("");
+        playSendSound(); // Play send sound
         fetchMessages(); // Refresh messages
       } else {
         setError(data.error || "Failed to send");
@@ -186,9 +202,10 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type your message..."
-          className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+          onFocus={unlockAudio}
+          placeholder="Type a message..."
           maxLength={1000}
+          className="flex-1 rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:bg-slate-900 transition"
         />
         <button
           type="submit"
