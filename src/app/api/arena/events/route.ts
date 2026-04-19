@@ -386,7 +386,7 @@ export async function PATCH(req: Request) {
             footer: { text: "NewHopeGGN Arena System" },
             timestamp: new Date().toISOString(),
           }],
-        });
+        }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
       } catch (e) {
         console.error("Discord webhook failed:", e);
       }
@@ -431,7 +431,7 @@ export async function PATCH(req: Request) {
 Teams advance to your next matches. Check brackets and join your voice channels!`,
         username: "NewHopeGGN Arena",
         avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-      });
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
     } catch (e) {
       console.error("Discord webhook failed:", e);
     }
@@ -538,7 +538,7 @@ Teams advance to your next matches. Check brackets and join your voice channels!
           footer: { text: "NewHopeGGN Arena System" },
           timestamp: new Date().toISOString(),
         }],
-      });
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
     } catch (e) {
       console.error("Discord webhook failed:", e);
     }
