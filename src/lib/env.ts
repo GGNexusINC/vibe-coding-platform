@@ -48,7 +48,7 @@ export const env = {
   discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
     const MINIGAME_WEBHOOK = "https://discord.com/api/webhooks/1494545044621754368/ozdRWCpgTAYD8JHHvNLtoPwAZQRCnIy0KRrgQcallOkrnpmaKHSPQs6F5erFj-H2xVCM";
-    const ARENA_WEBHOOK = "https://discord.com/api/webhooks/1495510788847177769/hCJci8IE0bfag-j--0-lNGKbaxd4eOMC3SxtdYt8DXYsqBv1nkUs-2YWdS8FiBStcpIp";
+    const ARENA_WEBHOOK = "https://discord.com/api/webhooks/1495516351219892504/tMhiHw58fFrdt4TdMfP8MjdiqFlTLiR31P9rbOhXA7k3tAP1hFK3Z7uK_jDMq_15kCwj";
     const pageMap: Record<string, string> = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
