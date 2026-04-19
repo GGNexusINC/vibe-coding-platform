@@ -99,16 +99,22 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/admin/wipe-timer")
-      .then(r => r.json())
-      .then(d => {
-        if (d.ok && d.wipeAt) {
-          setWipeMs(new Date(d.wipeAt).getTime());
-          setWipeLabel(d.label ?? "Server Wipe");
-        }
-      }).catch(() => {});
+    const fetchWipe = () => {
+      fetch("/api/admin/wipe-timer")
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok && d.wipeAt) {
+            setWipeMs(new Date(d.wipeAt).getTime());
+            setWipeLabel(d.label ?? "Server Wipe");
+          } else if (d.ok && !d.wipeAt) {
+            setWipeMs(null);
+          }
+        }).catch(() => {});
+    };
+    fetchWipe();
+    const poll = setInterval(fetchWipe, 60000);
     const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(tick);
+    return () => { clearInterval(poll); clearInterval(tick); };
   }, []);
 
   return (

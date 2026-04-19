@@ -437,6 +437,7 @@ export function AdminPanelClient() {
   }>({ mode: "Standard", ffa: false, weapons: [], no_deviants: false, extra: "" });
   const [rulesSaving, setRulesSaving] = useState(false);
   const [rulesSaved, setRulesSaved] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Inventory state
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -915,14 +916,48 @@ export function AdminPanelClient() {
   }
 
   async function handleUploadEventImage(eventId: string, file: File) {
-    const form = new FormData();
-    form.append("file", file);
-    const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: form });
-    const uploadData = await uploadRes.json();
-    if (!uploadData.ok) { alert(uploadData.error || "Upload failed"); return; }
-    // Now set the image_url on the event
-    await handleUpdateEventImage(eventId, uploadData.url);
-    setSelectedArenaEvent((prev: any) => ({ ...prev, image_url: uploadData.url }));
+    setImageUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: form });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.ok) { alert(uploadData.error || "Upload failed"); setImageUploading(false); return; }
+      // Save the URL to the event
+      const res = await fetch("/api/arena/events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: eventId, image_url: uploadData.url }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSelectedArenaEvent((prev: any) => ({ ...prev, image_url: uploadData.url }));
+        await loadArena();
+      } else {
+        alert(data.error || "Failed to save image");
+      }
+    } catch (e) {
+      alert("Upload error — check console");
+      console.error(e);
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
+  async function handleCloseEvent(eventId: string) {
+    if (!confirm("Close this event? It will be marked as completed and hidden from active events.")) return;
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, status: "completed", registration_open: false }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent(null);
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to close event");
+    }
   }
 
   async function handleToggleRegistration(eventId: string, open: boolean) {
@@ -2059,19 +2094,24 @@ export function AdminPanelClient() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-slate-600 uppercase tracking-widest">or</span>
-                      <label className="flex-1 cursor-pointer">
+                      <label className={`flex-1 ${imageUploading ? "" : "cursor-pointer"}`}>
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/gif,image/webp"
                           className="hidden"
+                          disabled={imageUploading}
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) await handleUploadEventImage(selectedArenaEvent.id, file);
-                            e.target.value = "";
+                            if (e.target) e.target.value = "";
                           }}
                         />
-                        <div className="h-10 rounded-xl border border-dashed border-cyan-500/30 bg-cyan-500/5 flex items-center justify-center gap-2 text-sm text-cyan-400 font-semibold hover:bg-cyan-500/10 transition">
-                          📁 Upload from Computer
+                        <div className={`h-10 rounded-xl border border-dashed flex items-center justify-center gap-2 text-sm font-semibold transition ${
+                          imageUploading
+                            ? "border-amber-500/30 bg-amber-500/10 text-amber-300 animate-pulse"
+                            : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/10"
+                        }`}>
+                          {imageUploading ? "⏳ Uploading..." : "📁 Upload from Computer"}
                         </div>
                       </label>
                     </div>
@@ -2081,7 +2121,7 @@ export function AdminPanelClient() {
                   {/* Event Controls */}
                   <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
                     <h3 className="text-sm font-semibold text-amber-400 mb-3">⚡ Event Controls</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       <button
                         onClick={async () => await handleToggleRegistration(selectedArenaEvent.id, !selectedArenaEvent.registration_open)}
                         className={`h-10 rounded-xl text-sm font-semibold transition ${
@@ -2113,6 +2153,13 @@ export function AdminPanelClient() {
                         className="h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
                       >
                         ➡️ Next Round
+                      </button>
+
+                      <button
+                        onClick={async () => await handleCloseEvent(selectedArenaEvent.id)}
+                        className="h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-sm font-bold hover:bg-rose-500/30 transition"
+                      >
+                        ✖ Close Event
                       </button>
                     </div>
                   </div>
