@@ -876,14 +876,23 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      const status = `📨 DMs: ${data.dms_sent}/${data.total_recipients} sent\n🔧 Bot token: ${data.bot_token_set ? '✅ Set' : '❌ Not set'}`;
+      const status = `📨 DMs: ${data.dms_sent}/${data.total_recipients} sent\n🔧 Bot token: ${data.bot_token_set ? '✅ Set' : '❌ NOT SET'}`;
+      
+      // Show debug info if token not working
+      let debugInfo = '';
+      if (data.env_debug) {
+        debugInfo = `\n\nDEBUG:\nUppercase: ${data.env_debug.token_from_upper ? '✅' : '❌'}\nLowercase: ${data.env_debug.token_from_lower ? '✅' : '❌'}\nNode Env: ${data.env_debug.node_env}`;
+      }
+      
       if (data.errors && data.errors.length > 0) {
-        alert(`${status}\n\n❌ Errors:\n${data.errors.slice(0, 3).map((e: any) => `${e.id.slice(0,8)}: ${e.error.slice(0, 50)}`).join('\n')}`);
+        alert(`${status}${debugInfo}\n\n❌ Errors:\n${data.errors.slice(0, 3).map((e: any) => `${e.id.slice(0,8)}: ${e.error.slice(0, 50)}`).join('\n')}`);
+      } else if (!data.bot_token_set) {
+        alert(`${status}${debugInfo}\n\n⚠️ DISCORD_BOT_TOKEN is NOT set in Vercel!\n\n1. Go to vercel.com → your project\n2. Settings → Environment Variables\n3. Add: DISCORD_BOT_TOKEN = your_token\n4. Redeploy the project`);
       } else {
         alert(status);
       }
     } else {
-      alert(`❌ Failed: ${data.error || "Unknown error"}\n\nBot token set: ${data.bot_token_set ? 'Yes' : 'NO - Add DISCORD_BOT_TOKEN to env'}`);
+      alert(`❌ Failed: ${data.error || "Unknown error"}`);
     }
   }
 
