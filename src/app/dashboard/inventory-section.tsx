@@ -11,16 +11,30 @@ type InventoryItem = {
   purchase_date: string;
   used_date?: string;
   wipe_cycle?: string;
+  metadata?: any;
+};
+
+type PackageLog = {
+  id: string;
+  item_name: string;
+  item_type: string;
+  action: string;
+  action_at: string;
+  action_by_name?: string;
+  details?: any;
 };
 
 export function InventorySection() {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [logs, setLogs] = useState<PackageLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     fetchInventory();
+    fetchLogs();
   }, []);
 
   async function fetchInventory() {
@@ -37,37 +51,25 @@ export function InventorySection() {
     }
   }
 
-  async function handleUseItem(itemId: string) {
-    if (!confirm("Use this insurance? This will notify staff to process your claim.")) return;
-    
-    setActionLoading(itemId);
-    setMessage("");
-
+  async function fetchLogs() {
     try {
-      const res = await fetch("/api/inventory", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_id: itemId, action: "use" }),
-      });
-
+      const res = await fetch("/api/inventory/logs?limit=20");
       const data = await res.json();
-      
-      if (data.ok) {
-        setMessage("✅ Insurance claimed! Staff have been notified.");
-        fetchInventory(); // Refresh
-      } else {
-        setMessage(`❌ ${data.error || "Failed to use item"}`);
-      }
+      if (data.ok) setLogs(data.logs || []);
     } catch (e) {
-      setMessage("❌ Network error");
-    } finally {
-      setActionLoading(null);
+      console.error("Failed to fetch logs:", e);
     }
   }
 
-  async function handleSaveItem(itemId: string) {
-    if (!confirm("Save this insurance for next wipe? You can use it later.")) return;
+  async function handleAction(itemId: string, action: "use" | "save", itemType: string) {
+    const confirmMsg = action === "use" 
+      ? (itemType === "insurance" 
+          ? "Use this insurance? This will notify staff to process your claim."
+          : "Use this package now? Staff will be notified to deliver it.")
+      : "Save this item for next wipe? You can use it later.";
     
+    if (!confirm(confirmMsg)) return;
+
     setActionLoading(itemId);
     setMessage("");
 
@@ -75,16 +77,17 @@ export function InventorySection() {
       const res = await fetch("/api/inventory", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_id: itemId, action: "save" }),
+        body: JSON.stringify({ item_id: itemId, action }),
       });
 
       const data = await res.json();
-      
+
       if (data.ok) {
-        setMessage("✅ Insurance saved for next wipe!");
-        fetchInventory(); // Refresh
+        setMessage(action === "use" ? "✅ Package claimed! Staff have been notified." : "✅ Package saved for next wipe!");
+        fetchInventory();
+        fetchLogs();
       } else {
-        setMessage(`❌ ${data.error || "Failed to save item"}`);
+        setMessage(`❌ ${data.error || "Failed to process item"}`);
       }
     } catch (e) {
       setMessage("❌ Network error");
@@ -97,6 +100,14 @@ export function InventorySection() {
   const savedItems = items.filter(i => i.status === "saved");
   const usedItems = items.filter(i => i.status === "used");
 
+  const actionLabels: Record<string, { label: string; icon: string; color: string }> = {
+    admin_given: { label: "Received", icon: "🎁", color: "text-emerald-400" },
+    user_used: { label: "Used", icon: "✅", color: "text-amber-400" },
+    user_saved: { label: "Saved", icon: "💾", color: "text-cyan-400" },
+    admin_revoked: { label: "Revoked", icon: "🗑️", color: "text-rose-400" },
+    admin_restored: { label: "Restored", icon: "♻️", color: "text-violet-400" },
+  };
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-6">
@@ -105,23 +116,26 @@ export function InventorySection() {
     );
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-6">
-        <div className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-stone-500 mb-3">▶ INVENTORY</div>
-        <div className="text-sm text-stone-400">No items in inventory. Purchase packs from the store!</div>
-      </div>
-    );
-  }
-
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-6">
-      <div className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">▶ INVENTORY</div>
-      
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-stone-500">▶ INVENTORY</div>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="text-xs text-cyan-400 hover:text-cyan-300"
+        >
+          {showHistory ? "Hide History" : "📜 Show History"}
+        </button>
+      </div>
+
       {message && (
         <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${message.startsWith("✅") ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" : "bg-rose-500/15 text-rose-400 border border-rose-500/25"}`}>
           {message}
         </div>
+      )}
+
+      {items.length === 0 && !showHistory && (
+        <div className="text-sm text-stone-400">No items in inventory. Purchase packs from the store!</div>
       )}
 
       {/* Available Items */}
@@ -136,35 +150,44 @@ export function InventorySection() {
               <div key={item.id} className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <div className="font-semibold text-white">{item.item_name}</div>
+                    <div className="font-semibold text-white flex items-center gap-2">
+                      {item.item_name}
+                      {item.metadata?.given_by && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">
+                          🎁 Admin Gift
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-stone-400">
-                      Purchased {new Date(item.purchase_date).toLocaleDateString()}
+                      {item.metadata?.given_by ? "Received" : "Purchased"} {new Date(item.purchase_date).toLocaleDateString()}
                       {item.wipe_cycle && ` • ${item.wipe_cycle}`}
                     </div>
+                    {item.metadata?.reason && (
+                      <div className="text-xs text-violet-300 mt-1">Reason: {item.metadata.reason}</div>
+                    )}
                   </div>
                   <span className="rounded-full px-2 py-1 text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     Available
                   </span>
                 </div>
-                
-                {item.item_type === "insurance" && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleUseItem(item.id)}
-                      disabled={actionLoading === item.id}
-                      className="flex-1 h-9 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm font-semibold hover:bg-rose-500/30 transition disabled:opacity-50"
-                    >
-                      {actionLoading === item.id ? "Processing..." : "🛡️ Use Insurance"}
-                    </button>
-                    <button
-                      onClick={() => handleSaveItem(item.id)}
-                      disabled={actionLoading === item.id}
-                      className="flex-1 h-9 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-semibold hover:bg-amber-500/30 transition disabled:opacity-50"
-                    >
-                      💾 Save for Next Wipe
-                    </button>
-                  </div>
-                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAction(item.id, "use", item.item_type)}
+                    disabled={actionLoading === item.id}
+                    className="flex-1 h-9 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm font-semibold hover:bg-rose-500/30 transition disabled:opacity-50"
+                  >
+                    {actionLoading === item.id ? "Processing..." : 
+                      item.item_type === "insurance" ? "🛡️ Use Insurance" : "📦 Use Package"}
+                  </button>
+                  <button
+                    onClick={() => handleAction(item.id, "save", item.item_type)}
+                    disabled={actionLoading === item.id}
+                    className="flex-1 h-9 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-semibold hover:bg-amber-500/30 transition disabled:opacity-50"
+                  >
+                    💾 Save for Next Wipe
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -200,7 +223,7 @@ export function InventorySection() {
 
       {/* Used Items */}
       {usedItems.length > 0 && (
-        <div>
+        <div className="mb-6">
           <div className="text-sm font-semibold text-stone-400 mb-3 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-stone-400" />
             Used ({usedItems.length})
@@ -222,6 +245,43 @@ export function InventorySection() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* History */}
+      {showHistory && (
+        <div className="pt-4 border-t border-white/10">
+          <div className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-cyan-400" />
+            Activity History
+          </div>
+          {logs.length === 0 ? (
+            <div className="text-sm text-stone-500">No activity yet.</div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {logs.map((log) => {
+                const meta = actionLabels[log.action] || { label: log.action, icon: "📝", color: "text-slate-400" };
+                return (
+                  <div key={log.id} className="rounded-lg border border-white/5 bg-slate-900/40 p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span>{meta.icon}</span>
+                        <span className={`font-bold uppercase ${meta.color}`}>{meta.label}</span>
+                        <span className="text-white">{log.item_name}</span>
+                      </div>
+                      <span className="text-stone-500">{new Date(log.action_at).toLocaleString()}</span>
+                    </div>
+                    {log.action_by_name && log.action === "admin_given" && (
+                      <div className="mt-1 text-stone-500">Given by: {log.action_by_name}</div>
+                    )}
+                    {log.details?.reason && (
+                      <div className="mt-1 text-violet-300">Reason: {log.details.reason}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

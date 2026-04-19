@@ -409,6 +409,27 @@ export function AdminPanelClient() {
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventorySummary, setInventorySummary] = useState({ total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
 
+  // Package logs state
+  const [packageLogs, setPackageLogs] = useState<any[]>([]);
+  const [packageLogsLoading, setPackageLogsLoading] = useState(false);
+  const [packageLogsFilter, setPackageLogsFilter] = useState("all");
+  const [packageLogsUserFilter, setPackageLogsUserFilter] = useState("");
+  const [packageLogsSummary, setPackageLogsSummary] = useState<any>(null);
+  const [packageLogsOffset, setPackageLogsOffset] = useState(0);
+  const [packageLogsHasMore, setPackageLogsHasMore] = useState(false);
+
+  // Give package form state
+  const [givePackageForm, setGivePackageForm] = useState({
+    user_id: "",
+    user_name: "",
+    item_type: "pack",
+    item_slug: "",
+    item_name: "",
+    reason: "",
+  });
+  const [givePackageLoading, setGivePackageLoading] = useState(false);
+  const [showGivePackageModal, setShowGivePackageModal] = useState(false);
+
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
@@ -689,6 +710,75 @@ export function AdminPanelClient() {
       await loadInventory();
     } else {
       alert(data?.error || "Action failed");
+    }
+  }
+
+  async function loadPackageLogs(offset = 0, append = false) {
+    setPackageLogsLoading(true);
+    
+    const params = new URLSearchParams();
+    params.set("limit", "50");
+    params.set("offset", String(offset));
+    if (packageLogsFilter !== "all") params.set("action", packageLogsFilter);
+    if (packageLogsUserFilter) params.set("user_id", packageLogsUserFilter);
+    
+    const res = await fetch(`/api/inventory/logs?${params}`, { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    
+    if (data?.ok) {
+      if (append) {
+        setPackageLogs(prev => [...prev, ...(data.logs || [])]);
+      } else {
+        setPackageLogs(data.logs || []);
+      }
+      setPackageLogsSummary(data.summary);
+      setPackageLogsHasMore(data.pagination?.hasMore || false);
+      setPackageLogsOffset(offset);
+    }
+    
+    setPackageLogsLoading(false);
+  }
+
+  async function handleGivePackage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!givePackageForm.user_id || !givePackageForm.item_slug) {
+      alert("User ID and item are required");
+      return;
+    }
+
+    setGivePackageLoading(true);
+    
+    const res = await fetch("/api/inventory/admin", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: givePackageForm.user_id,
+        user_name: givePackageForm.user_name,
+        item_type: givePackageForm.item_type,
+        item_slug: givePackageForm.item_slug,
+        item_name: givePackageForm.item_name || givePackageForm.item_slug,
+        reason: givePackageForm.reason,
+      }),
+    });
+    
+    const data = await res.json().catch(() => null);
+    setGivePackageLoading(false);
+    
+    if (data?.ok) {
+      alert(`Package "${data.item?.item_name}" given to user!`);
+      setShowGivePackageModal(false);
+      setGivePackageForm({
+        user_id: "",
+        user_name: "",
+        item_type: "pack",
+        item_slug: "",
+        item_name: "",
+        reason: "",
+      });
+      await loadInventory();
+      await loadPackageLogs();
+    } else {
+      alert(data?.error || "Failed to give package");
     }
   }
 
@@ -1102,7 +1192,10 @@ export function AdminPanelClient() {
     if (id === "lottery") void loadLottery();
     if (id === "modlog")  void loadModLog();
     if (id === "arena")   void loadArena();
-    if (id === "inventory") void loadInventory();
+    if (id === "inventory") {
+      void loadInventory();
+      void loadPackageLogs();
+    }
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -2055,12 +2148,20 @@ export function AdminPanelClient() {
                   <h2 className="text-2xl font-bold text-white">User Inventory</h2>
                   <p className="text-sm text-slate-400">Track purchased items, insurance claims, and pack usage.</p>
                 </div>
-                <button
-                  onClick={() => void loadInventory()}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
-                >
-                  🔄 Refresh
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowGivePackageModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition"
+                  >
+                    🎁 Give Package
+                  </button>
+                  <button
+                    onClick={() => void loadInventory()}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
+                  >
+                    🔄 Refresh
+                  </button>
+                </div>
               </div>
 
               {/* Summary Cards */}
@@ -2191,6 +2292,213 @@ export function AdminPanelClient() {
                   </div>
                 )}
               </div>
+
+              {/* Package Logs Section */}
+              <div className="pt-6 border-t border-white/10">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Package Logs</h3>
+                    <p className="text-sm text-slate-400">History of all package transactions and usage.</p>
+                  </div>
+                  {packageLogsSummary && (
+                    <div className="flex gap-3 text-xs">
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
+                        Given: {packageLogsSummary.admin_given || 0}
+                      </span>
+                      <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400">
+                        Used: {packageLogsSummary.user_used || 0}
+                      </span>
+                      <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-400">
+                        Saved: {packageLogsSummary.user_saved || 0}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Log Filters */}
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Filter by user ID..."
+                    value={packageLogsUserFilter}
+                    onChange={(e) => setPackageLogsUserFilter(e.target.value)}
+                    className="px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:border-cyan-500/50 outline-none"
+                  />
+                  <select
+                    value={packageLogsFilter}
+                    onChange={(e) => setPackageLogsFilter(e.target.value)}
+                    className="px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                  >
+                    <option value="all">All Actions</option>
+                    <option value="admin_given">Admin Given</option>
+                    <option value="user_used">User Used</option>
+                    <option value="user_saved">User Saved</option>
+                    <option value="admin_revoked">Admin Revoked</option>
+                  </select>
+                  <button
+                    onClick={() => void loadPackageLogs()}
+                    className="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
+                  >
+                    🔍 Search
+                  </button>
+                </div>
+
+                {/* Logs Table */}
+                <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
+                  <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+                    <span>Time</span>
+                    <span>Action</span>
+                    <span>User</span>
+                    <span>Item</span>
+                    <span>By</span>
+                  </div>
+                  
+                  {packageLogsLoading ? (
+                    <div className="px-5 py-8 text-center text-slate-500">Loading logs...</div>
+                  ) : packageLogs.length === 0 ? (
+                    <div className="px-5 py-8 text-center text-slate-500">No logs found</div>
+                  ) : (
+                    <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                      {packageLogs.map((log) => (
+                        <div key={log.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
+                          <div className="text-xs text-slate-500">
+                            {new Date(log.action_at).toLocaleString()}
+                          </div>
+                          <div>
+                            <span className={`text-[10px] px-2 py-1 rounded-full uppercase font-bold ${
+                              log.action === "admin_given" ? "bg-emerald-500/20 text-emerald-400" :
+                              log.action === "user_used" ? "bg-amber-500/20 text-amber-400" :
+                              log.action === "user_saved" ? "bg-cyan-500/20 text-cyan-400" :
+                              log.action === "admin_revoked" ? "bg-rose-500/20 text-rose-400" :
+                              "bg-slate-500/20 text-slate-400"
+                            }`}>
+                              {log.action.replace("_", " ")}
+                            </span>
+                          </div>
+                          <div className="font-mono text-xs text-slate-400 truncate">
+                            {log.user_id?.slice(0, 12)}...
+                          </div>
+                          <div className="text-white">{log.item_name}</div>
+                          <div className="text-xs text-slate-500">
+                            {log.action_by_name || log.action_by?.slice(0, 8)}...
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {packageLogsHasMore && (
+                    <div className="px-5 py-3 border-t border-white/6 text-center">
+                      <button
+                        onClick={() => void loadPackageLogs(packageLogsOffset + 50, true)}
+                        className="text-sm text-cyan-400 hover:text-cyan-300"
+                      >
+                        Load more...
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Give Package Modal */}
+              {showGivePackageModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+                  <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+                    <h3 className="text-xl font-bold text-white mb-4">Give Package to User</h3>
+                    
+                    <form onSubmit={handleGivePackage} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">User Discord ID *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="123456789012345678"
+                          value={givePackageForm.user_id}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, user_id: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">User Name (optional)</label>
+                        <input
+                          type="text"
+                          placeholder="Username"
+                          value={givePackageForm.user_name}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, user_name: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Item Type</label>
+                        <select
+                          value={givePackageForm.item_type}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, item_type: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        >
+                          <option value="pack">Pack</option>
+                          <option value="insurance">Insurance</option>
+                          <option value="construction">Construction</option>
+                          <option value="defense">Defense</option>
+                          <option value="tactical">Tactical</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Item Slug *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g., construction-pack-v1"
+                          value={givePackageForm.item_slug}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, item_slug: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Display Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Construction Package"
+                          value={givePackageForm.item_name}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, item_name: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Reason</label>
+                        <input
+                          type="text"
+                          placeholder="Why are you giving this package?"
+                          value={givePackageForm.reason}
+                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, reason: e.target.value }))}
+                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-3 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowGivePackageModal(false)}
+                          className="flex-1 px-4 py-2 rounded-xl border border-white/10 text-slate-300 text-sm font-semibold hover:bg-white/5 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={givePackageLoading}
+                          className="flex-1 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
+                        >
+                          {givePackageLoading ? "Giving..." : "Give Package"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

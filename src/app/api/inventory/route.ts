@@ -84,7 +84,7 @@ export async function PATCH(req: Request) {
   const supabase = getSupabase();
 
   const body = await req.json().catch(() => ({}));
-  const { item_id, action } = body;
+  const { item_id, action, reason } = body;
 
   if (!item_id || !action) {
     return NextResponse.json({ ok: false, error: "Missing item_id or action" }, { status: 400 });
@@ -112,13 +112,26 @@ export async function PATCH(req: Request) {
     // Use the item now
     updateData = {
       status: "used",
-      used_date: new Date().toISOString()
+      used_date: new Date().toISOString(),
+      metadata: { 
+        ...item.metadata, 
+        used_by: user.discord_id,
+        used_by_name: user.username,
+        used_at: new Date().toISOString(),
+        reason: reason || "User initiated",
+      }
     };
   } else if (action === "save") {
     // Save for next wipe
     updateData = {
       status: "saved",
-      metadata: { ...item.metadata, saved_for_next_wipe: true }
+      metadata: { 
+        ...item.metadata, 
+        saved_for_next_wipe: true,
+        saved_by: user.discord_id,
+        saved_by_name: user.username,
+        saved_at: new Date().toISOString(),
+      }
     };
   } else {
     return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400 });
@@ -135,25 +148,63 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  // Send Discord notification to staff when insurance is used
-  if (action === "use" && item.item_type === "insurance") {
-    try {
-      await sendDiscordWebhook({
-        username: "NewHopeGGN Insurance",
-        avatar_url: user.avatar_url || undefined,
-        content: `🛡️ **INSURANCE CLAIMED** 🛡️\n\n` +
-          `User: **${user.username}**\n` +
-          `Discord ID: \`${user.discord_id}\`\n` +
-          `Item: **${item.item_name}**\n` +
-          `Purchased: ${new Date(item.purchase_date).toLocaleDateString()}\n\n` +
-          `⚠️ <@&STAFF_ROLE_ID> Please process this insurance claim!`
-      });
-    } catch (e) {
-      console.error("Insurance webhook failed:", e);
+  // Send Discord notification
+  let discordNotified = false;
+  try {
+    const actionLabel = action === "use" ? "USED" : "SAVED";
+    const icon = action === "use" ? "✅" : "💾";
+    
+    let content = `${icon} **PACKAGE ${actionLabel}**\n\n`;
+    content += `**Item:** ${item.item_name}\n`;
+    content += `**Type:** ${item.item_type}\n`;
+    content += `**User:** ${user.username} (<@${user.discord_id}>)\n`;
+    content += `**ID:** \`${user.discord_id}\`\n`;
+    if (reason) content += `**Reason:** ${reason}\n`;
+    content += `**Wipe:** ${item.wipe_cycle}\n\n`;
+
+    // Extra alert for insurance usage
+    if (action === "use" && item.item_type === "insurance") {
+      content += `🛡️ **INSURANCE CLAIM - STAFF ACTION REQUIRED**\n`;
+      content += `Purchased: ${new Date(item.purchase_date).toLocaleDateString()}\n\n`;
+      content += `⚠️ <@&STAFF_ROLE_ID> Please process this insurance claim!`;
+    } else {
+      content += `📦 **Package Log**`;
     }
+
+    await sendDiscordWebhook({
+      username: "NewHopeGGN Packages",
+      avatar_url: user.avatar_url || undefined,
+      content,
+    });
+    discordNotified = true;
+  } catch (e) {
+    console.error("Package webhook failed:", e);
   }
 
-  return NextResponse.json({ ok: true, item: updated });
+  // Manually log to package_logs (in addition to trigger)
+  await supabase.from("package_logs").insert({
+    inventory_item_id: item.id,
+    user_id: user.discord_id,
+    user_name: user.username,
+    item_name: item.item_name,
+    item_type: item.item_type,
+    action: action === "use" ? "user_used" : "user_saved",
+    action_by: user.discord_id,
+    action_by_name: user.username,
+    details: {
+      reason: reason || "User initiated",
+      wipe_cycle: item.wipe_cycle,
+      item_id: item.id,
+      used_date: action === "use" ? new Date().toISOString() : null,
+    },
+    discord_notified: discordNotified,
+  });
+
+  return NextResponse.json({ 
+    ok: true, 
+    item: updated,
+    discord_notified: discordNotified,
+  });
 }
 
 // DELETE - Remove item (admin only)

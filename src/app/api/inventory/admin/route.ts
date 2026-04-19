@@ -1,12 +1,71 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createClient } from "@supabase/supabase-js";
+import { sendDiscordWebhook } from "@/lib/discord";
 
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
+
+// Discord webhook for package logs
+async function logToDiscord(
+  action: string,
+  itemName: string,
+  userId: string,
+  adminName: string,
+  details?: Record<string, any>
+) {
+  const icons: Record<string, string> = {
+    admin_given: "🎁",
+    user_used: "✅",
+    user_saved: "💾",
+    admin_revoked: "🗑️",
+    admin_restored: "♻️",
+    status_changed: "📝",
+  };
+
+  const actionLabels: Record<string, string> = {
+    admin_given: "Package Given",
+    user_used: "Package Used",
+    user_saved: "Package Saved",
+    admin_revoked: "Package Revoked",
+    admin_restored: "Package Restored",
+    status_changed: "Status Changed",
+  };
+
+  const icon = icons[action] || "📦";
+  const label = actionLabels[action] || action;
+
+  let content = `${icon} **${label}**\n\n`;
+  content += `**Item:** ${itemName}\n`;
+  content += `**User:** <@${userId}> (\`${userId}\`)\n`;
+  content += `**By:** ${adminName}\n`;
+  
+  if (details?.reason) {
+    content += `**Reason:** ${details.reason}\n`;
+  }
+  if (details?.wipe_cycle) {
+    content += `**Wipe:** ${details.wipe_cycle}\n`;
+  }
+  if (details?.old_status && details?.new_status) {
+    content += `**Change:** ${details.old_status} → ${details.new_status}\n`;
+  }
+  
+  content += `\n<:yellow:STAFF_ROLE_ID> **Package Log**`;
+
+  try {
+    await sendDiscordWebhook({
+      username: "NewHopeGGN Packages",
+      content,
+    });
+    return true;
+  } catch (e) {
+    console.error("Package log webhook failed:", e);
+    return false;
+  }
 }
 
 // GET - Fetch all inventory (admin only) with optional filters
@@ -101,4 +160,101 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true, message: `${item_ids.length} items updated` });
+}
+
+// PUT - Give a package to a user (admin only)
+export async function PUT(req: Request) {
+  const adminSession = await getAdminSession();
+  if (!adminSession?.discord_id) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = getSupabase();
+
+  const body = await req.json().catch(() => ({}));
+  const { 
+    user_id, 
+    user_name,
+    item_type, 
+    item_slug, 
+    item_name, 
+    wipe_cycle,
+    reason,
+    metadata = {} 
+  } = body;
+
+  if (!user_id || !item_type || !item_slug) {
+    return NextResponse.json({ 
+      ok: false, 
+      error: "Missing required fields: user_id, item_type, item_slug" 
+    }, { status: 400 });
+  }
+
+  const adminName = adminSession.username || adminSession.discord_id;
+  const itemDisplayName = item_name || item_slug;
+  const currentWipe = wipe_cycle || getCurrentWipeCycle();
+
+  // Create the inventory item
+  const { data: item, error } = await supabase
+    .from("user_inventory")
+    .insert({
+      user_id,
+      item_type,
+      item_slug,
+      item_name: itemDisplayName,
+      wipe_cycle: currentWipe,
+      status: "available",
+      metadata: {
+        ...metadata,
+        given_by: adminSession.discord_id,
+        given_by_name: adminName,
+        reason: reason || "Admin given",
+        given_at: new Date().toISOString(),
+      }
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  // Log to Discord (this happens via trigger too, but we want immediate Discord notification)
+  const discordNotified = await logToDiscord(
+    "admin_given",
+    itemDisplayName,
+    user_id,
+    adminName,
+    { reason: reason || "Admin given", wipe_cycle: currentWipe }
+  );
+
+  // Also manually create a log entry with Discord status
+  await supabase.from("package_logs").insert({
+    inventory_item_id: item.id,
+    user_id,
+    user_name: user_name || user_id,
+    item_name: itemDisplayName,
+    item_type,
+    action: "admin_given",
+    action_by: adminSession.discord_id,
+    action_by_name: adminName,
+    details: {
+      reason: reason || "Admin given",
+      wipe_cycle: currentWipe,
+      item_id: item.id,
+    },
+    discord_notified: discordNotified,
+  });
+
+  return NextResponse.json({ 
+    ok: true, 
+    item,
+    message: `Package "${itemDisplayName}" given to user ${user_id}`,
+    discord_notified: discordNotified,
+  });
+}
+
+function getCurrentWipeCycle(): string {
+  const now = new Date();
+  return `wipe-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
