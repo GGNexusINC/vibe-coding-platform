@@ -53,6 +53,7 @@ export const env = {
       "staff-page":   "DISCORD_WEBHOOK_URL_STAFF_PAGE",
       "script-hook":  "DISCORD_WEBHOOK_URL_SCRIPT_HOOK",
       "minigame":     "DISCORD_WEBHOOK_URL_MINIGAME",
+      "wipe":         "DISCORD_WEBHOOK_URL_WIPE",
     };
     // Hardcoded fallbacks per page in case env vars are not set
     const hardcodedFallbacks: Record<string, string> = {

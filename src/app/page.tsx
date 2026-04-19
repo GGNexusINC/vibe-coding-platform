@@ -178,6 +178,25 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6">
+            {/* 😺𝑾𝒊𝒑𝒆 Video */}
+            <div className="rz-surface rz-panel-border rounded-[2rem] overflow-hidden">
+              <div className="relative w-full aspect-video bg-slate-950">
+                <video
+                  src="https://cdn.discordapp.com/attachments/1419522458075005023/wipe-trailer.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/60 pointer-events-none">
+                  <div className="text-3xl font-black text-white tracking-widest drop-shadow-lg">😺𝑾𝒊𝒑𝒆</div>
+                  <div className="mt-1 text-xs text-slate-300 uppercase tracking-[0.2em]">New Season Starting</div>
+                </div>
+              </div>
+            </div>
+
             <div className="rz-surface rz-panel-border rounded-[2rem] p-6">
               <div className="rz-chip">{t.operationsTitle}</div>
               <div className="mt-5 grid gap-4">

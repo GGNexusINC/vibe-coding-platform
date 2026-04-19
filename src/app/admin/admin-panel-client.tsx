@@ -108,6 +108,7 @@ const pageOptions = [
   { value: "general-chat", label: "General Chat", note: "Public updates and major server posts." },
   { value: "ban-page", label: "Ban Page", note: "Punishments, warnings, and moderation notices." },
   { value: "staff-page", label: "Staff Page", note: "Staff-only announcements and internal alerts." },
+  { value: "wipe", label: "😺 Wipe", note: "Wipe cycle announcements and new season alerts." },
 ];
 
 const broadcastPresets = [
@@ -134,6 +135,22 @@ const broadcastPresets = [
     title: "Enforcement Notice",
     message: "A new enforcement action has been recorded. Please review the rules and appeal process if needed.",
     color: "#ef4444",
+  },
+  {
+    label: "😺 Wipe incoming",
+    target: "wipe",
+    audienceLabel: "wipe channel",
+    title: "😺𝑾𝒊𝒑𝒆 — New Season Starting",
+    message: "A new wipe is starting! Head to the store to grab your wipe packs and secure your VIP perks for this season. Good luck out there!",
+    color: "#a855f7",
+  },
+  {
+    label: "😺 Wipe complete",
+    target: "wipe",
+    audienceLabel: "wipe channel",
+    title: "😺𝑾𝒊𝒑𝒆 — Season Ended",
+    message: "The wipe has completed. Thank you for playing this season! Stay tuned for the next wipe announcement.",
+    color: "#06b6d4",
   },
 ];
 
