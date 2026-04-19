@@ -6,17 +6,53 @@ import { getPresenceMap } from "@/lib/presence";
 import { createClient } from "@supabase/supabase-js";
 import { KNOWN_ADMINS } from "@/lib/env";
 
-async function getGuildMembers() {
+function getSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return [];
-  const sb = createClient(url, key, { auth: { persistSession: false } });
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+async function getGuildMembers() {
+  const sb = getSupabaseClient();
+  if (!sb) return [];
   const { data } = await sb
     .from("guild_members")
     .select("discord_id, username, display_name, avatar_url, roles, joined_at, last_synced, is_bot")
     .order("is_bot", { ascending: true })
     .order("display_name", { ascending: true });
   return data ?? [];
+}
+
+// Get true active day counts per user from the full activity_logs table
+async function getActiveDaysMap(): Promise<Map<string, number>> {
+  const sb = getSupabaseClient();
+  if (!sb) return new Map();
+
+  const { data, error } = await sb.rpc("get_active_days_per_user");
+
+  if (!error && data) {
+    return new Map(
+      (data as { discord_id: string; active_days: number }[]).map((r) => [r.discord_id, r.active_days])
+    );
+  }
+
+  // Fallback: raw query
+  const { data: raw } = await sb
+    .from("activity_logs")
+    .select("discord_id, created_at")
+    .not("discord_id", "is", null);
+
+  if (!raw) return new Map();
+
+  const dayMap = new Map<string, Set<string>>();
+  for (const row of raw) {
+    if (!row.discord_id) continue;
+    if (!dayMap.has(row.discord_id)) dayMap.set(row.discord_id, new Set());
+    dayMap.get(row.discord_id)!.add(String(row.created_at).slice(0, 10));
+  }
+
+  return new Map([...dayMap.entries()].map(([id, days]) => [id, days.size]));
 }
 
 export async function GET() {
@@ -28,12 +64,13 @@ export async function GET() {
     );
   }
 
-  const [summary, recent, roster, presenceMap, guildMembers] = await Promise.all([
+  const [summary, recent, roster, presenceMap, guildMembers, activeDaysMap] = await Promise.all([
     getActivitySummary(),
     getRecentActivities(30),
     getRoster(),
     getPresenceMap(),
     getGuildMembers(),
+    getActiveDaysMap(),
   ]);
 
   // Build set of approved admin IDs for gold badge tagging
@@ -81,6 +118,14 @@ export async function GET() {
         isAdmin:      adminIds.has(gm.discord_id),
         isBot:        gm.is_bot,
       });
+    }
+  }
+
+  // Override activeDays for every member with the true count from the full activity_logs table
+  for (const [id, member] of memberMap.entries()) {
+    const trueDays = activeDaysMap.get(id);
+    if (trueDays !== undefined) {
+      member.activeDays = trueDays;
     }
   }
 
