@@ -10,6 +10,30 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Send DM to a Discord user
+async function sendDiscordDM(userId: string, message: string) {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) return false;
+  try {
+    const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
+      method: "POST",
+      headers: { "Authorization": `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: userId }),
+    });
+    if (!dmRes.ok) return false;
+    const dmChannel = await dmRes.json();
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+      method: "POST",
+      headers: { "Authorization": `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ content: message }),
+    });
+    return msgRes.ok;
+  } catch (e) {
+    console.error("DM error:", e);
+    return false;
+  }
+}
+
 // GET all events
 export async function GET() {
   const { data: events, error } = await supabase
@@ -100,24 +124,41 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Event ID required" }, { status: 400 });
   }
 
-  // Update event fields
+  // Update event fields if any provided
   const updateData: any = {};
   if (image_url !== undefined) updateData.image_url = image_url;
   if (registration_open !== undefined) updateData.registration_open = registration_open;
   if (status !== undefined) updateData.status = status;
   if (current_round !== undefined) updateData.current_round = current_round;
 
-  const { data: events, error } = await supabase
-    .from("arena_events")
-    .update(updateData)
-    .eq("id", event_id)
-    .select();
+  let event;
+  
+  if (Object.keys(updateData).length > 0) {
+    // Update and get event
+    const { data: events, error } = await supabase
+      .from("arena_events")
+      .update(updateData)
+      .eq("id", event_id)
+      .select();
 
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+    event = events?.[0];
+  } else {
+    // Just fetch the event
+    const { data: events, error } = await supabase
+      .from("arena_events")
+      .select("*")
+      .eq("id", event_id)
+      .single();
+    
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+    event = events;
   }
 
-  const event = events?.[0];
   if (!event) {
     return NextResponse.json({ ok: false, error: "Event not found" }, { status: 404 });
   }
@@ -177,7 +218,7 @@ export async function PATCH(req: Request) {
         })
         .eq("id", event_id);
 
-      // Send Discord notifications to each team with their opponent
+      // Send Discord notifications to each team
       for (const assignment of vcAssignments) {
         // Find match for this team
         const match = matches.find(m => 
@@ -190,20 +231,41 @@ export async function PATCH(req: Request) {
             ? match.team2_name 
             : match.team1_name;
           opponentText = `\n⚔️ **Your Opponent:** ${opponentName}`;
+        } else if (teams.length === 1) {
+          opponentText = "\n⏳ **Waiting for more teams to join...**";
+        } else {
+          opponentText = "\n🏆 **Bye round - you advance automatically!**";
         }
         
         try {
           await sendDiscordWebhook({
-            content: `🔊 **${assignment.team_name}** - Please join your designated voice channel!
-
-**👉 ${assignment.vc_channel}**${opponentText}
-
-Round 1 is starting soon. Good luck! 🎮`,
+            content: `🔊 **${assignment.team_name}** - Please join your designated voice channel!\n\n**👉 ${assignment.vc_channel}**${opponentText}\n\nRound 1 is starting soon. Good luck! 🎮`,
             username: "NewHopeGGN Arena",
             avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
           });
         } catch (e) {
           console.error("Failed to send VC notification:", e);
+        }
+      }
+
+      // Also send DMs to all team members if bot token available
+      if (process.env.DISCORD_BOT_TOKEN) {
+        for (const team of teams) {
+          const match = matches.find(m => 
+            m.team1_id === team.id || m.team2_id === team.id
+          );
+          const opponentName = match 
+            ? (match.team1_id === team.id ? match.team2_name : match.team1_name)
+            : null;
+          
+          const dmMessage = opponentName 
+            ? `🎮 **It's your turn in the arena!**\n\nYou're fighting: **${opponentName}**\nJoin voice channel: **${vcAssignments.find(v => v.team_id === team.id)?.vc_channel}**\n\nGood luck! ⚔️`
+            : `🎮 **You're registered for the arena!**\n\nJoin voice channel: **${vcAssignments.find(v => v.team_id === team.id)?.vc_channel}**\n\nWaiting for the event to start... ⏳`;
+
+          // DM team leader
+          if (team.leader_discord_id) {
+            await sendDiscordDM(team.leader_discord_id, dmMessage);
+          }
         }
       }
 
