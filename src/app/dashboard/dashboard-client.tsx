@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { InventorySection } from "./inventory-section";
 
 type User = {
   discord_id: string;
@@ -207,6 +208,13 @@ export default function DashboardClient({ user, msg }: { user: User | null; msg?
             {!user && <p className="mt-2 text-xs text-stone-600">Sign in first to save your UID.</p>}
           </div>
         </div>
+
+        {/* ── Inventory ── */}
+        {user && (
+          <div className="mb-8">
+            <InventorySection />
+          </div>
+        )}
 
         {/* ── Quick access ── */}
         <div className="relative rz-surface rounded-2xl p-6 border border-white/8 overflow-hidden">

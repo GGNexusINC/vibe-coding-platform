@@ -351,7 +351,7 @@ export function AdminPanelClient() {
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory">("dashboard");
   const [wipeAt, setWipeAt] = useState("");
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [wipeSaving, setWipeSaving] = useState(false);
@@ -401,6 +401,13 @@ export function AdminPanelClient() {
   const [arenaNewVoteOption, setArenaNewVoteOption] = useState({ name: "", icon: "🎯", description: "" });
   const [arenaVoteResults, setArenaVoteResults] = useState<any[]>([]);
   const [arenaTeams, setArenaTeams] = useState<any[]>([]);
+
+  // Inventory state
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryFilter, setInventoryFilter] = useState("all");
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [inventorySummary, setInventorySummary] = useState({ total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
 
   const [eventFilter, setEventFilter] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
@@ -655,6 +662,34 @@ export function AdminPanelClient() {
     const data = await res.json().catch(() => null);
     if (data?.ok) setArenaEvents(data.events || []);
     setArenaLoading(false);
+  }
+
+  async function loadInventory() {
+    setInventoryLoading(true);
+    const res = await fetch("/api/inventory/admin", { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) {
+      setInventoryItems(data.items || []);
+      setInventorySummary(data.summary || { total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
+    }
+    setInventoryLoading(false);
+  }
+
+  async function handleInventoryAction(itemIds: string[], action: "mark_used" | "mark_available" | "mark_saved" | "delete") {
+    if (!confirm(`${action === "delete" ? "Permanently delete" : "Update"} ${itemIds.length} item(s)?`)) return;
+    
+    const res = await fetch("/api/inventory/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_ids: itemIds, action }),
+    });
+    
+    const data = await res.json().catch(() => null);
+    if (data?.ok) {
+      await loadInventory();
+    } else {
+      alert(data?.error || "Action failed");
+    }
   }
 
   async function fetchArenaTeams(eventId: string) {
@@ -1053,6 +1088,7 @@ export function AdminPanelClient() {
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
     { id: "lottery"   as const, label: "Lottery",    icon: "◆" },
     { id: "arena"     as const, label: "Arena",      icon: "⚔️" },
+    { id: "inventory" as const, label: "Inventory",  icon: "🎒" },
     { id: "modlog" as const, label: "Mod Log", icon: "⚑" },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
   ] as const;
@@ -1066,6 +1102,7 @@ export function AdminPanelClient() {
     if (id === "lottery") void loadLottery();
     if (id === "modlog")  void loadModLog();
     if (id === "arena")   void loadArena();
+    if (id === "inventory") void loadInventory();
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -2006,6 +2043,154 @@ export function AdminPanelClient() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ════ INVENTORY ════ */}
+          {activeTab === "inventory" && (
+            <div className="space-y-6">
+              {/* Header with stats */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">User Inventory</h2>
+                  <p className="text-sm text-slate-400">Track purchased items, insurance claims, and pack usage.</p>
+                </div>
+                <button
+                  onClick={() => void loadInventory()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="rounded-xl border border-white/6 bg-slate-900/50 p-4">
+                  <div className="text-2xl font-bold text-white">{inventorySummary.total}</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wider">Total Items</div>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                  <div className="text-2xl font-bold text-emerald-400">{inventorySummary.available}</div>
+                  <div className="text-xs text-emerald-500/70 uppercase tracking-wider">Available</div>
+                </div>
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                  <div className="text-2xl font-bold text-amber-400">{inventorySummary.saved}</div>
+                  <div className="text-xs text-amber-500/70 uppercase tracking-wider">Saved</div>
+                </div>
+                <div className="rounded-xl border border-slate-500/20 bg-slate-500/10 p-4">
+                  <div className="text-2xl font-bold text-slate-400">{inventorySummary.used}</div>
+                  <div className="text-xs text-slate-500/70 uppercase tracking-wider">Used</div>
+                </div>
+                <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-4">
+                  <div className="text-2xl font-bold text-violet-400">{inventorySummary.insurance_count}</div>
+                  <div className="text-xs text-violet-500/70 uppercase tracking-wider">Insurance</div>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3">
+                <input
+                  type="text"
+                  placeholder="Search by user ID..."
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  className="px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:border-cyan-500/50 outline-none"
+                />
+                <select
+                  value={inventoryFilter}
+                  onChange={(e) => setInventoryFilter(e.target.value)}
+                  className="px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
+                >
+                  <option value="all">All Items</option>
+                  <option value="available">Available</option>
+                  <option value="used">Used</option>
+                  <option value="saved">Saved</option>
+                  <option value="insurance">Insurance Only</option>
+                </select>
+              </div>
+
+              {/* Inventory Table */}
+              <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
+                <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+                  <span>User</span>
+                  <span>Item</span>
+                  <span>Status</span>
+                  <span>Date</span>
+                  <span>Actions</span>
+                </div>
+                
+                {inventoryLoading ? (
+                  <div className="px-5 py-8 text-center text-slate-500">Loading inventory...</div>
+                ) : inventoryItems.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-slate-500">No items in inventory</div>
+                ) : (
+                  <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
+                    {inventoryItems
+                      .filter((item) => {
+                        if (inventoryFilter === "all") return true;
+                        if (inventoryFilter === "insurance") return item.item_type === "insurance";
+                        return item.status === inventoryFilter;
+                      })
+                      .filter((item) => {
+                        if (!inventorySearch) return true;
+                        return item.user_id?.toLowerCase().includes(inventorySearch.toLowerCase());
+                      })
+                      .map((item) => (
+                        <div key={item.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
+                          <div className="font-mono text-xs text-slate-400 truncate">
+                            {item.user_id?.slice(0, 12)}...
+                          </div>
+                          <div>
+                            <span className="text-white">{item.item_name}</span>
+                            {item.item_type === "insurance" && (
+                              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">INS</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className={`text-[10px] px-2 py-1 rounded-full uppercase font-bold ${
+                              item.status === "available" ? "bg-emerald-500/20 text-emerald-400" :
+                              item.status === "used" ? "bg-slate-500/20 text-slate-400" :
+                              item.status === "saved" ? "bg-amber-500/20 text-amber-400" :
+                              "bg-rose-500/20 text-rose-400"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {new Date(item.purchase_date).toLocaleDateString()}
+                          </div>
+                          <div className="flex gap-1">
+                            {item.status === "available" && (
+                              <>
+                                <button
+                                  onClick={() => void handleInventoryAction([item.id], "mark_used")}
+                                  className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-xs hover:bg-emerald-500/30"
+                                  title="Mark as used"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => void handleInventoryAction([item.id], "mark_saved")}
+                                  className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs hover:bg-amber-500/30"
+                                  title="Save for next wipe"
+                                >
+                                  💾
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => void handleInventoryAction([item.id], "delete")}
+                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-400 text-xs hover:bg-rose-500/30"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
