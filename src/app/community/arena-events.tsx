@@ -42,6 +42,15 @@ interface ArenaEvent {
       no_deviants?: boolean;
       extra?: string;
     };
+    ffa_participants?: {
+      id: string;
+      name: string;
+      avatar_url?: string;
+      team_name: string;
+      team_id: string;
+      vc_channel?: string;
+      status?: string;
+    }[];
   };
 }
 
@@ -713,8 +722,52 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                   );
                 })()}
 
+                {/* FFA Participant Display */}
+                {event.status === "active" && event.metadata?.ffa_participants && event.metadata.ffa_participants.length > 0 && (() => {
+                  const participants: any[] = event.metadata.ffa_participants;
+                  const ffaWinner = participants.find((p: any) => p.status === "winner");
+                  return (
+                    <div className="rounded-xl border border-rose-500/30 bg-gradient-to-b from-rose-500/10 via-slate-900/80 to-slate-950/90 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-rose-400 flex items-center gap-2">
+                          <span>🔥</span><span>Free For All — {participants.length} Players</span>
+                        </h4>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />LIVE
+                        </span>
+                      </div>
+                      {ffaWinner ? (
+                        <div className="rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-amber-500/20 p-4 text-center">
+                          <div className="text-3xl mb-2">🏆</div>
+                          <div className="text-xs text-amber-400/70 uppercase tracking-widest mb-1">FFA Winner</div>
+                          <div className="text-xl font-black text-amber-300">{ffaWinner.name}</div>
+                          <div className="text-xs text-slate-500 mt-1">{ffaWinner.team_name}</div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {participants.map((p: any, i: number) => (
+                            <div key={p.id || i} className={`p-2.5 rounded-xl border flex items-center gap-2 ${
+                              userTeam && p.team_id === userTeam.id
+                                ? "border-amber-500/50 bg-amber-500/10"
+                                : "border-white/8 bg-slate-900/50"
+                            }`}>
+                              <div className="w-7 h-7 rounded-lg bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-xs font-black text-rose-300 shrink-0">
+                                {p.name?.[0]?.toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-white truncate">{p.name}</div>
+                                <div className="text-[10px] text-violet-400">🔊 {p.vc_channel}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Tournament Bracket */}
-                {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (() => {
+                {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && !event.metadata?.ffa_participants?.length && (() => {
                   const matches = event.metadata.matches!;
                   const allDone = matches.every((m: any) => m.status === "completed");
                   const winners = matches.filter((m: any) => m.status === "completed" && m.winner_name).map((m: any) => m.winner_name);

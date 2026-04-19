@@ -131,7 +131,7 @@ export async function PATCH(req: Request) {
   if (status !== undefined) updateData.status = status;
   if (current_round !== undefined) updateData.current_round = current_round;
 
-  let event;
+  let event: any;
   
   if (Object.keys(updateData).length > 0) {
     // Update and get event
@@ -329,27 +329,59 @@ export async function PATCH(req: Request) {
     }
   }
 
-  if (action === "start_event") {
-    // Close registration
-    await supabase
-      .from("arena_events")
-      .update({ registration_open: false, status: "active" })
-      .eq("id", event_id);
+  // ── Shared bracket generation helper ──
+  async function buildBracket(roundNum: number) {
+    const isFFA = !!(event.metadata?.rules?.ffa);
 
-    // Auto-generate matches + VC assignments
     const { data: teams } = await supabase
       .from("arena_teams")
-      .select("*")
+      .select("*, arena_team_members(*)")
       .eq("event_id", event_id)
       .order("seed", { ascending: true });
 
-    const matches: any[] = [];
+    if (!teams || teams.length === 0) return { matches: [], vcAssignments: [], ffa_participants: [] };
+
     const vcAssignments: any[] = [];
+    const matches: any[] = [];
+    let ffa_participants: any[] = [];
 
-    if (teams && teams.length > 0) {
-      // Shuffle for fairness
+    if (isFFA) {
+      // Collect every individual player across all teams
+      const players: any[] = [];
+      for (const team of teams) {
+        for (const member of (team.arena_team_members || [])) {
+          players.push({
+            id: member.discord_id,
+            name: member.username,
+            avatar_url: member.avatar_url,
+            team_name: team.name,
+            team_id: team.id,
+          });
+        }
+      }
+      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      ffa_participants = shuffled.map((p, i) => ({
+        ...p,
+        vc_channel: `RaidZone-${i + 1}`,
+        status: "active",
+        rank: null,
+      }));
+      // One "FFA" meta-match for tracking the winner
+      matches.push({
+        event_id,
+        round: roundNum,
+        match_number: 1,
+        team1_id: teams[0]?.id,
+        team1_name: "FFA",
+        team2_id: teams[0]?.id,
+        team2_name: "FFA",
+        team1_vc: "All Players",
+        team2_vc: "All Players",
+        status: "live",
+      });
+    } else {
+      // Standard team mode — pair teams
       const shuffled = [...teams].sort(() => Math.random() - 0.5);
-
       shuffled.forEach((team, index) => {
         vcAssignments.push({
           team_id: team.id,
@@ -358,12 +390,11 @@ export async function PATCH(req: Request) {
           leader_username: team.leader_username,
         });
       });
-
       for (let i = 0; i < shuffled.length; i += 2) {
         if (i + 1 < shuffled.length) {
           matches.push({
             event_id,
-            round: 1,
+            round: roundNum,
             match_number: Math.floor(i / 2) + 1,
             team1_id: shuffled[i].id,
             team1_name: shuffled[i].name,
@@ -375,79 +406,164 @@ export async function PATCH(req: Request) {
           });
         }
       }
-
-      // Clear old matches and insert new
-      await supabase.from("arena_matches").delete().eq("event_id", event_id);
-      if (matches.length > 0) {
-        await supabase.from("arena_matches").insert(matches);
-      }
-
-      await supabase
-        .from("arena_events")
-        .update({
-          current_round: 1,
-          metadata: { vc_assignments: vcAssignments, matches, round: 1 },
-        })
-        .eq("id", event_id);
-
-      // Rich bracket embed for Discord
-      const matchFields = matches.map((m, idx) => ({
-        name: `⚔️ Match ${idx + 1}`,
-        value: `**${m.team1_name}** (${m.team1_vc}) vs **${m.team2_name}** (${m.team2_vc})`,
-        inline: false,
-      }));
-
-      // Byes
-      if (shuffled.length % 2 !== 0) {
-        const byeTeam = shuffled[shuffled.length - 1];
-        matchFields.push({
-          name: "🏆 Bye Round",
-          value: `**${byeTeam.name}** advances automatically`,
-          inline: false,
-        });
-      }
-
-      try {
-        await sendDiscordWebhook({
-          username: "NewHopeGGN Arena",
-          avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
-          embeds: [{
-            title: `🏆 ${event.name} — Round 1 Bracket`,
-            description: `Registration closed. **${teams.length} teams** competing. Check your voice channel and good luck! ⚔️`,
-            color: 0xf59e0b,
-            fields: matchFields,
-            footer: { text: "NewHopeGGN Arena System" },
-            timestamp: new Date().toISOString(),
-          }],
-        }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
-      } catch (e) {
-        console.error("Discord webhook failed:", e);
-      }
-
-      // DM team leaders
-      if (process.env.DISCORD_BOT_TOKEN) {
-        for (const team of shuffled) {
-          const match = matches.find(m => m.team1_id === team.id || m.team2_id === team.id);
-          const opponent = match ? (match.team1_id === team.id ? match.team2_name : match.team1_name) : null;
-          const vc = vcAssignments.find(v => v.team_id === team.id)?.vc_channel;
-          const msg = opponent
-            ? `🎮 **Arena is starting!**\n\nYou're fighting: **${opponent}**\nJoin voice channel: **${vc}**\n\nGood luck! ⚔️`
-            : `🎮 **Arena is starting!**\n\nJoin voice channel: **${vc}** — you have a bye this round! 🏆`;
-          if (team.leader_discord_id) {
-            await sendDiscordDM(team.leader_discord_id, msg).catch(() => {});
-          }
-        }
-      }
     }
 
-    // Re-fetch updated event
-    const { data: updatedEvent } = await supabase
-      .from("arena_events")
-      .select("*")
-      .eq("id", event_id)
-      .single();
+    // Clear old round matches and insert new
+    await supabase.from("arena_matches").delete().eq("event_id", event_id).eq("round", roundNum);
+    if (matches.length > 0) await supabase.from("arena_matches").insert(matches);
 
-    return NextResponse.json({ ok: true, event: updatedEvent, matches, vc_assignments: vcAssignments });
+    return { matches, vcAssignments, ffa_participants };
+  }
+
+  if (action === "generate_bracket") {
+    const roundNum = event.current_round || 1;
+    const { matches, vcAssignments, ffa_participants } = await buildBracket(roundNum);
+
+    const isFFA = !!(event.metadata?.rules?.ffa);
+    const newMeta = {
+      ...(event.metadata || {}),
+      matches,
+      vc_assignments: vcAssignments,
+      ffa_participants: ffa_participants.length ? ffa_participants : undefined,
+      round: roundNum,
+    };
+    await supabase.from("arena_events").update({ metadata: newMeta, status: "active" }).eq("id", event_id);
+
+    // Discord embed
+    const modeLabel = isFFA ? "🔥 Free For All" : `⚔️ ${event.metadata?.rules?.mode || "Team"} Mode`;
+    const fields = isFFA
+      ? ffa_participants.map((p: any, i: number) => ({
+          name: `#${i + 1} ${p.name}`,
+          value: `Team: ${p.team_name} • VC: ${p.vc_channel}`,
+          inline: true,
+        }))
+      : matches.map((m: any, i: number) => ({
+          name: `⚔️ Match ${i + 1}`,
+          value: `**${m.team1_name}** vs **${m.team2_name}**`,
+          inline: false,
+        }));
+
+    try {
+      await sendDiscordWebhook({
+        username: "NewHopeGGN Arena",
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `🏟️ ${event.name} — Round ${roundNum} Bracket Generated`,
+          description: `${modeLabel} — ${isFFA ? `${ffa_participants.length} players` : `${matches.length} matches`} set up. Get ready!`,
+          color: isFFA ? 0xef4444 : 0xf59e0b,
+          fields: fields.slice(0, 25),
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
+    } catch (e) { console.error("Webhook failed:", e); }
+
+    const { data: updatedEvent } = await supabase.from("arena_events").select("*").eq("id", event_id).single();
+    return NextResponse.json({ ok: true, event: updatedEvent, matches, vc_assignments: vcAssignments, ffa_participants });
+  }
+
+  if (action === "set_ffa_winner") {
+    const { winner_name, winner_discord_id, winner_team_name } = body;
+    if (!winner_name) return NextResponse.json({ ok: false, error: "winner_name required" }, { status: 400 });
+
+    // Mark all participants — find winner team id
+    const { data: winnerTeam } = await supabase
+      .from("arena_teams")
+      .select("id")
+      .eq("event_id", event_id)
+      .eq("name", winner_team_name || "")
+      .maybeSingle();
+
+    await supabase.from("arena_matches")
+      .update({ status: "completed", winner_id: winnerTeam?.id || null })
+      .eq("event_id", event_id)
+      .eq("round", event.current_round || 1);
+
+    const updatedParticipants = (event.metadata?.ffa_participants || []).map((p: any) => ({
+      ...p,
+      status: p.name === winner_name ? "winner" : "eliminated",
+    }));
+
+    const winnerMatch = { match_number: 1, status: "completed", winner_name, winner_id: winnerTeam?.id };
+    const newMeta = {
+      ...(event.metadata || {}),
+      ffa_participants: updatedParticipants,
+      matches: [winnerMatch],
+    };
+    await supabase.from("arena_events").update({ metadata: newMeta }).eq("id", event_id);
+
+    try {
+      await sendDiscordWebhook({
+        username: "NewHopeGGN Arena",
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `🏆 FFA Winner — ${event.name}`,
+          description: `**${winner_name}** wins the Free For All! 🔥`,
+          color: 0xf59e0b,
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
+    } catch (e) { console.error("Webhook failed:", e); }
+
+    const { data: updatedEvent } = await supabase.from("arena_events").select("*").eq("id", event_id).single();
+    return NextResponse.json({ ok: true, event: updatedEvent });
+  }
+
+  if (action === "start_event") {
+    // Close registration
+    await supabase
+      .from("arena_events")
+      .update({ registration_open: false, status: "active" })
+      .eq("id", event_id);
+
+    // Re-fetch event with updated rules
+    const { data: freshEvent } = await supabase.from("arena_events").select("*").eq("id", event_id).single();
+    if (freshEvent) Object.assign(event, freshEvent);
+
+    const { matches, vcAssignments, ffa_participants } = await buildBracket(1);
+    const isFFA = !!(event.metadata?.rules?.ffa);
+
+    await supabase
+      .from("arena_events")
+      .update({
+        current_round: 1,
+        metadata: {
+          ...(event.metadata || {}),
+          vc_assignments: vcAssignments,
+          matches,
+          ffa_participants: ffa_participants.length ? ffa_participants : undefined,
+          round: 1,
+        },
+      })
+      .eq("id", event_id);
+
+    // Notify Discord
+    const isFFA2 = !!(event.metadata?.rules?.ffa);
+    const startFields = isFFA2
+      ? ffa_participants.map((p: any, i: number) => ({ name: `#${i + 1} ${p.name}`, value: `Team: ${p.team_name} • VC: ${p.vc_channel}`, inline: true }))
+      : matches.map((m: any, idx: number) => ({ name: `⚔️ Match ${idx + 1}`, value: `**${m.team1_name}** (${m.team1_vc}) vs **${m.team2_name}** (${m.team2_vc})`, inline: false }));
+
+    try {
+      await sendDiscordWebhook({
+        username: "NewHopeGGN Arena",
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `🏆 ${event.name} — Round 1 ${isFFA2 ? "FFA" : "Bracket"}`,
+          description: isFFA2
+            ? `Registration closed. **${ffa_participants.length} players** competing in Free For All! ⚔️`
+            : `Registration closed. Bracket generated. Check your voice channel and good luck! ⚔️`,
+          color: isFFA2 ? 0xef4444 : 0xf59e0b,
+          fields: startFields.slice(0, 25),
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
+    } catch (e) { console.error("Discord webhook failed:", e); }
+
+    // Re-fetch updated event
+    const { data: updatedEvent } = await supabase.from("arena_events").select("*").eq("id", event_id).single();
+    return NextResponse.json({ ok: true, event: updatedEvent, matches, vc_assignments: vcAssignments, ffa_participants });
   }
 
   if (action === "next_round") {

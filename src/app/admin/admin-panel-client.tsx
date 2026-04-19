@@ -938,17 +938,62 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      setSelectedArenaEvent({
-        ...selectedArenaEvent,
+      setSelectedArenaEvent((prev: any) => ({
+        ...prev,
         registration_open: false,
         status: "active",
         current_round: 1,
-        metadata: { vc_assignments: data.vc_assignments || [], matches: data.matches || [], round: 1 },
-      });
+        metadata: {
+          ...(prev.metadata || {}),
+          vc_assignments: data.vc_assignments || [],
+          matches: data.matches || [],
+          ffa_participants: data.ffa_participants || undefined,
+          round: 1,
+        },
+      }));
       await loadArena();
       await fetchArenaTeams(eventId);
     } else {
       alert(data.error || "Failed to start event");
+    }
+  }
+
+  async function handleGenerateBracket(eventId: string) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "generate_bracket" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent((prev: any) => ({
+        ...prev,
+        status: "active",
+        metadata: {
+          ...(prev.metadata || {}),
+          matches: data.matches || [],
+          vc_assignments: data.vc_assignments || [],
+          ffa_participants: data.ffa_participants || undefined,
+        },
+      }));
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to generate bracket");
+    }
+  }
+
+  async function handleSetFFAWinner(eventId: string, winnerName: string, winnerTeamName: string) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "set_ffa_winner", winner_name: winnerName, winner_team_name: winnerTeamName }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent((prev: any) => ({ ...prev, metadata: data.event?.metadata || prev.metadata }));
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to set FFA winner");
     }
   }
 
@@ -2167,8 +2212,57 @@ export function AdminPanelClient() {
                       </div>
                     </div>
 
+                    {/* 🔥 FFA Participant Grid */}
+                    {selectedArenaEvent.metadata?.ffa_participants && selectedArenaEvent.metadata.ffa_participants.length > 0 && (() => {
+                      const participants: any[] = selectedArenaEvent.metadata.ffa_participants;
+                      const ffaWinner = participants.find((p: any) => p.status === "winner");
+                      return (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+                            <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/10">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                              <span className="text-[11px] font-bold text-rose-400 uppercase tracking-widest">
+                                🔥 FFA — Round {selectedArenaEvent.current_round || 1} · {participants.length} Players
+                              </span>
+                            </div>
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+                          </div>
+
+                          {ffaWinner ? (
+                            <div className="mb-3 rounded-2xl border border-amber-400/50 bg-gradient-to-r from-amber-950/60 to-slate-900/60 p-4 text-center shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                              <div className="text-3xl mb-1">🏆</div>
+                              <div className="text-xs text-amber-400/70 uppercase tracking-widest mb-1">FFA Winner</div>
+                              <div className="text-xl font-black text-amber-300">{ffaWinner.name}</div>
+                              <div className="text-xs text-slate-500 mt-1">Team: {ffaWinner.team_name}</div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {participants.map((p: any, i: number) => (
+                                <div key={p.id || i} className="relative rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-950/40 via-slate-950/80 to-slate-900/60 p-3 flex flex-col items-center gap-2">
+                                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/40 to-transparent" />
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/30 to-orange-500/20 border border-rose-500/30 flex items-center justify-center text-lg font-black text-rose-300">
+                                    {p.name?.[0]?.toUpperCase()}
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xs font-bold text-white leading-tight">{p.name}</div>
+                                    <div className="text-[10px] text-slate-500">{p.team_name}</div>
+                                    {p.vc_channel && <div className="text-[10px] text-violet-400 font-mono">{p.vc_channel}</div>}
+                                  </div>
+                                  <button
+                                    onClick={async () => await handleSetFFAWinner(selectedArenaEvent.id, p.name, p.team_name)}
+                                    className="w-full py-1.5 rounded-lg bg-gradient-to-r from-amber-500/30 to-orange-500/20 border border-amber-500/40 text-amber-200 text-[10px] font-bold hover:from-amber-500/50 transition shadow-[0_0_8px_rgba(245,158,11,0.15)]"
+                                  >🏆 Won</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* ⚔️ Bracket */}
-                    {selectedArenaEvent.metadata?.matches && selectedArenaEvent.metadata.matches.length > 0 && (
+                    {selectedArenaEvent.metadata?.matches && selectedArenaEvent.metadata.matches.length > 0 && !selectedArenaEvent.metadata?.ffa_participants?.length && (
                       <div className="mb-4">
                         {/* Section header */}
                         <div className="flex items-center gap-3 mb-4">
@@ -2506,10 +2600,10 @@ export function AdminPanelClient() {
                           ⏰ 5 Min Warning
                         </button>
                         <button
-                          onClick={async () => await handleNotifyAllTeams(selectedArenaEvent.id, "⚔️ Fight! The round has started! May the best team win!")}
+                          onClick={async () => await handleGenerateBracket(selectedArenaEvent.id)}
                           className="py-2 rounded bg-rose-500/20 text-rose-300 text-sm font-semibold hover:bg-rose-500/30"
                         >
-                          ⚔️ Round Start
+                          ⚔️ Generate Bracket
                         </button>
                         <button
                           onClick={async () => await handleShuffleTeams(selectedArenaEvent.id)}
