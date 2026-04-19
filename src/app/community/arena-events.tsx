@@ -338,6 +338,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
     return votes.find(v => v.team_id === userTeam.id);
   };
 
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const userVote = getUserVote();
   const totalVotes = voteResults.reduce((sum, r) => sum + r.vote_count, 0);
 
@@ -670,32 +671,181 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                   </div>
                 </div>
 
-                {/* Bracket / Matches Section - Show to everyone when event is active */}
+                {/* Tournament Pyramid Bracket - Professional View */}
                 {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (
-                  <div className="rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-500/10 to-slate-950/50 p-3">
-                    <h4 className="text-sm font-semibold text-amber-400 mb-3">🏆 Round 1 Bracket</h4>
-                    <div className="space-y-2">
-                      {event.metadata.matches.map((match: any) => (
-                        <div key={match.match_number} className="p-2 rounded-lg bg-slate-900/50 border border-white/5">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-slate-500">Match {match.match_number}</span>
-                            <span className="text-xs text-emerald-400">Live</span>
+                  <div className="rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/80 to-slate-950/90 p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
+                        <span>🏆</span>
+                        <span>Tournament Bracket - Round {event.current_round || 1}</span>
+                      </h4>
+                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 animate-pulse">● Live</span>
+                    </div>
+                    
+                    {/* Pyramid Layout */}
+                    <div className="space-y-3">
+                      {event.metadata.matches.map((match: any, index: number) => {
+                        const isUsersMatch = userTeam && (match.team1_id === userTeam.id || match.team2_id === userTeam.id);
+                        return (
+                          <div 
+                            key={match.match_number}
+                            onClick={() => setSelectedMatch(isUsersMatch ? null : match)}
+                            className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.02] ${
+                              isUsersMatch 
+                                ? "border-amber-500 bg-gradient-to-r from-amber-500/20 to-rose-500/10 shadow-lg shadow-amber-500/20" 
+                                : "border-white/10 bg-slate-900/60 hover:border-amber-500/50 hover:bg-slate-900/80"
+                            }`}
+                          >
+                            {/* Match Header */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-500">#{match.match_number}</span>
+                                {isUsersMatch && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-bold">YOUR MATCH</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span className="text-[10px] text-emerald-400 font-medium">IN PROGRESS</span>
+                              </div>
+                            </div>
+
+                            {/* VS Battle Display */}
+                            <div className="flex items-stretch gap-2">
+                              {/* Team 1 */}
+                              <div className={`flex-1 p-2.5 rounded-lg ${
+                                isUsersMatch && match.team1_id === userTeam?.id
+                                  ? "bg-amber-500/20 border border-amber-500/40" 
+                                  : "bg-slate-800/60 border border-white/5"
+                              }`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold">
+                                    {match.team1_name[0]}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-white truncate">{match.team1_name}</p>
+                                    <p className="text-[10px] text-violet-400 flex items-center gap-1">
+                                      <span>🔊</span>{match.team1_vc}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* VS Center */}
+                              <div className="flex flex-col items-center justify-center px-1">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                                  <span className="text-xs font-black text-amber-950">VS</span>
+                                </div>
+                              </div>
+
+                              {/* Team 2 */}
+                              <div className={`flex-1 p-2.5 rounded-lg ${
+                                isUsersMatch && match.team2_id === userTeam?.id
+                                  ? "bg-amber-500/20 border border-amber-500/40" 
+                                  : "bg-slate-800/60 border border-white/5"
+                              }`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500/30 to-red-500/30 flex items-center justify-center text-sm font-bold">
+                                    {match.team2_name[0]}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-white truncate">{match.team2_name}</p>
+                                    <p className="text-[10px] text-violet-400 flex items-center gap-1">
+                                      <span>🔊</span>{match.team2_vc}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Click hint */}
+                            <p className="text-[10px] text-center text-slate-500 mt-2">
+                              {isUsersMatch ? "⚔️ Click to view match details" : "👆 Click to view match details"}
+                            </p>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-white">{match.team1_name}</p>
-                              <p className="text-[10px] text-violet-400">{match.team1_vc}</p>
+                        );
+                      })}
+                    </div>
+
+                    {/* Pyramid visualization hint */}
+                    <div className="mt-4 pt-3 border-t border-white/10">
+                      <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500">
+                        <span>🏆</span>
+                        <span>Winners advance to next round</span>
+                        <span>→</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Match Detail Modal */}
+                {selectedMatch && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedMatch(null)}>
+                    <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl shadow-amber-500/10" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-amber-400">Match #{selectedMatch.match_number}</h3>
+                        <button onClick={() => setSelectedMatch(null)} className="text-slate-400 hover:text-white text-xl">&times;</button>
+                      </div>
+
+                      {/* Battle Display */}
+                      <div className="space-y-4">
+                        {/* Team 1 */}
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/20 to-purple-500/10 border border-violet-500/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl bg-violet-500/30 flex items-center justify-center text-2xl font-bold">
+                              {selectedMatch.team1_name[0]}
                             </div>
-                            <div className="px-2">
-                              <span className="text-amber-400 font-bold">VS</span>
-                            </div>
-                            <div className="flex-1 text-right">
-                              <p className="text-sm font-semibold text-white">{match.team2_name}</p>
-                              <p className="text-[10px] text-violet-400">{match.team2_vc}</p>
+                            <div>
+                              <p className="text-lg font-bold text-white">{selectedMatch.team1_name}</p>
+                              <p className="text-sm text-violet-400 flex items-center gap-1">
+                                <span>🔊</span> {selectedMatch.team1_vc}
+                              </p>
                             </div>
                           </div>
                         </div>
-                      ))}
+
+                        {/* VS */}
+                        <div className="flex justify-center">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                            <span className="text-xl font-black text-amber-950">VS</span>
+                          </div>
+                        </div>
+
+                        {/* Team 2 */}
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-rose-500/20 to-red-500/10 border border-rose-500/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl bg-rose-500/30 flex items-center justify-center text-2xl font-bold">
+                              {selectedMatch.team2_name[0]}
+                            </div>
+                            <div>
+                              <p className="text-lg font-bold text-white">{selectedMatch.team2_name}</p>
+                              <p className="text-sm text-violet-400 flex items-center gap-1">
+                                <span>🔊</span> {selectedMatch.team2_vc}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Join Buttons */}
+                      <div className="mt-6 grid grid-cols-2 gap-3">
+                        <a 
+                          href="discord://" 
+                          className="py-3 rounded-xl bg-violet-500 text-white font-bold text-center hover:bg-violet-400 transition"
+                        >
+                          Join {selectedMatch.team1_vc}
+                        </a>
+                        <a 
+                          href="discord://" 
+                          className="py-3 rounded-xl bg-rose-500 text-white font-bold text-center hover:bg-rose-400 transition"
+                        >
+                          Join {selectedMatch.team2_vc}
+                        </a>
+                      </div>
+
+                      <p className="mt-4 text-center text-xs text-slate-500">
+                        Click to open Discord and join the voice channels
+                      </p>
                     </div>
                   </div>
                 )}

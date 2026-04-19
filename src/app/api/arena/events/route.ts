@@ -107,15 +107,19 @@ export async function PATCH(req: Request) {
   if (status !== undefined) updateData.status = status;
   if (current_round !== undefined) updateData.current_round = current_round;
 
-  const { data: event, error } = await supabase
+  const { data: events, error } = await supabase
     .from("arena_events")
     .update(updateData)
     .eq("id", event_id)
-    .select()
-    .single();
+    .select();
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  const event = events?.[0];
+  if (!event) {
+    return NextResponse.json({ ok: false, error: "Event not found" }, { status: 404 });
   }
 
   // Handle special actions
