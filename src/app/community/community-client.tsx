@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArenaEventsWidget } from "./arena-events";
 
 const GUILD_ID = "1419522458075005023";
 const INVITE = "https://discord.gg/5Fcw9XSEeZ";
@@ -181,6 +182,9 @@ export default function CommunityClient() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
+  // User session for Arena Events
+  const [session, setSession] = useState<{ discord_id?: string; username?: string; avatar_url?: string } | null>(null);
+
   // Discord messages
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [channelList, setChannelList] = useState<string[]>([]);
@@ -220,6 +224,13 @@ export default function CommunityClient() {
     if (chs.length > 0) setChannelList(chs);
   }
 
+  async function loadSession() {
+    const res = await fetch("/api/session").catch(() => null);
+    if (!res?.ok) return;
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setSession(data.user ?? null);
+  }
+
   async function loadMessages(channel: string | null, isRefresh = false) {
     const url = channel
       ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`
@@ -249,6 +260,7 @@ export default function CommunityClient() {
     void loadFeed();
     void loadChannels();
     void loadMessages(null);
+    void loadSession();
     const wt = window.setInterval(() => void loadWidget(), 30000);
     const ft = window.setInterval(() => void loadFeed(), 15000);
     const mt = window.setInterval(() => {
@@ -521,8 +533,11 @@ export default function CommunityClient() {
             </div>
           </div>
 
-          {/* ── Right: Online members ── */}
+          {/* ── Right: Arena Events + Online members ── */}
           <div className="space-y-4 order-3 lg:order-3">
+            {/* Arena Events Widget */}
+            <ArenaEventsWidget session={session} />
+
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 sm:mb-4">
                 Members Online — <span className="text-emerald-400">{presenceCount}</span>
