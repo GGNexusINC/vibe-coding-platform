@@ -23,6 +23,15 @@ interface ArenaEvent {
       team_name: string;
       leader_username: string;
     }[];
+    matches?: {
+      team1_id: string;
+      team1_name: string;
+      team1_vc: string;
+      team2_id: string;
+      team2_name: string;
+      team2_vc: string;
+      match_number: number;
+    }[];
   };
 }
 
@@ -89,6 +98,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamTag, setNewTeamTag] = useState("");
+  const [newTeamLogo, setNewTeamLogo] = useState("");
   const [creating, setCreating] = useState(false);
   const [joiningTeamId, setJoiningTeamId] = useState<string | null>(null);
   const [kickingMemberId, setKickingMemberId] = useState<string | null>(null);
@@ -183,6 +193,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
           event_id: selectedEvent.id,
           name: newTeamName.trim(),
           tag: newTeamTag.trim() || null,
+          logo_url: newTeamLogo.trim() || null,
         }),
       });
       const data = await res.json();
@@ -190,6 +201,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
         setShowCreateTeam(false);
         setNewTeamName("");
         setNewTeamTag("");
+        setNewTeamLogo("");
         fetchTeams(selectedEvent.id);
       } else {
         alert(data.error || "Failed to create team");
@@ -405,10 +417,16 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                 {userTeam && event.status === "active" && event.metadata?.vc_assignments && (
                   (() => {
                     const assignment = event.metadata.vc_assignments.find((a) => a.team_id === userTeam.id);
+                    const match = event.metadata.matches?.find((m: any) => 
+                      m.team1_id === userTeam.id || m.team2_id === userTeam.id
+                    );
+                    const opponent = match ? (match.team1_id === userTeam.id ? match.team2_name : match.team1_name) : null;
+                    const opponentVc = match ? (match.team1_id === userTeam.id ? match.team2_vc : match.team1_vc) : null;
+                    
                     if (assignment) {
                       return (
                         <div className="rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-500/20 to-purple-500/10 p-4">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 mb-3">
                             <div className="w-12 h-12 rounded-xl bg-violet-500/30 flex items-center justify-center text-2xl">
                               🔊
                             </div>
@@ -424,6 +442,19 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                               Join VC
                             </a>
                           </div>
+                          
+                          {opponent && (
+                            <div className="mt-3 p-3 rounded-lg bg-slate-900/50 border border-rose-500/20">
+                              <p className="text-xs text-rose-400 font-semibold uppercase tracking-wider mb-1">⚔️ Your Opponent</p>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-lg font-bold text-white">{opponent}</p>
+                                  <p className="text-xs text-slate-400">They are in {opponentVc}</p>
+                                </div>
+                                <span className="text-2xl">⚔️</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     }
@@ -476,6 +507,14 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                         onChange={(e) => setNewTeamTag(e.target.value)}
                         className="w-full mb-2 px-3 py-1.5 rounded bg-slate-800 border border-white/10 text-sm text-white placeholder:text-slate-500"
                       />
+                      <input
+                        type="text"
+                        placeholder="Team Logo URL (Discord CDN, Imgur)"
+                        value={newTeamLogo}
+                        onChange={(e) => setNewTeamLogo(e.target.value)}
+                        className="w-full mb-2 px-3 py-1.5 rounded bg-slate-800 border border-white/10 text-sm text-white placeholder:text-slate-500"
+                      />
+                      <p className="text-[10px] text-slate-500 mb-2">Logo will be posted to team-logos channel</p>
                       <div className="flex gap-2">
                         <button
                           onClick={handleCreateTeam}
@@ -485,7 +524,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                           {creating ? "Creating..." : "Create Team"}
                         </button>
                         <button
-                          onClick={() => { setShowCreateTeam(false); setNewTeamName(""); setNewTeamTag(""); }}
+                          onClick={() => { setShowCreateTeam(false); setNewTeamName(""); setNewTeamTag(""); setNewTeamLogo(""); }}
                           className="px-3 py-1.5 rounded bg-slate-800 text-slate-400 text-sm hover:bg-slate-700"
                         >
                           Cancel
@@ -517,7 +556,9 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                             <div className="p-3">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  {team.leader_avatar_url ? (
+                                  {team.logo_url ? (
+                                    <img src={team.logo_url} alt="" className="w-10 h-10 rounded-lg border border-white/10 object-cover" />
+                                  ) : team.leader_avatar_url ? (
                                     <img src={team.leader_avatar_url} alt="" className="w-8 h-8 rounded-full border border-white/10" />
                                   ) : (
                                     <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
@@ -628,6 +669,36 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                     )}
                   </div>
                 </div>
+
+                {/* Bracket / Matches Section - Show to everyone when event is active */}
+                {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (
+                  <div className="rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-500/10 to-slate-950/50 p-3">
+                    <h4 className="text-sm font-semibold text-amber-400 mb-3">🏆 Round 1 Bracket</h4>
+                    <div className="space-y-2">
+                      {event.metadata.matches.map((match: any) => (
+                        <div key={match.match_number} className="p-2 rounded-lg bg-slate-900/50 border border-white/5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-slate-500">Match {match.match_number}</span>
+                            <span className="text-xs text-emerald-400">Live</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-white">{match.team1_name}</p>
+                              <p className="text-[10px] text-violet-400">{match.team1_vc}</p>
+                            </div>
+                            <div className="px-2">
+                              <span className="text-amber-400 font-bold">VS</span>
+                            </div>
+                            <div className="flex-1 text-right">
+                              <p className="text-sm font-semibold text-white">{match.team2_name}</p>
+                              <p className="text-[10px] text-violet-400">{match.team2_vc}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Voting Section */}
                 {userTeam && isTeamLeader(userTeam) && (

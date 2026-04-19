@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     username: session.username || "Unknown",
   });
 
-  // Send Discord notification
+  // Send Discord notification to general
   try {
     await sendDiscordWebhook({
       content: `🎮 **New Team Registered!**\n\n**${name}** ${tag ? `[${tag}]` : ""}\n👤 Leader: ${session.username}\n🏆 Event: Arena Tournament\n\nUse /arena join ${name} to join this team!`,
@@ -121,6 +121,27 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error("Discord webhook failed:", e);
+  }
+
+  // Send team logo to dedicated logo channel if logo exists
+  if (logo_url) {
+    try {
+      await fetch("https://discord.com/api/webhooks/1495295625812643930/rrEaVUaIk72w_UaG-GRRoC3Xr2i84oxHkZWFwD8stJCZcogZS38LpgOsCL1ghzoSKPdk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `🎨 **Team Logo: ${name}** ${tag ? `[${tag}]` : ""}\n👤 Leader: ${session.username}\n🖼️ Logo:`,
+          embeds: [{
+            title: `${name} Team Logo`,
+            image: { url: logo_url },
+            color: 0xffaa00,
+            footer: { text: `Team ID: ${team.id}` }
+          }]
+        }),
+      });
+    } catch (e) {
+      console.error("Logo webhook failed:", e);
+    }
   }
 
   return NextResponse.json({ ok: true, team });

@@ -136,23 +136,65 @@ export async function PATCH(req: Request) {
         leader_username: team.leader_username,
       }));
 
-      // Store assignments in event metadata
+      // Generate matches - pair teams: 1v2, 3v4, 5v6, etc.
+      const matches = [];
+      for (let i = 0; i < teams.length; i += 2) {
+        if (i + 1 < teams.length) {
+          const team1 = teams[i];
+          const team2 = teams[i + 1];
+          const matchNumber = Math.floor(i / 2) + 1;
+          
+          matches.push({
+            event_id,
+            round: 1,
+            match_number: matchNumber,
+            team1_id: team1.id,
+            team1_name: team1.name,
+            team2_id: team2.id,
+            team2_name: team2.name,
+            team1_vc: `RaidZone-${i + 1}`,
+            team2_vc: `RaidZone-${i + 2}`,
+            status: "pending",
+          });
+        }
+      }
+
+      // Store matches in database
+      if (matches.length > 0) {
+        await supabase.from("arena_matches").insert(matches);
+      }
+
+      // Store assignments AND matches in event metadata
       await supabase
         .from("arena_events")
         .update({
-          metadata: { vc_assignments: vcAssignments }
+          metadata: { vc_assignments: vcAssignments, matches, round: 1 },
+          current_round: 1
         })
         .eq("id", event_id);
 
-      // Send Discord notifications to each team
+      // Send Discord notifications to each team with their opponent
       for (const assignment of vcAssignments) {
+        // Find match for this team
+        const match = matches.find(m => 
+          m.team1_id === assignment.team_id || m.team2_id === assignment.team_id
+        );
+        
+        let opponentText = "";
+        if (match) {
+          const opponentName = match.team1_id === assignment.team_id 
+            ? match.team2_name 
+            : match.team1_name;
+          opponentText = `\n⚔️ **Your Opponent:** ${opponentName}`;
+        }
+        
         try {
           await sendDiscordWebhook({
             content: `🔊 **${assignment.team_name}** - Please join your designated voice channel!
 
-**👉 ${assignment.vc_channel}**
+**👉 ${assignment.vc_channel}**${opponentText}
 
-Round is starting soon. Good luck! ⚔️`,
+Round 1 is starting soon. Good luck! 🎮`,
             username: "NewHopeGGN Arena",
             avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
           });
@@ -161,11 +203,29 @@ Round is starting soon. Good luck! ⚔️`,
         }
       }
 
+      // Send bracket overview
+      let bracketText = "🏆 **Round 1 Matchups:**\n\n";
+      matches.forEach((m, idx) => {
+        bracketText += `**Match ${idx + 1}:** ${m.team1_name} vs ${m.team2_name}\n`;
+        bracketText += `└ ${m.team1_vc} vs ${m.team2_vc}\n\n`;
+      });
+      
+      try {
+        await sendDiscordWebhook({
+          content: bracketText + "Good luck to all teams! ⚔️",
+          username: "NewHopeGGN Arena",
+          avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        });
+      } catch (e) {
+        console.error("Failed to send bracket:", e);
+      }
+
       return NextResponse.json({
         ok: true,
         event,
         vc_assignments: vcAssignments,
-        message: `Assigned ${teams.length} teams to voice channels`
+        matches,
+        message: `Assigned ${teams.length} teams to voice channels, generated ${matches.length} matches`
       });
     }
   }
