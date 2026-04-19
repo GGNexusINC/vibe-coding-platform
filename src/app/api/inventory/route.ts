@@ -199,25 +199,6 @@ export async function PATCH(req: Request) {
     console.error("Package webhook failed:", e);
   }
 
-  // Manually log to package_logs (in addition to trigger)
-  await supabase.from("package_logs").insert({
-    inventory_item_id: item.id,
-    user_id: user.discord_id,
-    user_name: user.username,
-    item_name: item.item_name,
-    item_type: item.item_type,
-    action: action === "use" ? "user_used" : "user_saved",
-    action_by: user.discord_id,
-    action_by_name: user.username,
-    details: {
-      reason: reason || "User initiated",
-      wipe_cycle: item.wipe_cycle,
-      item_id: item.id,
-      used_date: action === "use" ? new Date().toISOString() : null,
-    },
-    discord_notified: discordNotified,
-  });
-
   return NextResponse.json({ 
     ok: true, 
     item: updated,

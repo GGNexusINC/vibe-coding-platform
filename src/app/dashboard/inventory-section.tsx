@@ -251,32 +251,41 @@ export function InventorySection() {
       {/* History */}
       {showHistory && (
         <div className="pt-4 border-t border-white/10">
-          <div className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-cyan-400" />
-            Activity History
-          </div>
+          <div className="text-sm font-semibold text-cyan-400 mb-3">📜 Activity History</div>
           {logs.length === 0 ? (
             <div className="text-sm text-stone-500">No activity yet.</div>
           ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
               {logs.map((log) => {
                 const meta = actionLabels[log.action] || { label: log.action, icon: "📝", color: "text-slate-400" };
+                const date = new Date(log.action_at);
+                const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                const timeStr = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+                const showReason = log.details?.reason &&
+                  log.details.reason !== "User initiated" &&
+                  log.details.reason !== "Admin given";
+
                 return (
-                  <div key={log.id} className="rounded-lg border border-white/5 bg-slate-900/40 p-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span>{meta.icon}</span>
-                        <span className={`font-bold uppercase ${meta.color}`}>{meta.label}</span>
-                        <span className="text-white">{log.item_name}</span>
+                  <div key={log.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/3 transition">
+                    <span className="text-base mt-0.5">{meta.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-xs font-bold uppercase tracking-wide ${meta.color}`}>{meta.label}</span>
+                        <span className="text-sm text-white font-medium truncate">{log.item_name}</span>
                       </div>
-                      <span className="text-stone-500">{new Date(log.action_at).toLocaleString()}</span>
+                      {(showReason || (log.action === "admin_given" && log.action_by_name)) && (
+                        <div className="text-xs text-stone-500 mt-0.5">
+                          {log.action === "admin_given" && log.action_by_name && (
+                            <span>From {log.action_by_name}{showReason ? " · " : ""}</span>
+                          )}
+                          {showReason && <span>{log.details.reason}</span>}
+                        </div>
+                      )}
                     </div>
-                    {log.action_by_name && log.action === "admin_given" && (
-                      <div className="mt-1 text-stone-500">Given by: {log.action_by_name}</div>
-                    )}
-                    {log.details?.reason && (
-                      <div className="mt-1 text-violet-300">Reason: {log.details.reason}</div>
-                    )}
+                    <div className="text-right text-[11px] text-stone-600 shrink-0">
+                      <div>{dateStr}</div>
+                      <div>{timeStr}</div>
+                    </div>
                   </div>
                 );
               })}

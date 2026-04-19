@@ -241,24 +241,6 @@ export async function PUT(req: Request) {
     { reason: reason || "Admin given", wipe_cycle: currentWipe }
   );
 
-  // Also manually create a log entry with Discord status
-  await supabase.from("package_logs").insert({
-    inventory_item_id: item.id,
-    user_id,
-    user_name: user_name || user_id,
-    item_name: itemDisplayName,
-    item_type,
-    action: "admin_given",
-    action_by: adminSession.discord_id,
-    action_by_name: adminName,
-    details: {
-      reason: reason || "Admin given",
-      wipe_cycle: currentWipe,
-      item_id: item.id,
-    },
-    discord_notified: discordNotified,
-  });
-
   return NextResponse.json({ 
     ok: true, 
     item,
