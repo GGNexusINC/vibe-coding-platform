@@ -11,6 +11,7 @@ type WidgetMember = {
   id: string;
   username: string;
   status: string;
+  avatar_url?: string;
 };
 
 type Widget = {
@@ -36,10 +37,9 @@ export default function SupportClient() {
         const res = await fetch(WIDGET_URL);
         if (!res.ok) { setLoadingStaff(false); return; }
         const data: Widget & { icon?: string; id?: string } = await res.json();
-        // Grab guild icon if available
-        if (data.id && data.icon) {
-          setGuildIconUrl(`https://cdn.discordapp.com/icons/${data.id}/${data.icon}.png?size=64`);
-        }
+        // Use the NEWHOPEGGN bot avatar as server logo (guild icon not exposed in widget API)
+        const botMember = data.members?.find(m => m.username === "NEWHOPEGGN");
+        if (botMember?.avatar_url) setGuildIconUrl(botMember.avatar_url);
         const online = new Set<string>();
         data.members?.forEach((m) => {
           // Check if member username matches any staff (case insensitive)
