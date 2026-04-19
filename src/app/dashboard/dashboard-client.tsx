@@ -150,12 +150,14 @@ export default function DashboardClient({ user, msg }: { user: User | null; msg?
 
             {user && (
               <div className="mt-4 flex items-center justify-between">
-                <a
-                  href="/auth/sign-out?next=/"
-                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition"
-                >
-                  Sign out →
-                </a>
+                <form action="/auth/sign-out?next=/" method="POST">
+                  <button
+                    type="submit"
+                    className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition"
+                  >
+                    Sign out →
+                  </button>
+                </form>
               </div>
             )}
           </div>
