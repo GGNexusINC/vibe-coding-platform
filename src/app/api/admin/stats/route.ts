@@ -55,6 +55,47 @@ async function getActiveDaysMap(): Promise<Map<string, number>> {
   return new Map([...dayMap.entries()].map(([id, days]) => [id, days.size]));
 }
 
+// Get total active minutes per user (time between first and last event per day, summed)
+async function getActiveMinutesMap(): Promise<Map<string, number>> {
+  const sb = getSupabaseClient();
+  if (!sb) return new Map();
+
+  const { data: raw } = await sb
+    .from("activity_logs")
+    .select("discord_id, created_at")
+    .not("discord_id", "is", null)
+    .order("created_at", { ascending: true });
+
+  if (!raw) return new Map();
+
+  // Group timestamps by user+day, sum the span (last - first) per day
+  const userDayMap = new Map<string, Map<string, { first: number; last: number }>>();
+  for (const row of raw) {
+    if (!row.discord_id) continue;
+    const day = String(row.created_at).slice(0, 10);
+    const ts = new Date(row.created_at).getTime();
+    if (!userDayMap.has(row.discord_id)) userDayMap.set(row.discord_id, new Map());
+    const dayMap = userDayMap.get(row.discord_id)!;
+    const existing = dayMap.get(day);
+    if (!existing) {
+      dayMap.set(day, { first: ts, last: ts });
+    } else {
+      if (ts < existing.first) existing.first = ts;
+      if (ts > existing.last) existing.last = ts;
+    }
+  }
+
+  const result = new Map<string, number>();
+  for (const [userId, days] of userDayMap.entries()) {
+    let totalMs = 0;
+    for (const { first, last } of days.values()) {
+      totalMs += Math.max(0, last - first);
+    }
+    result.set(userId, Math.round(totalMs / 60000));
+  }
+  return result;
+}
+
 export async function GET() {
   const admin = await getAdminSession();
   if (!admin) {
@@ -64,13 +105,14 @@ export async function GET() {
     );
   }
 
-  const [summary, recent, roster, presenceMap, guildMembers, activeDaysMap] = await Promise.all([
+  const [summary, recent, roster, presenceMap, guildMembers, activeDaysMap, activeMinutesMap] = await Promise.all([
     getActivitySummary(),
     getRecentActivities(30),
     getRoster(),
     getPresenceMap(),
     getGuildMembers(),
     getActiveDaysMap(),
+    getActiveMinutesMap(),
   ]);
 
   // Build set of approved admin IDs for gold badge tagging
@@ -121,12 +163,12 @@ export async function GET() {
     }
   }
 
-  // Override activeDays for every member with the true count from the full activity_logs table
+  // Override activeDays + set activeMinutes for every member from the full activity_logs table
   for (const [id, member] of memberMap.entries()) {
     const trueDays = activeDaysMap.get(id);
-    if (trueDays !== undefined) {
-      member.activeDays = trueDays;
-    }
+    if (trueDays !== undefined) member.activeDays = trueDays;
+    const mins = activeMinutesMap.get(id);
+    (member as typeof member & { activeMinutes?: number }).activeMinutes = mins ?? 0;
   }
 
   // Re-sort: active now first, then by lastActiveAt

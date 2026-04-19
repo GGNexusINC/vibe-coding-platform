@@ -32,6 +32,7 @@ type MemberSummary = {
   profile?: Record<string, unknown>;
   lastActiveAt: string;
   activeDays: number;
+  activeMinutes?: number;
   events: number;
   activeNow: boolean;
   isAdmin?: boolean;
@@ -328,6 +329,19 @@ function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
 
 function getMemberName(member: MemberSummary) {
   return member.globalName || member.username;
+}
+
+function formatActiveTime(days: number, minutes?: number): string {
+  if (!days && !minutes) return "—";
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (minutes && minutes > 0) {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs > 0) parts.push(`${hrs}h`);
+    if (mins > 0 || hrs === 0) parts.push(`${mins}m`);
+  }
+  return parts.join(" ") || "—";
 }
 
 export function AdminPanelClient() {
@@ -1451,7 +1465,7 @@ export function AdminPanelClient() {
                       <div className="mt-2 flex flex-wrap gap-3 text-xs">
                         {[
                           { label: "Events", val: selectedMember.events },
-                          { label: "Active Days", val: selectedMember.activeDays },
+                          { label: "Time Active", val: formatActiveTime(selectedMember.activeDays, selectedMember.activeMinutes) },
                           { label: "Last Seen", val: new Date(selectedMember.lastActiveAt).toLocaleDateString() },
                         ].map((s) => (
                           <div key={s.label} className="rounded-lg border border-white/6 bg-slate-950/60 px-3 py-1.5">
@@ -1497,7 +1511,7 @@ export function AdminPanelClient() {
                           {member.isAdmin && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">Admin</span>}
                         </div>
                         <div className="text-[11px] text-slate-600">
-                          {member.isBot ? "Discord Bot" : member.events > 0 ? `${member.events} events · ${member.activeDays}d active` : "Discord member"}
+                          {member.isBot ? "Discord Bot" : member.events > 0 ? `${member.events} events · ${formatActiveTime(member.activeDays, member.activeMinutes)}` : "Discord member"}
                         </div>
                       </div>
                       <div className="shrink-0 text-[11px] text-slate-600">{new Date(member.lastActiveAt).toLocaleDateString()}</div>
