@@ -35,6 +35,13 @@ interface ArenaEvent {
       winner_id?: string;
       winner_name?: string;
     }[];
+    rules?: {
+      mode?: string;
+      ffa?: boolean;
+      weapons?: string[];
+      no_deviants?: boolean;
+      extra?: string;
+    };
   };
 }
 
@@ -673,6 +680,38 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                     )}
                   </div>
                 </div>
+
+                {/* Live Game Rules */}
+                {event.metadata?.rules && (() => {
+                  const r = event.metadata.rules!;
+                  const hasRules = (r.mode && r.mode !== "Standard") || r.ffa || r.no_deviants || (r.weapons && r.weapons.length > 0);
+                  if (!hasRules) return null;
+                  return (
+                    <div className="rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-950/60 via-slate-900/80 to-slate-950/80 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                        <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Live Game Rules</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {r.mode && r.mode !== "Standard" && (
+                          <span className="px-2 py-1 rounded-full bg-violet-500/20 border border-violet-400/40 text-[10px] font-bold text-violet-200">{r.mode}</span>
+                        )}
+                        {r.ffa && (
+                          <span className="px-2 py-1 rounded-full bg-rose-500/20 border border-rose-400/40 text-[10px] font-bold text-rose-200 animate-pulse">🔥 Free For All</span>
+                        )}
+                        {r.no_deviants && (
+                          <span className="px-2 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-[10px] font-bold text-amber-200">🚫 No Deviants</span>
+                        )}
+                        {r.weapons?.map((w: string) => (
+                          <span key={w} className="px-2 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-bold text-cyan-200">🔫 {w} Only</span>
+                        ))}
+                        {r.extra && (
+                          <span className="w-full mt-1 text-[10px] text-slate-400 italic">📋 {r.extra}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Tournament Bracket */}
                 {event.status === "active" && event.metadata?.matches && event.metadata.matches.length > 0 && (() => {

@@ -163,6 +163,39 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Event not found" }, { status: 404 });
   }
 
+  // ── Update game rules ──
+  if (action === "update_rules") {
+    const { rules } = body;
+    if (!rules) return NextResponse.json({ ok: false, error: "No rules provided" }, { status: 400 });
+
+    const updatedMeta = { ...(event.metadata || {}), rules };
+    await supabase.from("arena_events").update({ metadata: updatedMeta }).eq("id", event_id);
+
+    // Build rules summary for Discord
+    const ruleLines: string[] = [];
+    if (rules.mode) ruleLines.push(`🎮 **Mode:** ${rules.mode}`);
+    if (rules.ffa) ruleLines.push(`⚔️ **Free For All** — every player for themselves`);
+    if (rules.weapons?.length) ruleLines.push(`🔫 **Allowed Weapons:** ${rules.weapons.join(", ")}`);
+    if (rules.no_deviants) ruleLines.push(`🚫 **No Deviants** — all deviant abilities disabled`);
+    if (rules.extra) ruleLines.push(`📋 **Notes:** ${rules.extra}`);
+
+    try {
+      await sendDiscordWebhook({
+        username: "NewHopeGGN Arena",
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `📋 ${event.name} — Rules Updated`,
+          description: ruleLines.join("\n") || "Rules have been updated.",
+          color: 0x8b5cf6,
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
+      }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
+    } catch (e) { console.error("Webhook failed:", e); }
+
+    return NextResponse.json({ ok: true, metadata: updatedMeta });
+  }
+
   // Handle special actions
   if (action === "assign_vcs") {
     // Assign teams to voice channels and notify

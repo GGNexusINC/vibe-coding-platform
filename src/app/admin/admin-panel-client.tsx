@@ -432,6 +432,11 @@ export function AdminPanelClient() {
   const [arenaNewVoteOption, setArenaNewVoteOption] = useState({ name: "", icon: "🎯", description: "" });
   const [arenaVoteResults, setArenaVoteResults] = useState<any[]>([]);
   const [arenaTeams, setArenaTeams] = useState<any[]>([]);
+  const [arenaRules, setArenaRules] = useState<{
+    mode: string; ffa: boolean; weapons: string[]; no_deviants: boolean; extra: string;
+  }>({ mode: "Standard", ffa: false, weapons: [], no_deviants: false, extra: "" });
+  const [rulesSaving, setRulesSaving] = useState(false);
+  const [rulesSaved, setRulesSaved] = useState(false);
 
   // Inventory state
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -716,6 +721,12 @@ export function AdminPanelClient() {
     const data = await res.json().catch(() => null);
     if (data?.ok) setArenaEvents(data.events || []);
     setArenaLoading(false);
+  }
+
+  function syncRulesFromEvent(event: any) {
+    const r = event?.metadata?.rules;
+    if (r) setArenaRules({ mode: r.mode || "Standard", ffa: !!r.ffa, weapons: r.weapons || [], no_deviants: !!r.no_deviants, extra: r.extra || "" });
+    else setArenaRules({ mode: "Standard", ffa: false, weapons: [], no_deviants: false, extra: "" });
   }
 
   async function loadInventory() {
@@ -1107,6 +1118,25 @@ export function AdminPanelClient() {
       alert("Matches shuffled! New pairings generated.");
     } else {
       alert(data.error || "Failed to shuffle");
+    }
+  }
+
+  async function handleUpdateRules() {
+    if (!selectedArenaEvent) return;
+    setRulesSaving(true);
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: selectedArenaEvent.id, action: "update_rules", rules: arenaRules }),
+    });
+    const data = await res.json();
+    setRulesSaving(false);
+    if (data.ok) {
+      setSelectedArenaEvent((prev: any) => ({ ...prev, metadata: data.metadata }));
+      setRulesSaved(true);
+      setTimeout(() => setRulesSaved(false), 2500);
+    } else {
+      alert(data.error || "Failed to save rules");
     }
   }
 
@@ -1893,7 +1923,7 @@ export function AdminPanelClient() {
                   arenaEvents.map((event) => (
                     <div
                       key={event.id}
-                      onClick={() => { setSelectedArenaEvent(event); fetchArenaTeams(event.id); }}
+                      onClick={() => { setSelectedArenaEvent(event); fetchArenaTeams(event.id); syncRulesFromEvent(event); }}
                       className={`rounded-2xl border p-4 cursor-pointer transition ${
                         selectedArenaEvent?.id === event.id
                           ? "border-amber-500/50 bg-amber-500/10"
@@ -2327,6 +2357,137 @@ export function AdminPanelClient() {
                         </div>
                       );
                     })()}
+
+                    {/* ── Game Rules Panel ── */}
+                    <div className="pt-3 border-t border-white/10">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10">
+                          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                          <span className="text-[11px] font-bold text-violet-400 uppercase tracking-widest">Game Rules</span>
+                        </div>
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+                      </div>
+
+                      {/* Mode presets */}
+                      <div className="mb-3">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Quick Preset</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { label: "Standard", icon: "⚔️", mode: "Standard", weapons: [], ffa: false, no_deviants: false },
+                            { label: "FFA", icon: "🔥", mode: "Free For All", weapons: [], ffa: true, no_deviants: false },
+                            { label: "Pistols", icon: "🔫", mode: "Pistols Only", weapons: ["Pistols"], ffa: false, no_deviants: true },
+                            { label: "Bows", icon: "🏹", mode: "Bows Only", weapons: ["Bows"], ffa: false, no_deviants: true },
+                            { label: "Knife", icon: "🗡️", mode: "Knife Only", weapons: ["Knife"], ffa: true, no_deviants: true },
+                            { label: "No Deviants", icon: "🚫", mode: "No Deviants", weapons: [], ffa: false, no_deviants: true },
+                            { label: "Bows + Knife", icon: "🏹🗡️", mode: "Bows & Knife", weapons: ["Bows", "Knife"], ffa: false, no_deviants: true },
+                            { label: "Pistols + Knife", icon: "🔫🗡️", mode: "Pistols & Knife", weapons: ["Pistols", "Knife"], ffa: false, no_deviants: true },
+                          ].map((preset) => {
+                            const isActive = arenaRules.mode === preset.mode;
+                            return (
+                              <button
+                                key={preset.label}
+                                onClick={() => setArenaRules({ mode: preset.mode, ffa: preset.ffa, weapons: preset.weapons, no_deviants: preset.no_deviants, extra: arenaRules.extra })}
+                                className={`py-2 px-2 rounded-xl border text-[11px] font-bold transition-all ${
+                                  isActive
+                                    ? "border-violet-400/60 bg-violet-500/25 text-violet-200 shadow-[0_0_10px_rgba(139,92,246,0.3)]"
+                                    : "border-white/8 bg-slate-900/50 text-slate-400 hover:border-violet-500/30 hover:text-violet-300"
+                                }`}
+                              >
+                                <div>{preset.icon}</div>
+                                <div className="mt-0.5">{preset.label}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Live rule toggles */}
+                      <div className="rounded-xl border border-violet-500/20 bg-slate-900/60 p-3 mb-3 space-y-2">
+                        {[
+                          { key: "ffa", label: "Free For All", icon: "🔥", desc: "No teams — solo survival" },
+                          { key: "no_deviants", label: "No Deviants", icon: "🚫", desc: "Deviant abilities disabled" },
+                        ].map(({ key, label, icon, desc }) => {
+                          const val = arenaRules[key as "ffa" | "no_deviants"];
+                          return (
+                            <div key={key} className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span>{icon}</span>
+                                <div>
+                                  <div className="text-xs font-semibold text-white">{label}</div>
+                                  <div className="text-[10px] text-slate-500">{desc}</div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setArenaRules((r) => ({ ...r, [key]: !val }))}
+                                className={`relative w-10 h-5 rounded-full transition-all ${val ? "bg-violet-500" : "bg-slate-700"}`}
+                              >
+                                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${val ? "left-5" : "left-0.5"}`} />
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* Weapon toggles */}
+                        <div>
+                          <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5">Allowed Weapons</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {["Pistols", "Bows", "Knife", "AR", "Shotgun", "Sniper"].map((w) => {
+                              const active = arenaRules.weapons.includes(w);
+                              return (
+                                <button
+                                  key={w}
+                                  onClick={() => setArenaRules((r) => ({
+                                    ...r,
+                                    weapons: active ? r.weapons.filter((x) => x !== w) : [...r.weapons, w],
+                                  }))}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                    active
+                                      ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-200"
+                                      : "border-white/8 bg-slate-800/60 text-slate-500 hover:text-slate-300"
+                                  }`}
+                                >
+                                  {active ? "✓ " : ""}{w}
+                                </button>
+                              );
+                            })}
+                            {arenaRules.weapons.length === 0 && (
+                              <span className="text-[10px] text-slate-600 italic">All weapons allowed</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Extra notes */}
+                        <input
+                          value={arenaRules.extra}
+                          onChange={(e) => setArenaRules((r) => ({ ...r, extra: e.target.value }))}
+                          placeholder="Additional rules / notes..."
+                          className="w-full mt-1 h-8 rounded-lg border border-white/8 bg-slate-800/80 px-3 text-[11px] text-white outline-none placeholder:text-slate-600 focus:border-violet-400/30 transition"
+                        />
+                      </div>
+
+                      {/* Live preview badge row */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        <span className="px-2 py-1 rounded-full bg-violet-500/15 border border-violet-500/25 text-[10px] font-bold text-violet-300">{arenaRules.mode}</span>
+                        {arenaRules.ffa && <span className="px-2 py-1 rounded-full bg-rose-500/15 border border-rose-500/25 text-[10px] font-bold text-rose-300">🔥 FFA</span>}
+                        {arenaRules.no_deviants && <span className="px-2 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-[10px] font-bold text-amber-300">🚫 No Deviants</span>}
+                        {arenaRules.weapons.map((w) => (
+                          <span key={w} className="px-2 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/25 text-[10px] font-bold text-cyan-300">🔫 {w}</span>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => void handleUpdateRules()}
+                        disabled={rulesSaving}
+                        className={`w-full py-2.5 rounded-xl text-sm font-black transition-all border ${
+                          rulesSaved
+                            ? "bg-emerald-500/20 border-emerald-400/50 text-emerald-300"
+                            : "bg-gradient-to-r from-violet-500/30 to-purple-500/20 border-violet-400/40 text-violet-200 hover:from-violet-500/50 hover:border-violet-400/60 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+                        } disabled:opacity-50`}
+                      >
+                        {rulesSaved ? "✓ Rules Published to Discord!" : rulesSaving ? "Publishing..." : "📋 Publish Rules to Discord"}
+                      </button>
+                    </div>
 
                     {/* Admin Actions */}
                     <div className="pt-3 border-t border-white/10">
