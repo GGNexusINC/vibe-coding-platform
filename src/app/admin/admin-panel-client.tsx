@@ -8,11 +8,19 @@ type ActivityEntry = {
   createdAt: string;
   username?: string;
   discordId?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   globalName?: string | null;
-  discriminator?: string | null;
-  profile?: Record<string, unknown>;
-  details: string;
+  details?: string;
+  metadata?: {
+    pageUrl?: string;
+    ip?: string;
+    os?: string;
+    browser?: string;
+    device?: string;
+    userAgent?: string;
+    isAdmin?: boolean;
+    timestamp?: string;
+  };
 };
 
 type MemberSummary = {
@@ -130,6 +138,186 @@ const broadcastPresets = [
 
 function formatEventType(type: string) {
   return type.replaceAll("_", " ");
+}
+
+function getEventIcon(type: string) {
+  switch (type) {
+    case "login": return "🟢";
+    case "logout": return "🔴";
+    case "support_ticket": return "🎫";
+    case "purchase_intent": return "🛒";
+    case "admin_broadcast": return "📢";
+    default: return "⚪";
+  }
+}
+
+function getEventColor(type: string) {
+  switch (type) {
+    case "login": return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+    case "logout": return "text-rose-400 bg-rose-500/10 border-rose-500/20";
+    case "support_ticket": return "text-amber-400 bg-amber-500/10 border-amber-500/20";
+    case "purchase_intent": return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
+    case "admin_broadcast": return "text-violet-400 bg-violet-500/10 border-violet-500/20";
+    default: return "text-slate-400 bg-slate-500/10 border-slate-500/20";
+  }
+}
+
+function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  if (entries.length === 0) {
+    return <div className="py-10 text-center text-sm text-slate-600">No activity yet.</div>;
+  }
+
+  return (
+    <div className="divide-y divide-white/4 max-h-[520px] overflow-y-auto">
+      {entries.map((entry) => {
+        const isExpanded = expandedId === entry.id;
+        const meta = entry.metadata;
+        const isAdmin = meta?.isAdmin || entry.details?.toLowerCase().includes("admin");
+
+        return (
+          <div
+            key={entry.id}
+            className={`group transition-all duration-200 ${isExpanded ? "bg-white/5" : "hover:bg-white/[0.02]"}`}
+          >
+            {/* Main Row */}
+            <button
+              onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+              className="w-full flex items-center gap-3 px-5 py-3 text-left"
+            >
+              {/* Avatar */}
+              {entry.avatarUrl ? (
+                <img
+                  src={entry.avatarUrl}
+                  alt=""
+                  className={`h-9 w-9 shrink-0 rounded-full object-cover border-2 ${isAdmin ? "border-amber-400/50" : "border-white/10"}`}
+                />
+              ) : (
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${isAdmin ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-slate-400"}`}>
+                  {(entry.username || "G")[0].toUpperCase()}
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={`truncate text-sm font-semibold ${isAdmin ? "text-amber-200" : "text-slate-100"}`}>
+                    {entry.username || "Guest"}
+                  </span>
+                  {isAdmin && (
+                    <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold border ${getEventColor(entry.type)}`}>
+                    {getEventIcon(entry.type)} {formatEventType(entry.type)}
+                  </span>
+                  <span className="truncate text-xs text-slate-500">
+                    {entry.details || "No details"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Time & Expand */}
+              <div className="shrink-0 flex items-center gap-2">
+                <span className="text-[11px] text-slate-600">
+                  {new Date(entry.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <svg
+                  className={`h-4 w-4 text-slate-600 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {/* Expanded Details */}
+            {isExpanded && meta && (
+              <div className="px-5 pb-4 pt-1">
+                <div className="ml-12 rounded-xl border border-white/8 bg-slate-900/80 p-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    {/* Page URL */}
+                    {meta.pageUrl && (
+                      <div className="col-span-2">
+                        <span className="text-slate-500 uppercase tracking-wider font-semibold">Page</span>
+                        <div className="mt-1 flex items-center gap-2 text-slate-300 font-mono bg-slate-950/50 px-2 py-1.5 rounded border border-white/5">
+                          <svg className="h-3.5 w-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                          {meta.pageUrl}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Device Info */}
+                    <div>
+                      <span className="text-slate-500 uppercase tracking-wider font-semibold">Device</span>
+                      <div className="mt-1 flex items-center gap-1.5 text-slate-300">
+                        <span className="text-base">{meta.device === "Mobile" ? "📱" : meta.device === "Tablet" ? "📱" : "💻"}</span>
+                        <span>{meta.os || "Unknown"}</span>
+                        <span className="text-slate-600">•</span>
+                        <span>{meta.browser || "Unknown"}</span>
+                      </div>
+                    </div>
+
+                    {/* IP Address */}
+                    <div>
+                      <span className="text-slate-500 uppercase tracking-wider font-semibold">IP Address</span>
+                      <div className="mt-1 font-mono text-slate-400">
+                        {meta.ip || "Unknown"}
+                      </div>
+                    </div>
+
+                    {/* Full Timestamp */}
+                    <div className="col-span-2 pt-2 border-t border-white/5">
+                      <span className="text-slate-500 uppercase tracking-wider font-semibold">Full Timestamp</span>
+                      <div className="mt-1 text-slate-400 font-mono text-[11px]">
+                        {new Date(entry.createdAt).toISOString()}
+                      </div>
+                    </div>
+
+                    {/* User Agent (collapsible) */}
+                    {meta.userAgent && meta.userAgent !== "Unknown" && (
+                      <div className="col-span-2">
+                        <span className="text-slate-500 uppercase tracking-wider font-semibold">User Agent</span>
+                        <div className="mt-1 text-slate-500 text-[10px] break-all font-mono bg-slate-950/30 px-2 py-1.5 rounded">
+                          {meta.userAgent}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-600">Discord ID: <span className="font-mono text-slate-500">{entry.discordId || "N/A"}</span></span>
+                    {entry.discordId && (
+                      <a
+                        href={`https://discord.com/users/${entry.discordId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1"
+                      >
+                        View Discord Profile
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function getMemberName(member: MemberSummary) {
@@ -790,23 +978,7 @@ export function AdminPanelClient() {
                     ))}
                   </div>
                 </div>
-                <div className="divide-y divide-white/4 max-h-[420px] overflow-y-auto">
-                  {filteredRecent.length === 0 && <div className="py-10 text-center text-sm text-slate-600">No activity yet.</div>}
-                  {filteredRecent.map((entry) => (
-                    <div key={entry.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/2 transition">
-                      {entry.avatarUrl
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={entry.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover border border-white/8" />
-                        : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-bold text-slate-400">{(entry.username || "G")[0].toUpperCase()}</div>
-                      }
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-slate-100">{entry.username || "Guest"}</div>
-                        <div className="truncate text-xs text-slate-500">{formatEventType(entry.type)}{entry.details ? ` · ${entry.details}` : ""}</div>
-                      </div>
-                      <div className="shrink-0 text-[11px] text-slate-600">{new Date(entry.createdAt).toLocaleTimeString()}</div>
-                    </div>
-                  ))}
-                </div>
+                <ActivityFeed entries={filteredRecent} />
               </div>
             </div>
           )}

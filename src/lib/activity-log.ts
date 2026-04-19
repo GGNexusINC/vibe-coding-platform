@@ -18,6 +18,17 @@ export type ActivityLogEntry = {
   discriminator?: string | null;
   profile?: Record<string, unknown>;
   details: string;
+  metadata?: {
+    pageUrl?: string;
+    ip?: string;
+    os?: string;
+    browser?: string;
+    device?: string;
+    userAgent?: string;
+    isAdmin?: boolean;
+    timestamp?: string;
+    [key: string]: unknown;
+  };
 };
 
 const MAX_LOGS = 300;
