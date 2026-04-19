@@ -721,6 +721,85 @@ export function AdminPanelClient() {
     }
   }
 
+  async function handleUpdateEventImage(eventId: string, imageUrl: string) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, image_url: imageUrl }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert("Image updated!");
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to update image");
+    }
+  }
+
+  async function handleToggleRegistration(eventId: string, open: boolean) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, registration_open: open }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent({ ...selectedArenaEvent, registration_open: open });
+      await loadArena();
+    } else {
+      alert(data.error || "Failed to toggle registration");
+    }
+  }
+
+  async function handleStartEvent(eventId: string) {
+    if (!confirm("Start the event? This will close registration and notify all teams.")) return;
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "start_event" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent({ ...selectedArenaEvent, registration_open: false, status: "active" });
+      await loadArena();
+      alert("Event started! Teams have been notified.");
+    } else {
+      alert(data.error || "Failed to start event");
+    }
+  }
+
+  async function handleAssignVCs(eventId: string) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "assign_vcs" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent({ ...selectedArenaEvent, metadata: { ...selectedArenaEvent.metadata, vc_assignments: data.vc_assignments } });
+      await loadArena();
+      alert(`Assigned ${data.vc_assignments.length} teams to voice channels!`);
+    } else {
+      alert(data.error || "Failed to assign VCs");
+    }
+  }
+
+  async function handleNextRound(eventId: string) {
+    const res = await fetch("/api/arena/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "next_round" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSelectedArenaEvent({ ...selectedArenaEvent, current_round: data.event.current_round });
+      await loadArena();
+      alert(`Round ${data.event.current_round} started!`);
+    } else {
+      alert(data.error || "Failed to advance round");
+    }
+  }
+
   async function handleDrawWinner() {
     setLotteryDrawing(true);
     setLotteryStatus("");
@@ -1518,7 +1597,22 @@ export function AdminPanelClient() {
               {selectedArenaEvent && (
                 <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-white">{selectedArenaEvent.name}</h2>
+                    <div className="flex items-center gap-3">
+                      {selectedArenaEvent.image_url && (
+                        <img src={selectedArenaEvent.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                      )}
+                      <div>
+                        <h2 className="text-lg font-bold text-white">{selectedArenaEvent.name}</h2>
+                        <p className="text-xs text-slate-400">
+                          Round {selectedArenaEvent.current_round || 0} • {selectedArenaEvent.arena_teams?.[0]?.count || 0} teams •
+                          {selectedArenaEvent.registration_open ? (
+                            <span className="text-emerald-400"> Registration Open</span>
+                          ) : (
+                            <span className="text-rose-400"> Registration Closed</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
                     <button
                       onClick={() => setSelectedArenaEvent(null)}
                       className="text-xs text-slate-400 hover:text-white"
@@ -1527,9 +1621,88 @@ export function AdminPanelClient() {
                     </button>
                   </div>
 
+                  {/* Event Image Upload */}
+                  <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                    <h3 className="text-sm font-semibold text-cyan-400 mb-3">📸 Event Image</h3>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={selectedArenaEvent.image_url || ""}
+                        onChange={(e) => setSelectedArenaEvent({ ...selectedArenaEvent, image_url: e.target.value })}
+                        placeholder="Image URL (Discord CDN, Imgur, etc.)"
+                        className="flex-1 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                      />
+                      <button
+                        onClick={() => void handleUpdateEventImage(selectedArenaEvent.id, selectedArenaEvent.image_url)}
+                        disabled={!selectedArenaEvent.image_url}
+                        className="px-4 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 disabled:opacity-40"
+                      >
+                        Update
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2">Paste a direct image URL. Recommended: 512x512px</p>
+                  </div>
+
+                  {/* Event Controls */}
+                  <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                    <h3 className="text-sm font-semibold text-amber-400 mb-3">⚡ Event Controls</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        onClick={() => void handleToggleRegistration(selectedArenaEvent.id, !selectedArenaEvent.registration_open)}
+                        className={`h-10 rounded-xl text-sm font-semibold transition ${
+                          selectedArenaEvent.registration_open
+                            ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                        }`}
+                      >
+                        {selectedArenaEvent.registration_open ? "🔒 Close Reg" : "🔓 Open Reg"}
+                      </button>
+                      
+                      <button
+                        onClick={() => void handleStartEvent(selectedArenaEvent.id)}
+                        disabled={!selectedArenaEvent.registration_open}
+                        className="h-10 rounded-xl bg-amber-500 text-amber-950 text-sm font-bold hover:bg-amber-400 disabled:opacity-40 transition"
+                      >
+                        🚀 START
+                      </button>
+                      
+                      <button
+                        onClick={() => void handleAssignVCs(selectedArenaEvent.id)}
+                        className="h-10 rounded-xl bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 transition"
+                      >
+                        🔊 Assign VCs
+                      </button>
+                      
+                      <button
+                        onClick={() => void handleNextRound(selectedArenaEvent.id)}
+                        className="h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
+                      >
+                        ➡️ Next Round
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Assigned Voice Channels */}
+                  {selectedArenaEvent.metadata?.vc_assignments && selectedArenaEvent.metadata.vc_assignments.length > 0 && (
+                    <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-violet-500/20">
+                      <h3 className="text-sm font-semibold text-violet-400 mb-3">🔊 Assigned Voice Channels</h3>
+                      <div className="grid gap-2 max-h-40 overflow-y-auto">
+                        {selectedArenaEvent.metadata.vc_assignments.map((assignment: any) => (
+                          <div key={assignment.team_id} className="flex items-center justify-between p-2 rounded-lg bg-slate-900/50">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-violet-400">{assignment.vc_channel}</span>
+                              <span className="text-sm text-white">{assignment.team_name}</span>
+                            </div>
+                            <span className="text-xs text-slate-500">👑 {assignment.leader_username}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Vote Options Management */}
-                  <div className="mb-6">
-                    <h3 className="text-sm font-semibold text-violet-400 mb-3">🗳️ Voting Options</h3>
+                  <div className="p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                    <h3 className="text-sm font-semibold text-amber-400 mb-3">🗳️ Voting Options</h3>
                     <div className="flex gap-2 mb-4">
                       <input
                         value={arenaNewVoteOption.name}
@@ -1546,19 +1719,17 @@ export function AdminPanelClient() {
                       <button
                         onClick={() => void handleAddVoteOption(selectedArenaEvent.id)}
                         disabled={!arenaNewVoteOption.name.trim()}
-                        className="px-4 h-10 rounded-xl bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 disabled:opacity-40"
+                        className="px-4 h-10 rounded-xl bg-amber-500/20 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 disabled:opacity-40"
                       >
                         Add
                       </button>
                     </div>
 
                     {/* Current Vote Results */}
-                    <div className="space-y-2">
-                      {arenaVoteResults.length === 0 ? (
-                        <p className="text-xs text-slate-500">No votes yet. Add options above!</p>
-                      ) : (
-                        arenaVoteResults.map((result: any, index: number) => (
-                          <div key={result.option_id} className="flex items-center gap-3 p-2 rounded-lg bg-slate-950/50">
+                    {arenaVoteResults.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        {arenaVoteResults.map((result: any, index: number) => (
+                          <div key={result.option_id} className="flex items-center gap-3 p-2 rounded-lg bg-slate-900/30">
                             <span className="text-lg">{result.option_icon}</span>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
@@ -1576,14 +1747,14 @@ export function AdminPanelClient() {
                               </div>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
                     {arenaVoteResults.length > 0 && (
                       <button
                         onClick={() => void handleFinalizeVotes(selectedArenaEvent.id)}
-                        className="mt-4 w-full h-10 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-sm font-bold text-white shadow-lg shadow-violet-500/15 hover:opacity-90 transition"
+                        className="w-full h-10 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-sm font-bold text-white shadow-lg shadow-violet-500/15 hover:opacity-90 transition"
                       >
                         🏆 Finalize & Announce Winner
                       </button>

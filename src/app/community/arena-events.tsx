@@ -14,7 +14,16 @@ interface ArenaEvent {
   start_time?: string;
   current_round: number;
   created_at: string;
+  image_url?: string;
   arena_teams?: { count: number }[];
+  metadata?: {
+    vc_assignments?: {
+      team_id: string;
+      vc_channel: string;
+      team_name: string;
+      leader_username: string;
+    }[];
+  };
 }
 
 interface ArenaTeam {
@@ -365,22 +374,63 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
       <div className="divide-y divide-white/5">
         {events.map((event) => (
           <div key={event.id} className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="font-semibold text-white">{event.name}</h3>
-                <p className="text-xs text-slate-400">{event.game_mode} • {event.arena_teams?.[0]?.count || 0}/{event.max_teams} Teams</p>
+            <div className="flex items-start gap-3 mb-2">
+              {event.image_url ? (
+                <img src={event.image_url} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-white/10 flex items-center justify-center text-xl">
+                  ⚔️
+                </div>
+              )}
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-white">{event.name}</h3>
+                    <p className="text-xs text-slate-400">{event.game_mode} • {event.arena_teams?.[0]?.count || 0}/{event.max_teams} Teams</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    event.registration_open 
+                      ? "bg-emerald-500/20 text-emerald-300" 
+                      : "bg-rose-500/20 text-rose-300"
+                  }`}>
+                    {event.registration_open ? "Open" : "Closed"}
+                  </span>
+                </div>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                event.registration_open 
-                  ? "bg-emerald-500/20 text-emerald-300" 
-                  : "bg-rose-500/20 text-rose-300"
-              }`}>
-                {event.registration_open ? "Open" : "Closed"}
-              </span>
             </div>
 
             {selectedEvent?.id === event.id ? (
               <div className="mt-3 space-y-3">
+                {/* Voice Channel Assignment Banner */}
+                {userTeam && event.status === "active" && event.metadata?.vc_assignments && (
+                  (() => {
+                    const assignment = event.metadata.vc_assignments.find((a) => a.team_id === userTeam.id);
+                    if (assignment) {
+                      return (
+                        <div className="rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-500/20 to-purple-500/10 p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-violet-500/30 flex items-center justify-center text-2xl">
+                              🔊
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs text-violet-300 font-semibold uppercase tracking-wider">Your Voice Channel</p>
+                              <p className="text-xl font-bold text-white">{assignment.vc_channel}</p>
+                              <p className="text-xs text-slate-400">Please join this channel now!</p>
+                            </div>
+                            <a 
+                              href="discord://" 
+                              className="px-3 py-2 rounded-lg bg-violet-500 text-white text-sm font-bold hover:bg-violet-400 transition"
+                            >
+                              Join VC
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()
+                )}
+
                 {/* Teams Section */}
                 <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
                   <div className="flex items-center justify-between mb-3">
