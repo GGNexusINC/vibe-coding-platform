@@ -2583,24 +2583,17 @@ export function AdminPanelClient() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Item Slug *</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Package Name *</label>
                         <input
                           type="text"
                           required
-                          placeholder="e.g., construction-pack-v1"
-                          value={givePackageForm.item_slug}
-                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, item_slug: e.target.value }))}
-                          className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Display Name</label>
-                        <input
-                          type="text"
                           placeholder="e.g., Construction Package"
                           value={givePackageForm.item_name}
-                          onChange={(e) => setGivePackageForm(prev => ({ ...prev, item_name: e.target.value }))}
+                          onChange={(e) => {
+                            const name = e.target.value;
+                            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+                            setGivePackageForm(prev => ({ ...prev, item_name: name, item_slug: slug || "package" }));
+                          }}
                           className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
                         />
                       </div>
