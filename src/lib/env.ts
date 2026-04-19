@@ -16,6 +16,7 @@ export const KNOWN_ADMINS: KnownAdmin[] = [
   { discordId: "940804710267486249",  username: "Kilo",        role: "owner" },
   { discordId: "1310794181190352997", username: "Buzzworthy",  role: "owner" },
   { discordId: "145278391166173185",  username: "Zeus",        role: "owner" },
+  { discordId: "1142676239283396638", username: "JosNL32",     role: "owner" },
 ];
 
 export const env = {

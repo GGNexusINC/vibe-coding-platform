@@ -182,7 +182,7 @@ export default function Home() {
             <div className="rz-surface rz-panel-border rounded-[2rem] overflow-hidden">
               <div className="relative w-full aspect-video bg-slate-950">
                 <video
-                  src="https://cdn.discordapp.com/attachments/1419522458075005023/wipe-trailer.mp4"
+                  src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
                   autoPlay
                   loop
                   muted
