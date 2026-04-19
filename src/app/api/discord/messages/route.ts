@@ -36,7 +36,12 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (channel) query = query.eq("channel_name", channel);
+  if (channel) {
+    query = query.eq("channel_name", channel);
+  } else {
+    // When showing "All", exclude ticket channels
+    query = query.not("channel_name", "like", "ticket-%");
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ ok: false, messages: [] });
