@@ -919,7 +919,7 @@ export function AdminPanelClient() {
   }
 
   async function handleStartEvent(eventId: string) {
-    if (!confirm("Start the event? This will close registration and notify all teams.")) return;
+    if (!confirm("Start the event? This will close registration, generate the bracket, and notify all teams.")) return;
     const res = await fetch("/api/arena/events", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -927,9 +927,15 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      setSelectedArenaEvent({ ...selectedArenaEvent, registration_open: false, status: "active" });
+      setSelectedArenaEvent({
+        ...selectedArenaEvent,
+        registration_open: false,
+        status: "active",
+        current_round: 1,
+        metadata: { vc_assignments: data.vc_assignments || [], matches: data.matches || [], round: 1 },
+      });
       await loadArena();
-      alert("Event started! Teams have been notified.");
+      await fetchArenaTeams(eventId);
     } else {
       alert(data.error || "Failed to start event");
     }
@@ -2090,51 +2096,85 @@ export function AdminPanelClient() {
                       </div>
                     </div>
 
-                    {/* Live Matches */}
+                    {/* ⚔️ Bracket Pyramid */}
                     {selectedArenaEvent.metadata?.matches && selectedArenaEvent.metadata.matches.length > 0 && (
                       <div className="mb-4">
-                        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Live Matches</h4>
-                        <div className="grid gap-2">
+                        <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          Round {selectedArenaEvent.current_round || 1} Bracket — {selectedArenaEvent.metadata.matches.length} Match{selectedArenaEvent.metadata.matches.length !== 1 ? "es" : ""}
+                        </h4>
+                        <div className="space-y-3">
                           {selectedArenaEvent.metadata.matches.map((match: any) => (
-                            <div key={match.match_number} className="p-3 rounded-lg bg-slate-900/60 border border-amber-500/20">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-amber-400">Match #{match.match_number}</span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">● Live</span>
+                            <div key={match.match_number} className="rounded-xl border border-amber-500/25 bg-gradient-to-b from-amber-950/30 to-slate-950/60 overflow-hidden">
+                              {/* Match header */}
+                              <div className="flex items-center justify-between px-4 py-2 border-b border-amber-500/15 bg-amber-500/5">
+                                <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">⚔️ Match {match.match_number}</span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">● LIVE</span>
                               </div>
-                              <div className="flex items-center justify-between text-sm gap-2">
-                                <div className="flex-1 min-w-0 text-left">
-                                  <span className="font-semibold text-white truncate block">{match.team1_name}</span>
-                                  <span className="text-xs text-violet-400 block truncate">{match.team1_vc}</span>
+                              {/* VS card */}
+                              <div className="grid grid-cols-[1fr_auto_1fr] gap-2 p-3 items-center">
+                                {/* Team 1 */}
+                                <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
+                                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg font-black text-amber-300">
+                                    {match.team1_name?.[0]?.toUpperCase()}
+                                  </div>
+                                  <span className="text-sm font-bold text-white text-center leading-tight">{match.team1_name}</span>
+                                  <span className="text-[10px] text-violet-400 font-mono">{match.team1_vc}</span>
+                                  <button
+                                    onClick={async () => await handleNotifyMatch(match, "team1")}
+                                    className="mt-1 w-full py-1 rounded-lg bg-violet-500/20 text-violet-300 text-[10px] hover:bg-violet-500/30 transition"
+                                  >📢 Notify</button>
                                 </div>
-                                <span className="shrink-0 px-2 text-amber-400 font-bold">VS</span>
-                                <div className="flex-1 min-w-0 text-right">
-                                  <span className="font-semibold text-white truncate block">{match.team2_name}</span>
-                                  <span className="text-xs text-violet-400 block truncate">{match.team2_vc}</span>
+                                {/* VS */}
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="text-xl font-black text-amber-400">VS</span>
+                                  <button
+                                    onClick={async () => await handleStartMatch(match)}
+                                    className="mt-1 px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold hover:bg-emerald-500/30 transition whitespace-nowrap"
+                                  >▶ Start</button>
                                 </div>
-                              </div>
-                              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                                <button
-                                  onClick={async () => await handleNotifyMatch(match, 'team1')}
-                                  className="flex-1 py-1 rounded bg-violet-500/20 text-violet-300 text-xs hover:bg-violet-500/30"
-                                >
-                                  📢 Notify {match.team1_name}
-                                </button>
-                                <button
-                                  onClick={async () => await handleNotifyMatch(match, 'team2')}
-                                  className="flex-1 py-1 rounded bg-rose-500/20 text-rose-300 text-xs hover:bg-rose-500/30"
-                                >
-                                  📢 Notify {match.team2_name}
-                                </button>
-                                <button
-                                  onClick={async () => await handleStartMatch(match)}
-                                  className="flex-1 py-1 rounded bg-emerald-500/20 text-emerald-300 text-xs hover:bg-emerald-500/30"
-                                >
-                                  ▶️ Start Match
-                                </button>
+                                {/* Team 2 */}
+                                <div className="flex flex-col items-center gap-1 rounded-xl bg-slate-900/80 border border-white/5 p-3">
+                                  <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-lg font-black text-rose-300">
+                                    {match.team2_name?.[0]?.toUpperCase()}
+                                  </div>
+                                  <span className="text-sm font-bold text-white text-center leading-tight">{match.team2_name}</span>
+                                  <span className="text-[10px] text-violet-400 font-mono">{match.team2_vc}</span>
+                                  <button
+                                    onClick={async () => await handleNotifyMatch(match, "team2")}
+                                    className="mt-1 w-full py-1 rounded-lg bg-rose-500/20 text-rose-300 text-[10px] hover:bg-rose-500/30 transition"
+                                  >📢 Notify</button>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
+                        {/* Bye teams */}
+                        {selectedArenaEvent.metadata?.vc_assignments &&
+                          (() => {
+                            const matchedIds = new Set(selectedArenaEvent.metadata.matches.flatMap((m: any) => [m.team1_id, m.team2_id]));
+                            const byeTeams = (selectedArenaEvent.metadata.vc_assignments as any[]).filter(v => !matchedIds.has(v.team_id));
+                            return byeTeams.length > 0 ? (
+                              <div className="mt-2 space-y-1">
+                                {byeTeams.map((t: any) => (
+                                  <div key={t.team_id} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-amber-500/15 bg-amber-500/5">
+                                    <span className="text-base">🏆</span>
+                                    <span className="text-sm font-semibold text-amber-200">{t.team_name}</span>
+                                    <span className="text-xs text-slate-500">Bye — advances automatically</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null;
+                          })()
+                        }
+                      </div>
+                    )}
+                    {/* No matches yet */}
+                    {(!selectedArenaEvent.metadata?.matches || selectedArenaEvent.metadata.matches.length === 0) && (
+                      <div className="mb-4 rounded-xl border border-white/5 bg-slate-900/40 px-4 py-6 text-center">
+                        <div className="text-2xl mb-2">⚔️</div>
+                        <p className="text-sm text-slate-400 font-semibold">No bracket yet</p>
+                        <p className="text-xs text-slate-600 mt-1">Hit <span className="text-amber-400">🚀 START</span> to generate the bracket and assign voice channels.</p>
                       </div>
                     )}
 

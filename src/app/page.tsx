@@ -113,9 +113,16 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
+      {/* Background video */}
+      <video
+        src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
+        autoPlay loop muted playsInline
+        className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-15"
+        onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+      />
       <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
       <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(103,232,249,0.06),rgba(4,16,24,0.4),rgba(4,16,24,0.95))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,16,24,0.55),rgba(4,16,24,0.7),rgba(4,16,24,0.97))]" />
       <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-cyan-400/14 blur-3xl rz-pulse" />
       <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl rz-pulse" />
       <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-amber-300/8 blur-3xl" />

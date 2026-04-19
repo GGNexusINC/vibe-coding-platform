@@ -297,25 +297,124 @@ export async function PATCH(req: Request) {
   }
 
   if (action === "start_event") {
-    // Close registration and notify all teams
+    // Close registration
     await supabase
       .from("arena_events")
       .update({ registration_open: false, status: "active" })
       .eq("id", event_id);
 
-    try {
-      await sendDiscordWebhook({
-        content: `🏆 **${event.name} is STARTING!**
+    // Auto-generate matches + VC assignments
+    const { data: teams } = await supabase
+      .from("arena_teams")
+      .select("*")
+      .eq("event_id", event_id)
+      .order("seed", { ascending: true });
 
-Registration is now **CLOSED**. Teams check your assigned voice channels!
+    const matches: any[] = [];
+    const vcAssignments: any[] = [];
 
-Good luck to all competitors! ⚔️`,
-        username: "NewHopeGGN Arena",
-        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+    if (teams && teams.length > 0) {
+      // Shuffle for fairness
+      const shuffled = [...teams].sort(() => Math.random() - 0.5);
+
+      shuffled.forEach((team, index) => {
+        vcAssignments.push({
+          team_id: team.id,
+          vc_channel: `RaidZone-${index + 1}`,
+          team_name: team.name,
+          leader_username: team.leader_username,
+        });
       });
-    } catch (e) {
-      console.error("Discord webhook failed:", e);
+
+      for (let i = 0; i < shuffled.length; i += 2) {
+        if (i + 1 < shuffled.length) {
+          matches.push({
+            event_id,
+            round: 1,
+            match_number: Math.floor(i / 2) + 1,
+            team1_id: shuffled[i].id,
+            team1_name: shuffled[i].name,
+            team2_id: shuffled[i + 1].id,
+            team2_name: shuffled[i + 1].name,
+            team1_vc: `RaidZone-${i + 1}`,
+            team2_vc: `RaidZone-${i + 2}`,
+            status: "live",
+          });
+        }
+      }
+
+      // Clear old matches and insert new
+      await supabase.from("arena_matches").delete().eq("event_id", event_id);
+      if (matches.length > 0) {
+        await supabase.from("arena_matches").insert(matches);
+      }
+
+      await supabase
+        .from("arena_events")
+        .update({
+          current_round: 1,
+          metadata: { vc_assignments: vcAssignments, matches, round: 1 },
+        })
+        .eq("id", event_id);
+
+      // Rich bracket embed for Discord
+      const matchFields = matches.map((m, idx) => ({
+        name: `⚔️ Match ${idx + 1}`,
+        value: `**${m.team1_name}** (${m.team1_vc}) vs **${m.team2_name}** (${m.team2_vc})`,
+        inline: false,
+      }));
+
+      // Byes
+      if (shuffled.length % 2 !== 0) {
+        const byeTeam = shuffled[shuffled.length - 1];
+        matchFields.push({
+          name: "🏆 Bye Round",
+          value: `**${byeTeam.name}** advances automatically`,
+          inline: false,
+        });
+      }
+
+      try {
+        await sendDiscordWebhook({
+          username: "NewHopeGGN Arena",
+          avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+          embeds: [{
+            title: `🏆 ${event.name} — Round 1 Bracket`,
+            description: `Registration closed. **${teams.length} teams** competing. Check your voice channel and good luck! ⚔️`,
+            color: 0xf59e0b,
+            fields: matchFields,
+            footer: { text: "NewHopeGGN Arena System" },
+            timestamp: new Date().toISOString(),
+          }],
+        });
+      } catch (e) {
+        console.error("Discord webhook failed:", e);
+      }
+
+      // DM team leaders
+      if (process.env.DISCORD_BOT_TOKEN) {
+        for (const team of shuffled) {
+          const match = matches.find(m => m.team1_id === team.id || m.team2_id === team.id);
+          const opponent = match ? (match.team1_id === team.id ? match.team2_name : match.team1_name) : null;
+          const vc = vcAssignments.find(v => v.team_id === team.id)?.vc_channel;
+          const msg = opponent
+            ? `🎮 **Arena is starting!**\n\nYou're fighting: **${opponent}**\nJoin voice channel: **${vc}**\n\nGood luck! ⚔️`
+            : `🎮 **Arena is starting!**\n\nJoin voice channel: **${vc}** — you have a bye this round! 🏆`;
+          if (team.leader_discord_id) {
+            await sendDiscordDM(team.leader_discord_id, msg).catch(() => {});
+          }
+        }
+      }
     }
+
+    // Re-fetch updated event
+    const { data: updatedEvent } = await supabase
+      .from("arena_events")
+      .select("*")
+      .eq("id", event_id)
+      .single();
+
+    return NextResponse.json({ ok: true, event: updatedEvent, matches, vc_assignments: vcAssignments });
   }
 
   if (action === "next_round") {
