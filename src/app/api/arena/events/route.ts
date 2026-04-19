@@ -418,25 +418,123 @@ export async function PATCH(req: Request) {
   }
 
   if (action === "next_round") {
-    const newRound = (event.current_round || 0) + 1;
+    const newRound = (event.current_round || 1) + 1;
+
+    // Pull completed matches from DB (join winner team for name)
+    const { data: completedMatches } = await supabase
+      .from("arena_matches")
+      .select(`*, winner:arena_teams!arena_matches_winner_id_fkey(id, name), team1:arena_teams!arena_matches_team1_id_fkey(id, name), team2:arena_teams!arena_matches_team2_id_fkey(id, name)`)
+      .eq("event_id", event_id)
+      .eq("round", event.current_round || 1)
+      .eq("status", "completed")
+      .order("match_number", { ascending: true });
+
+    // Also check metadata matches as fallback (winner_name stored there)
+    const metaMatches: any[] = event.metadata?.matches || [];
+
+    if (!completedMatches || completedMatches.length === 0) {
+      return NextResponse.json({ ok: false, error: "No completed matches found for current round" }, { status: 400 });
+    }
+
+    // Collect winners — prefer DB join, fall back to metadata winner_name
+    const winners = completedMatches
+      .map((m: any) => {
+        const meta = metaMatches.find((mm: any) => mm.match_number === m.match_number);
+        const winnerId = m.winner_id || m.team1_id;
+        const winnerName = m.winner?.name || meta?.winner_name || m.team1?.name || m.team1_name;
+        return { id: winnerId, name: winnerName };
+      })
+      .filter((w: any) => w.id && w.name);
+
+    if (winners.length < 2) {
+      return NextResponse.json({ ok: false, error: "Need at least 2 winners to generate next round" }, { status: 400 });
+    }
+
+    // Pair winners: 1v2, 3v4, etc. Odd winner gets a bye
+    const newMatches: any[] = [];
+    const vcAssignments: any[] = [];
+
+    winners.forEach((winner: any, index: number) => {
+      vcAssignments.push({
+        team_id: winner.id,
+        vc_channel: `RaidZone-${index + 1}`,
+        team_name: winner.name,
+      });
+    });
+
+    for (let i = 0; i < winners.length; i += 2) {
+      if (i + 1 < winners.length) {
+        newMatches.push({
+          event_id,
+          round: newRound,
+          match_number: Math.floor(i / 2) + 1,
+          team1_id: winners[i].id,
+          team1_name: winners[i].name,
+          team2_id: winners[i + 1].id,
+          team2_name: winners[i + 1].name,
+          team1_vc: `RaidZone-${i + 1}`,
+          team2_vc: `RaidZone-${i + 2}`,
+          status: "live",
+        });
+      }
+    }
+
+    // Insert new round matches into DB
+    if (newMatches.length > 0) {
+      await supabase.from("arena_matches").insert(newMatches);
+    }
+
+    // Update event: bump round + store new matches + vc_assignments in metadata
     await supabase
       .from("arena_events")
-      .update({ current_round: newRound })
+      .update({
+        current_round: newRound,
+        metadata: { vc_assignments: vcAssignments, matches: newMatches, round: newRound },
+      })
       .eq("id", event_id);
+
+    // Build rich bracket embed for Discord
+    const matchFields = newMatches.map((m: any, idx: number) => ({
+      name: `⚔️ Match ${idx + 1}`,
+      value: `**${m.team1_name}** (${m.team1_vc}) vs **${m.team2_name}** (${m.team2_vc})`,
+      inline: false,
+    }));
+
+    // Bye winner if odd number
+    if (winners.length % 2 !== 0) {
+      const byeWinner = winners[winners.length - 1];
+      matchFields.push({
+        name: "🏅 Bye",
+        value: `**${byeWinner.name}** advances automatically`,
+        inline: false,
+      });
+    }
 
     try {
       await sendDiscordWebhook({
-        content: `➡️ **Round ${newRound} Starting!**
-
-Teams advance to your next matches. Check brackets and join your voice channels!`,
         username: "NewHopeGGN Arena",
         avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+        embeds: [{
+          title: `🏆 ${event.name} — Round ${newRound} Bracket`,
+          description: `Round ${event.current_round || 1} is over! **${winners.length} teams** advance. New matchups below — join your voice channels! ⚔️`,
+          color: 0x06b6d4,
+          fields: matchFields,
+          footer: { text: "NewHopeGGN Arena System" },
+          timestamp: new Date().toISOString(),
+        }],
       }, { webhookUrl: env.discordWebhookUrlForPage("arena") });
     } catch (e) {
       console.error("Discord webhook failed:", e);
     }
 
-    return NextResponse.json({ ok: true, event: { ...event, current_round: newRound } });
+    // Re-fetch updated event
+    const { data: updatedEvent } = await supabase
+      .from("arena_events")
+      .select("*")
+      .eq("id", event_id)
+      .single();
+
+    return NextResponse.json({ ok: true, event: updatedEvent, matches: newMatches, vc_assignments: vcAssignments });
   }
 
   if (action === "shuffle_matches") {

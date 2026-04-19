@@ -965,7 +965,16 @@ export function AdminPanelClient() {
     });
     const data = await res.json();
     if (data.ok) {
-      setSelectedArenaEvent((prev: any) => ({ ...prev, current_round: data.event.current_round }));
+      // Immediately update the bracket UI with new round matches
+      setSelectedArenaEvent((prev: any) => ({
+        ...prev,
+        current_round: data.event?.current_round ?? (prev.current_round || 1) + 1,
+        metadata: {
+          ...(prev.metadata || {}),
+          matches: data.matches || [],
+          vc_assignments: data.vc_assignments || [],
+        },
+      }));
       await loadArena();
     } else {
       alert(data.error || "Failed to advance round");
