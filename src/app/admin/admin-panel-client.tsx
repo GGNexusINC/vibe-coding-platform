@@ -350,15 +350,15 @@ function getMemberName(member: MemberSummary) {
 
 function formatActiveTime(days: number, minutes?: number): string {
   if (!days && !minutes) return "—";
+  const totalMins = (minutes ?? 0);
+  const d = days > 0 ? days : 0;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
   const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (minutes && minutes > 0) {
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hrs > 0) parts.push(`${hrs}h`);
-    if (mins > 0 || hrs === 0) parts.push(`${mins}m`);
-  }
-  return parts.join(" ") || "—";
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || (d === 0 && h === 0)) parts.push(`${m}m`);
+  return parts.join(" ") || (d > 0 ? `${d}d` : "—");
 }
 
 export function AdminPanelClient() {
@@ -1366,7 +1366,7 @@ export function AdminPanelClient() {
                 {[
                   { label: "Active Now", value: stats?.summary.activeNowCount ?? 0, color: "from-emerald-400/15 to-emerald-400/3 border-emerald-400/15", accent: "text-emerald-400", dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" },
                   { label: "Members", value: stats?.summary.totalMembersTracked ?? 0, color: "from-cyan-400/15 to-cyan-400/3 border-cyan-400/15", accent: "text-cyan-400", dot: "bg-cyan-400" },
-                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "from-violet-400/15 to-violet-400/3 border-violet-400/15", accent: "text-violet-400", dot: "bg-violet-400" },
+                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "from-violet-400/15 to-violet-400/3 border-violet-400/15", accent: "text-violet-400", dot: "bg-violet-400", suffix: " days" },
                   { label: "Events", value: stats?.summary.totalEvents ?? 0, color: "from-amber-400/15 to-amber-400/3 border-amber-400/15", accent: "text-amber-400", dot: "bg-amber-400" },
                 ].map((s) => (
                   <div key={s.label} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b ${s.color} p-4 transition-transform duration-150 hover:scale-[1.02]`}>
@@ -1374,7 +1374,10 @@ export function AdminPanelClient() {
                       <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${s.dot}`} />
                       <span className="text-[11px] font-medium text-slate-400">{s.label}</span>
                     </div>
-                    <div className={`text-3xl font-black tracking-tight ${s.accent}`}>{s.value.toLocaleString()}</div>
+                    <div className={`text-3xl font-black tracking-tight ${s.accent}`}>
+                      {s.value.toLocaleString()}
+                      {"suffix" in s && s.suffix && <span className="text-base font-semibold ml-0.5 opacity-70">{s.suffix}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1487,8 +1490,15 @@ export function AdminPanelClient() {
                       <div className="mt-0.5 text-xs text-slate-500">@{selectedMember.username} · {selectedMember.discordId}</div>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs">
                         {[
-                          { label: "Events", val: selectedMember.events },
-                          { label: "Time Active", val: formatActiveTime(selectedMember.activeDays, selectedMember.activeMinutes) },
+                          { label: "Events", val: String(selectedMember.events) },
+                          { label: "Active Days", val: selectedMember.activeDays > 0 ? `${selectedMember.activeDays}d` : "—" },
+                          { label: "Session Time", val: (() => {
+                            const m = selectedMember.activeMinutes ?? 0;
+                            if (!m) return "—";
+                            const h = Math.floor(m / 60);
+                            const mins = m % 60;
+                            return [h > 0 && `${h}h`, (mins > 0 || h === 0) && `${mins}m`].filter(Boolean).join(" ");
+                          })() },
                           { label: "Last Seen", val: new Date(selectedMember.lastActiveAt).toLocaleDateString() },
                         ].map((s) => (
                           <div key={s.label} className="rounded-lg border border-white/6 bg-slate-950/60 px-3 py-1.5">
@@ -1534,7 +1544,7 @@ export function AdminPanelClient() {
                           {member.isAdmin && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">Admin</span>}
                         </div>
                         <div className="text-[11px] text-slate-600">
-                          {member.isBot ? "Discord Bot" : member.events > 0 ? `${member.events} events · ${formatActiveTime(member.activeDays, member.activeMinutes)}` : "Discord member"}
+                          {member.isBot ? "Discord Bot" : member.events > 0 ? `${member.events} events · ${formatActiveTime(member.activeDays, member.activeMinutes)} active` : "Discord member"}
                         </div>
                       </div>
                       <div className="shrink-0 text-[11px] text-slate-600">{new Date(member.lastActiveAt).toLocaleDateString()}</div>
