@@ -18,6 +18,9 @@ process.stderr.write("[bot] Starting...\n");
 
 require("dotenv").config();
 const { Client, GatewayIntentBits, EmbedBuilder, AuditLogEvent, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { joinVoiceChannel, getVoiceConnection, EndBehaviorType } = require("@discordjs/voice");
+const { createClient: createDeepgramClient } = require("@deepgram/sdk");
+const { pipeline } = require("stream");
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
@@ -27,6 +30,8 @@ const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
 const LOG_CHANNEL_ID       = process.env.LOG_CHANNEL_ID || "";
 const TRANSLATE_TARGET     = process.env.TRANSLATE_TARGET_LANG || "en";
 const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "https://discord.com/api/webhooks/1495921032996065371/26WHqlDgpGOu4-Vau922YxmCWLmbo1VSdF_6E8I-CTQi87vtLIfcekLk0TnHh4pOCyeC";
+const DEEPGRAM_API_KEY     = process.env.DEEPGRAM_API_KEY || "";
+const VC_TARGET_LANG       = process.env.VC_TARGET_LANG || "en";
 
 process.stderr.write(`[bot] BOT_TOKEN present: ${!!BOT_TOKEN}\n`);
 process.stderr.write(`[bot] SITE_URL: ${SITE_URL}\n`);
@@ -110,6 +115,31 @@ function avatarOf(user) {
 }
 
 // ── Slash command definitions ─────────────────────────────────────────────
+const vcListenCommand = new SlashCommandBuilder()
+  .setName("vclisten")
+  .setDescription("Bot joins your voice channel and translates speech live to Staff-Voice")
+  .addStringOption(opt =>
+    opt.setName("translate_to")
+       .setDescription("Translate speech to which language? (default: English)")
+       .setRequired(false)
+       .addChoices(
+         { name: "🇺🇸 English",    value: "en" },
+         { name: "🇪🇸 Spanish",    value: "es" },
+         { name: "🇵🇹 Portuguese", value: "pt" },
+         { name: "🇫🇷 French",     value: "fr" },
+         { name: "🇩🇪 German",     value: "de" },
+         { name: "🇷🇺 Russian",    value: "ru" },
+         { name: "🇨🇳 Chinese",    value: "zh" },
+         { name: "🇯🇵 Japanese",   value: "ja" },
+       )
+  )
+  .toJSON();
+
+const vcStopCommand = new SlashCommandBuilder()
+  .setName("vcstop")
+  .setDescription("Stop the bot from listening and leave the voice channel")
+  .toJSON();
+
 const translateCommand = new SlashCommandBuilder()
   .setName("nhtranslate")
   .setDescription("Translate text to another language (auto-detects source)")
@@ -148,12 +178,119 @@ async function registerSlashCommands() {
     const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
     await rest.put(
       Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-      { body: [translateCommand] },
+      { body: [translateCommand, vcListenCommand, vcStopCommand] },
     );
     console.log("[bot] Slash commands registered.");
   } catch (e) {
     console.error("[bot] Failed to register slash commands:", e.message);
   }
+}
+
+// ── Voice listen helpers ───────────────────────────────────────
+const activeListeners = new Map(); // guildId -> { connection, cleanups[] }
+
+async function postToStaffVoice(username, avatarUrl, original, translated, targetLang) {
+  if (!STAFF_VOICE_WEBHOOK) return;
+  const LANG_FLAGS = {
+    en: "🇺🇸", es: "🇪🇸", pt: "🇵🇹", fr: "🇫🇷",
+    de: "🇩🇪", ru: "🇷🇺", zh: "🇨🇳", ja: "🇯🇵",
+  };
+  const flag = LANG_FLAGS[targetLang] ?? "🌐";
+  await fetch(STAFF_VOICE_WEBHOOK, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      username: "NewHopeGGN Voice",
+      avatar_url: avatarUrl || BOT_AVATAR,
+      embeds: [{
+        color: 0x7c3aed,
+        author: { name: `🎤 ${username} (voice)`, icon_url: avatarUrl || BOT_AVATAR },
+        fields: [
+          { name: "📝 Said",                   value: original.slice(0, 1024) },
+          { name: `${flag} Translation`,      value: translated.slice(0, 1024) },
+        ],
+        footer: { text: "NewHopeGGN Live Voice Translate", icon_url: BOT_AVATAR },
+        timestamp: new Date().toISOString(),
+      }],
+    }),
+  }).catch(e => console.error("[voice] webhook error:", e.message));
+}
+
+async function startListeningToUser(connection, userId, member, targetLang) {
+  if (!DEEPGRAM_API_KEY) {
+    console.error("[voice] DEEPGRAM_API_KEY not set");
+    return null;
+  }
+
+  const receiver = connection.receiver;
+  const deepgram = createDeepgramClient(DEEPGRAM_API_KEY);
+
+  const audioStream = receiver.subscribe(userId, {
+    end: { behavior: EndBehaviorType.AfterSilence, duration: 1000 },
+  });
+
+  let fullTranscript = "";
+
+  const dgLive = deepgram.listen.live({
+    model: "nova-2",
+    language: "multi",
+    smart_format: true,
+    interim_results: false,
+    utterance_end_ms: 1200,
+  });
+
+  dgLive.on("Results", async (data) => {
+    const transcript = data?.channel?.alternatives?.[0]?.transcript;
+    if (!transcript || transcript.trim().length < 2) return;
+    fullTranscript = transcript.trim();
+
+    try {
+      const { translated } = await translateText(fullTranscript, targetLang);
+      const username = member?.displayName ?? member?.user?.username ?? `User ${userId}`;
+      const avatarUrl = member?.user?.displayAvatarURL({ size: 64 }) ?? BOT_AVATAR;
+      console.log(`[voice] ${username}: ${fullTranscript} -> ${translated}`);
+      await postToStaffVoice(username, avatarUrl, fullTranscript, translated, targetLang);
+    } catch (e) {
+      console.error("[voice] translate error:", e.message);
+    }
+  });
+
+  dgLive.on("error", (e) => console.error("[voice] Deepgram error:", e.message));
+
+  audioStream.on("data", (chunk) => {
+    if (dgLive.getReadyState() === 1) dgLive.send(chunk);
+  });
+
+  audioStream.on("end", () => {
+    try { dgLive.finish(); } catch {}
+  });
+
+  return () => {
+    try { audioStream.destroy(); } catch {}
+    try { dgLive.finish(); } catch {}
+  };
+}
+
+async function startVoiceListening(connection, guild, targetLang) {
+  const receiver = connection.receiver;
+  const cleanups = [];
+
+  receiver.speaking.on("start", async (userId) => {
+    if (cleanups[userId]) return; // already listening to this user
+    const member = guild.members.cache.get(userId) ?? await guild.members.fetch(userId).catch(() => null);
+    if (member?.user?.bot) return;
+    const cleanup = await startListeningToUser(connection, userId, member, targetLang);
+    if (cleanup) cleanups[userId] = cleanup;
+  });
+
+  receiver.speaking.on("end", (userId) => {
+    if (cleanups[userId]) {
+      cleanups[userId]();
+      delete cleanups[userId];
+    }
+  });
+
+  return cleanups;
 }
 
 /**
@@ -296,6 +433,53 @@ async function relayMessage(msg) {
 // ── Slash command handler ─────────────────────────────────────────────────
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+
+  // ── /vclisten ──
+  if (interaction.commandName === "vclisten") {
+    const member = interaction.member;
+    const voiceChannel = member?.voice?.channel;
+    if (!voiceChannel) {
+      return interaction.reply({ content: "❌ You must be in a voice channel first!", ephemeral: true });
+    }
+    if (!DEEPGRAM_API_KEY) {
+      return interaction.reply({ content: "❌ `DEEPGRAM_API_KEY` is not set on the bot. Add it to Fly.io secrets.", ephemeral: true });
+    }
+
+    const targetLang = interaction.options.getString("translate_to") ?? VC_TARGET_LANG;
+    const guildId = interaction.guildId;
+
+    // Disconnect existing if any
+    const existing = getVoiceConnection(guildId);
+    if (existing) existing.destroy();
+    if (activeListeners.has(guildId)) activeListeners.delete(guildId);
+
+    const connection = joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId,
+      adapterCreator: interaction.guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: true,
+    });
+
+    const cleanups = await startVoiceListening(connection, interaction.guild, targetLang);
+    activeListeners.set(guildId, { connection, cleanups });
+
+    const LANG_NAMES = { en: "🇺🇸 English", es: "🇪🇸 Spanish", pt: "🇵🇹 Portuguese", fr: "🇫🇷 French", de: "🇩🇪 German", ru: "🇷🇺 Russian", zh: "🇨🇳 Chinese", ja: "🇯🇵 Japanese" };
+    return interaction.reply({
+      content: `🎤 Now listening in **${voiceChannel.name}** — translating to **${LANG_NAMES[targetLang] ?? targetLang}**. Results post to Staff-Voice.\nRun \`/vcstop\` to stop.`,
+      ephemeral: true,
+    });
+  }
+
+  // ── /vcstop ──
+  if (interaction.commandName === "vcstop") {
+    const guildId = interaction.guildId;
+    const existing = getVoiceConnection(guildId);
+    if (existing) existing.destroy();
+    activeListeners.delete(guildId);
+    return interaction.reply({ content: "🔇 Stopped listening and left the voice channel.", ephemeral: true });
+  }
+
   if (interaction.commandName !== "nhtranslate") return;
 
   await interaction.deferReply({ ephemeral: false });
