@@ -330,23 +330,56 @@ client.once("ready", async () => {
 
 async function syncMembers() {
   try {
+    console.log("[bot] Starting member sync...");
     // Use Discord REST API — no privileged GuildMembers intent required
     const DISCORD_TOKEN = BOT_TOKEN;
     let allMembers = [];
     let after = "0";
     const LIMIT = 1000;
+    let iterations = 0;
+    const MAX_ITERATIONS = 50; // Safety limit to prevent infinite loops
 
-    while (true) {
-      const res = await fetch(
-        `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=${LIMIT}&after=${after}`,
-        { headers: { Authorization: `Bot ${DISCORD_TOKEN}` } }
-      );
-      if (!res.ok) { console.error("[bot] Discord members REST failed:", res.status); break; }
-      const batch = await res.json();
-      if (!batch.length) break;
-      allMembers = allMembers.concat(batch);
-      if (batch.length < LIMIT) break;
-      after = batch[batch.length - 1].user.id;
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+      console.log(`[bot] Fetching members batch ${iterations}, after: ${after}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const res = await fetch(
+          `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=${LIMIT}&after=${after}`,
+          { 
+            headers: { Authorization: `Bot ${DISCORD_TOKEN}` },
+            signal: controller.signal
+          }
+        );
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) { 
+          console.error("[bot] Discord members REST failed:", res.status); 
+          break; 
+        }
+        const batch = await res.json();
+        console.log(`[bot] Fetched ${batch.length} members in batch ${iterations}`);
+        
+        if (!batch.length) break;
+        allMembers = allMembers.concat(batch);
+        if (batch.length < LIMIT) break;
+        after = batch[batch.length - 1].user.id;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error("[bot] Discord API fetch timeout in batch", iterations);
+        } else {
+          console.error("[bot] Discord API fetch error:", fetchError.message);
+        }
+        break;
+      }
+    }
+    
+    if (iterations >= MAX_ITERATIONS) {
+      console.error("[bot] Member sync hit max iterations limit, stopping to prevent infinite loop");
     }
 
     const payload = allMembers.map(m => ({
@@ -361,15 +394,30 @@ async function syncMembers() {
       roles:        m.roles ?? [],
     }));
 
-    const res = await fetch(`${SITE_URL}/api/discord/members-sync`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ secret: INGEST_SECRET, members: payload }),
-    });
-    if (!res.ok) {
-      console.error("[bot] members-sync failed:", res.status, await res.text());
-    } else {
-      console.log(`[bot] Synced ${payload.length} guild members`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const res = await fetch(`${SITE_URL}/api/discord/members-sync`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ secret: INGEST_SECRET, members: payload }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        console.error("[bot] members-sync failed:", res.status, await res.text());
+      } else {
+        console.log(`[bot] Synced ${payload.length} guild members`);
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("[bot] Website API sync timeout");
+      } else {
+        console.error("[bot] Website API sync error:", fetchError.message);
+      }
     }
   } catch (e) {
     console.error("[bot] syncMembers error:", e.message);
