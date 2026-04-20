@@ -453,7 +453,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -519,6 +519,16 @@ export function AdminPanelClient() {
   const [imageUploading, setImageUploading] = useState(false);
 
   // Inventory state
+  const [adminFiles, setAdminFiles] = useState<{id:string;file_name:string;file_type:string;file_size:number;public_url:string;folder:string;description?:string;uploaded_by:string;created_at:string}[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [filesFolder, setFilesFolder] = useState("all");
+  const [filesUploading, setFilesUploading] = useState(false);
+  const [filesUploadStatus, setFilesUploadStatus] = useState("");
+  const [filesNewFolder, setFilesNewFolder] = useState("general");
+  const [filesNewDesc, setFilesNewDesc] = useState("");
+  const [filesDeletingId, setFilesDeletingId] = useState<string|null>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
+
   const [salesLeaderboard, setSalesLeaderboard] = useState<{name:string;count:number;revenue:number;recent:{buyer:string;pack:string;at:string}[]}[]>([]);
   const [salesLoading, setSalesLoading] = useState(false);
   const [salesTotal, setSalesTotal] = useState(0);
@@ -679,6 +689,7 @@ export function AdminPanelClient() {
     else if (saved === "arena") void loadArena();
     else if (saved === "inventory") { void loadInventory(); void loadPackageLogs(); }
     else if (saved === "sales") void loadSales();
+    else if (saved === "files") void loadAdminFiles();
     else if (saved === "tickets") void loadTickets();
 
     return () => { window.clearTimeout(timer); window.clearInterval(tick); };
@@ -769,6 +780,45 @@ export function AdminPanelClient() {
     const reader = new FileReader();
     reader.onload = (ev) => setImagePreview(String(ev.target?.result ?? ""));
     reader.readAsDataURL(file);
+  }
+
+  async function loadAdminFiles() {
+    setFilesLoading(true);
+    const params = filesFolder !== "all" ? `?folder=${filesFolder}` : "";
+    const res = await fetch(`/api/admin/files${params}`, { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setAdminFiles(data.files ?? []);
+    setFilesLoading(false);
+  }
+
+  async function handleFileUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const input = filesInputRef.current;
+    if (!input?.files?.[0]) return;
+    setFilesUploading(true);
+    setFilesUploadStatus("");
+    const fd = new FormData();
+    fd.append("file", input.files[0]);
+    fd.append("folder", filesNewFolder || "general");
+    fd.append("description", filesNewDesc);
+    const res = await fetch("/api/admin/files", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (data.ok) {
+      setFilesUploadStatus("✓ File uploaded.");
+      setFilesNewDesc("");
+      if (input) input.value = "";
+      void loadAdminFiles();
+    } else {
+      setFilesUploadStatus(data.error || "Upload failed.");
+    }
+    setFilesUploading(false);
+  }
+
+  async function handleFileDelete(id: string) {
+    setFilesDeletingId(id);
+    await fetch("/api/admin/files", { method: "DELETE", headers: {"content-type":"application/json"}, body: JSON.stringify({ id }) });
+    setFilesDeletingId(null);
+    void loadAdminFiles();
   }
 
   async function loadSales() {
@@ -1495,6 +1545,7 @@ export function AdminPanelClient() {
     { id: "tickets" as const, label: "Tickets", icon: "🎫", badge: openTickets },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
     { id: "sales" as const, label: "Sales", icon: "💰" },
+    { id: "files" as const, label: "Files", icon: "📁" },
   ] as const;
 
   type TabId = (typeof tabs)[number]["id"];
@@ -1520,6 +1571,7 @@ export function AdminPanelClient() {
     }
     if (id === "tickets") void loadTickets();
     if (id === "sales") void loadSales();
+    if (id === "files") void loadAdminFiles();
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -3730,6 +3782,155 @@ export function AdminPanelClient() {
                   <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Preview</div>
                   <div className="text-sm text-amber-300 font-semibold">{wipeLabel}</div>
                   <div className="text-xs text-slate-400 mt-0.5">{new Date(wipeAt).toLocaleString()}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════ FILES ════ */}
+          {activeTab === "files" && (
+            <div className="grid gap-5">
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight">📁 Shared Files</h1>
+                <p className="text-xs text-slate-500 mt-0.5">Upload images, PDFs, and documents visible to all admins. Max 20 MB per file.</p>
+              </div>
+
+              {/* Upload Form */}
+              <form onSubmit={handleFileUpload} className="rounded-2xl border border-white/8 bg-white/3 p-5 grid gap-3">
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">📤 Upload New File</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-widest">Folder / Category</label>
+                    <select
+                      value={filesNewFolder}
+                      onChange={(e) => setFilesNewFolder(e.target.value)}
+                      className="w-full h-10 rounded-xl border border-white/8 bg-slate-900 px-3 text-sm text-white outline-none focus:border-cyan-400/30"
+                    >
+                      <option value="general">General</option>
+                      <option value="guides">Guides</option>
+                      <option value="media">Media / Photos</option>
+                      <option value="documents">Documents</option>
+                      <option value="staff-only">Staff Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-widest">Description (optional)</label>
+                    <input
+                      type="text"
+                      value={filesNewDesc}
+                      onChange={(e) => setFilesNewDesc(e.target.value)}
+                      placeholder="e.g. Wipe rules v3"
+                      maxLength={120}
+                      className="w-full h-10 rounded-xl border border-white/8 bg-slate-900 px-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-cyan-400/30"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-widest">File</label>
+                  <input
+                    ref={filesInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    className="block w-full rounded-xl border border-white/8 bg-slate-900 px-3 py-2.5 text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:px-3 file:py-1 file:text-xs file:font-bold file:text-cyan-300 hover:file:bg-cyan-500/30"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={filesUploading}
+                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-2.5 text-sm font-extrabold text-white hover:from-cyan-400 hover:to-blue-400 transition disabled:opacity-40"
+                  >
+                    {filesUploading ? "Uploading…" : "↑ Upload"}
+                  </button>
+                  {filesUploadStatus && (
+                    <span className={`text-sm font-semibold ${
+                      filesUploadStatus.startsWith("✓") ? "text-emerald-400" : "text-rose-400"
+                    }`}>{filesUploadStatus}</span>
+                  )}
+                </div>
+              </form>
+
+              {/* Folder Filter */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {["all", "general", "guides", "media", "documents", "staff-only"].map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => { setFilesFolder(f); void loadAdminFiles(); }}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition capitalize ${
+                      filesFolder === f
+                        ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-300"
+                        : "border-white/8 bg-white/3 text-slate-400 hover:bg-white/8"
+                    }`}
+                  >
+                    {f === "all" ? "📂 All" : f}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => void loadAdminFiles()}
+                  disabled={filesLoading}
+                  className="ml-auto rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-white/10 transition disabled:opacity-40"
+                >
+                  {filesLoading ? "Loading…" : "↻"}
+                </button>
+              </div>
+
+              {/* File Grid */}
+              {filesLoading ? (
+                <div className="py-10 text-center text-sm text-slate-600">Loading files…</div>
+              ) : adminFiles.length === 0 ? (
+                <div className="rounded-2xl border border-white/8 bg-white/3 py-12 text-center text-sm text-slate-600">
+                  No files uploaded yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {adminFiles.map((f) => {
+                    const isImage = f.file_type.startsWith("image/");
+                    const isPdf = f.file_type === "application/pdf";
+                    const icon = isImage ? "🖼️" : isPdf ? "📄" : "📎";
+                    const sizeKb = (f.file_size / 1024).toFixed(0);
+                    return (
+                      <div key={f.id} className="group rounded-2xl border border-white/8 bg-white/4 overflow-hidden hover:border-white/15 transition">
+                        {isImage ? (
+                          <a href={f.public_url} target="_blank" rel="noopener noreferrer">
+                            <img src={f.public_url} alt={f.file_name} className="w-full h-36 object-cover bg-slate-900" />
+                          </a>
+                        ) : (
+                          <div className="flex h-36 items-center justify-center bg-slate-900/60 text-5xl">
+                            {icon}
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-sm font-semibold text-white truncate">{f.file_name}</div>
+                          {f.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{f.description}</div>}
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <div className="text-[10px] text-slate-600">
+                              {f.uploaded_by} • {sizeKb} KB • <span className="capitalize">{f.folder}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <a
+                                href={f.public_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-lg border border-white/8 bg-white/5 px-2 py-1 text-[10px] font-bold text-cyan-400 hover:bg-white/10 transition"
+                              >
+                                ↓ Open
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleFileDelete(f.id)}
+                                disabled={filesDeletingId === f.id}
+                                className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-40"
+                              >
+                                {filesDeletingId === f.id ? "…" : "×"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

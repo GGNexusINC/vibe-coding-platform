@@ -17,14 +17,15 @@
 process.stderr.write("[bot] Starting...\n");
 
 require("dotenv").config();
-const { Client, GatewayIntentBits, EmbedBuilder, AuditLogEvent } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, AuditLogEvent, REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
 const SITE_URL       = process.env.SITE_URL       || "https://newhopeggn.vercel.app";
 const INGEST_SECRET  = process.env.INGEST_SECRET  || "newhopeggn-bot-secret";
 const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
-const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
+const LOG_CHANNEL_ID    = process.env.LOG_CHANNEL_ID || "";
+const TRANSLATE_TARGET  = process.env.TRANSLATE_TARGET_LANG || "en"; // default translate-to language
 
 process.stderr.write(`[bot] BOT_TOKEN present: ${!!BOT_TOKEN}\n`);
 process.stderr.write(`[bot] SITE_URL: ${SITE_URL}\n`);
@@ -107,9 +108,59 @@ function avatarOf(user) {
   return user?.displayAvatarURL?.({ size: 64 }) ?? BOT_AVATAR;
 }
 
+// ── Slash command definitions ─────────────────────────────────────────────
+const translateCommand = new SlashCommandBuilder()
+  .setName("translate")
+  .setDescription("Translate text to any language (auto-detects source)")
+  .addStringOption(opt =>
+    opt.setName("text")
+       .setDescription("The text to translate")
+       .setRequired(true)
+       .setMaxLength(500)
+  )
+  .addStringOption(opt =>
+    opt.setName("to")
+       .setDescription("Target language code, e.g. en, es, fr, pt, de, ar, zh (default: en)")
+       .setRequired(false)
+  )
+  .toJSON();
+
+async function registerSlashCommands() {
+  try {
+    const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
+    await rest.put(
+      Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+      { body: [translateCommand] },
+    );
+    console.log("[bot] Slash commands registered.");
+  } catch (e) {
+    console.error("[bot] Failed to register slash commands:", e.message);
+  }
+}
+
+/**
+ * Translate text using the free MyMemory API (no key required).
+ * Auto-detects source language, translates to `targetLang`.
+ */
+async function translateText(text, targetLang) {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${encodeURIComponent(targetLang)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`MyMemory HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.responseStatus !== 200) throw new Error(json.responseMessage || "Translation failed");
+  const translated = json.responseData?.translatedText;
+  return {
+    translated,
+    detectedFrom: json.responseData?.match?.toString() ?? null,
+  };
+}
+
 client.once("clientReady", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
   console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
+
+  // Register slash commands
+  await registerSlashCommands();
 
   // Initial sync on startup, then every 10 minutes
   await syncMembers();
@@ -219,6 +270,44 @@ async function relayMessage(msg) {
     console.error("[bot] Fetch error:", e.message);
   }
 }
+
+// ── Slash command handler ─────────────────────────────────────────────────
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== "translate") return;
+
+  await interaction.deferReply();
+
+  const text = interaction.options.getString("text", true);
+  const targetLang = (interaction.options.getString("to") ?? TRANSLATE_TARGET).toLowerCase().trim();
+
+  try {
+    const { translated } = await translateText(text, targetLang);
+
+    const LANG_NAMES = {
+      en: "English", es: "Spanish", fr: "French", pt: "Portuguese",
+      de: "German", it: "Italian", ar: "Arabic", zh: "Chinese",
+      ru: "Russian", ja: "Japanese", ko: "Korean", nl: "Dutch",
+      pl: "Polish", tr: "Turkish", hi: "Hindi", vi: "Vietnamese",
+    };
+    const targetName = LANG_NAMES[targetLang] ?? targetLang.toUpperCase();
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setAuthor({ name: `${interaction.user.displayName ?? interaction.user.username} — Translation`, iconURL: interaction.user.displayAvatarURL({ size: 64 }) })
+      .addFields(
+        { name: "📝 Original",          value: text.slice(0, 1024) },
+        { name: `🌐 → ${targetName}`,   value: (translated ?? "*(no result)*").slice(0, 1024) },
+      )
+      .setFooter({ text: "NewHopeGGN Translate • Powered by MyMemory", iconURL: BOT_AVATAR })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (e) {
+    console.error("[bot] Translation error:", e.message);
+    await interaction.editReply({ content: `❌ Translation failed: ${e.message}` });
+  }
+});
 
 // Catch new messages
 client.on("messageCreate", (msg) => { void relayMessage(msg); });
