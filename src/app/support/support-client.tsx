@@ -105,6 +105,20 @@ export default function SupportClient() {
         </p>
       </div>
 
+      {/* Response time strip */}
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs">
+        <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1.5 text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Typical response: <strong>under 2 hours</strong>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/4 px-3 py-1.5 text-slate-400">
+          🕐 Staff active: <strong className="text-slate-300">daily 10am – midnight ET</strong>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/4 px-3 py-1.5 text-slate-400">
+          💬 Replies sync to <strong className="text-slate-300">Discord in real time</strong>
+        </div>
+      </div>
+
       {/* 🆕 Live Chat Announcement Banner */}
       <div className="relative mb-8 overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/60 via-violet-950/40 to-cyan-950/60 p-5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.12),transparent_70%)]" />

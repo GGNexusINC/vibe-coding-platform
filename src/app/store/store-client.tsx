@@ -89,9 +89,18 @@ export function StoreClient({ user }: { user: User | null }) {
     reason?: string;
   }>({ available: true });
   const [loading, setLoading] = useState(true);
+  const [wipeMs, setWipeMs] = useState<number | null>(null);
+  const [wipeLabel, setWipeLabel] = useState("Server Wipe");
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     fetchInsuranceStatus();
+    fetch("/api/admin/wipe-timer", { cache: "no-store" })
+      .then(r => r.json())
+      .then(d => { if (d.ok && d.wipeAt) { setWipeMs(new Date(d.wipeAt).getTime()); setWipeLabel(d.label ?? "Server Wipe"); } })
+      .catch(() => {});
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
   }, []);
 
   async function fetchInsuranceStatus() {
@@ -114,6 +123,42 @@ export function StoreClient({ user }: { user: User | null }) {
 
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+
+      {/* Wipe status banner */}
+      {wipeMs && (() => {
+        const ms = wipeMs - now;
+        const past = ms <= 0;
+        const abs = Math.abs(ms);
+        const d = Math.floor(abs / 86400000);
+        const h = Math.floor((abs % 86400000) / 3600000);
+        const m = Math.floor((abs % 3600000) / 60000);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const display = d > 0 ? `${pad(d)}d ${pad(h)}h ${pad(m)}m` : `${pad(h)}h ${pad(m)}m`;
+        return past ? (
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-rose-500/8 px-5 py-3 text-sm">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <span className="font-semibold text-rose-200">Wipe has occurred</span>
+              <span className="ml-2 text-rose-300/60">— new wipe timer will be set soon. Packs purchased now apply to the next wipe.</span>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-500/25 bg-orange-500/8 px-5 py-3">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-xl">⏳</span>
+              <div>
+                <span className="font-semibold text-orange-200">Wipe is active</span>
+                <span className="ml-2 text-orange-300/60">— buy now to receive your pack and VIP before the wipe.</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-400/60">{wipeLabel} in</span>
+              <span className="font-mono text-lg font-black text-orange-200 tabular-nums">{display}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rz-surface rz-panel-border relative overflow-hidden rounded-[2rem] p-7 sm:p-9">
           <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.15),transparent_56%)]" />
