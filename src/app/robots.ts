@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/admin/", "/auth/"],
       },
     ],
-    sitemap: "https://newhopeggn-ggnexusteam.vercel.app/sitemap.xml",
+    sitemap: "https://newhopeggn.vercel.app/sitemap.xml",
   };
 }

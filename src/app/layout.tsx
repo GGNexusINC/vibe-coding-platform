@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "NewHopeGGN | Once Human Community",
     description: "NewHopeGGN — your Once Human private server community. Wipe packs, VIP perks, live Discord feed, and more.",
-    url: "https://newhopeggn-ggnexusteam.vercel.app",
+    url: "https://newhopeggn.vercel.app",
     siteName: "NewHopeGGN",
     type: "website",
   },
