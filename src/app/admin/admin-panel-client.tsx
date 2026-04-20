@@ -3389,7 +3389,7 @@ export function AdminPanelClient() {
                     <div className="py-10 text-center text-sm text-slate-600">No tickets yet.</div>
                   )}
                   {tickets.map((ticket) => (
-                    <div key={ticket.id} className="px-5 py-4 flex flex-col gap-2">
+                    <div key={ticket.id} className="px-5 py-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -3406,12 +3406,8 @@ export function AdminPanelClient() {
                             {new Date(ticket.created_at).toLocaleString()}
                           </div>
                           <div className="mt-1.5 text-sm text-slate-400 line-clamp-2 bg-slate-900/60 rounded-xl px-3 py-2 border border-white/5">{ticket.message}</div>
-                          {liveTicketId === ticket.id && ticket.discord_channel_id && (
-                            <AdminTicketChat ticketId={ticket.id} channelId={ticket.discord_channel_id} adminName={stats?.viewer?.username ?? "Admin"} />
-                          )}
                           {ticket.discord_channel_id && (
                             <div className="mt-1.5 flex items-center gap-2">
-                              <code className="text-[11px] text-slate-600 font-mono">{ticket.discord_channel_id}</code>
                               <button type="button"
                                 onClick={() => setLiveTicketId(liveTicketId === ticket.id ? null : ticket.id)}
                                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold border transition ${
@@ -3424,7 +3420,7 @@ export function AdminPanelClient() {
                             </div>
                           )}
                         </div>
-                        <div className="flex shrink-0 gap-1.5 flex-wrap">
+                        <div className="flex shrink-0 gap-1.5 flex-wrap items-start">
                           {ticket.status !== "resolved" && ticket.status !== "closed" && (
                             <button type="button"
                               onClick={async () => {
@@ -3450,6 +3446,9 @@ export function AdminPanelClient() {
                           )}
                         </div>
                       </div>
+                      {liveTicketId === ticket.id && ticket.discord_channel_id && (
+                        <AdminTicketChat ticketId={ticket.id} channelId={ticket.discord_channel_id} adminName={stats?.viewer?.username ?? "Admin"} />
+                      )}
                     </div>
                   ))}
                 </div>

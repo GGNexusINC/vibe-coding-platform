@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getAdminSession } from "@/lib/admin-auth";
 
 const TICKET_LOGS_WEBHOOK = "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki";
 
@@ -14,15 +13,16 @@ export async function POST(
   const closedBy = body?.closedBy as string | undefined;
 
   const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+  // Must use service role — anon key cannot UPDATE due to RLS
   const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, sbKey, { auth: { persistSession: false } });
 
-  // Always update DB status first
-  const { error: dbErr } = await supabase.from("tickets").update({ status: "closed" }).eq("id", ticketId);
-  if (dbErr) console.error("[ticket-close] DB error:", dbErr.message);
-
-  // Get ticket subject for the embed
+  // Get ticket info first for embed
   const { data: ticketRow } = await supabase.from("tickets").select("subject,guest_username").eq("id", ticketId).single();
+
+  // Update DB status
+  const { error: dbErr } = await supabase.from("tickets").update({ status: "closed" }).eq("id", ticketId);
+  if (dbErr) console.error("[ticket-close] DB update error:", JSON.stringify(dbErr));
 
   // Fire webhook embed
   const ts = Math.floor(Date.now() / 1000);

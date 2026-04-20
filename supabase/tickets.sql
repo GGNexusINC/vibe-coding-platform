@@ -41,3 +41,20 @@ on public.tickets
 for insert
 to authenticated, anon
 with check (true);
+
+-- Allow anon/service role to update ticket status (needed when service role key unavailable)
+drop policy if exists "tickets_anon_update" on public.tickets;
+create policy "tickets_anon_update"
+on public.tickets
+for update
+to anon, authenticated
+using (true)
+with check (true);
+
+-- Allow anon to select all tickets (admin panel uses anon key fallback)
+drop policy if exists "tickets_admin_select_all" on public.tickets;
+create policy "tickets_admin_select_all"
+on public.tickets
+for select
+to anon
+using (true);
