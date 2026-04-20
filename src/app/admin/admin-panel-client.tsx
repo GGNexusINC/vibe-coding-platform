@@ -1380,7 +1380,9 @@ export function AdminPanelClient() {
 
   async function loadTickets() {
     setTicketsLoading(true);
-    const d = await fetch("/api/admin/tickets").then(r => r.json()).catch(() => ({}));
+    setTicketStatusMsg("");
+    const d = await fetch("/api/admin/tickets").then(r => r.json()).catch(() => ({ ok: false, error: "Network error" }));
+    if (!d.ok) setTicketStatusMsg(`Error loading tickets: ${d.error ?? "unknown"}${d.code ? ` (${d.code})` : ""}`);
     setTickets(d.tickets ?? []);
     setTicketsLoading(false);
   }
@@ -3298,6 +3300,10 @@ export function AdminPanelClient() {
                   <h1 className="text-xl font-bold text-white tracking-tight">Support Tickets</h1>
                   <p className="mt-0.5 text-sm text-slate-500">View and manage user support requests.</p>
                 </div>
+                <button type="button" onClick={() => void loadTickets()} disabled={ticketsLoading}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 hover:text-white transition disabled:opacity-40">
+                  {ticketsLoading ? "⟳" : "↻"} Refresh
+                </button>
                 <div className="flex gap-2">
                   {[{label:"Open",val:tickets.filter(t=>t.status==="open").length,color:"text-amber-400"},{label:"Resolved",val:tickets.filter(t=>t.status==="resolved").length,color:"text-emerald-400"},{label:"Closed",val:tickets.filter(t=>t.status==="closed").length,color:"text-slate-500"}].map(s=>(
                     <div key={s.label} className="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-center">

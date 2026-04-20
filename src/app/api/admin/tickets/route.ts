@@ -23,8 +23,11 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, tickets: data ?? [] });
+  if (error) {
+    console.error("[admin/tickets] Supabase error:", error);
+    return NextResponse.json({ ok: false, error: error.message, code: error.code }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, tickets: data ?? [], count: data?.length ?? 0 });
 }
 
 // PATCH — update ticket status
