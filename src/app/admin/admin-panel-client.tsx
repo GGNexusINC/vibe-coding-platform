@@ -453,7 +453,9 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets">(
+    () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
+  );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
   const [liveTicketId, setLiveTicketId] = useState<string|null>(null);
   const [ticketsLoading, setTicketsLoading] = useState(false);
@@ -664,6 +666,15 @@ export function AdminPanelClient() {
 
     // Pre-load mod log so it's ready when owner opens the tab
     void loadModLog();
+
+    // Restore tab-specific data for whichever tab was saved
+    const saved = typeof window !== "undefined" ? localStorage.getItem("adminTab") : null;
+    if (saved === "roster") void loadRoster();
+    else if (saved === "streamers") void loadStreamers();
+    else if (saved === "lottery") void loadLottery();
+    else if (saved === "arena") void loadArena();
+    else if (saved === "inventory") { void loadInventory(); void loadPackageLogs(); }
+    else if (saved === "tickets") void loadTickets();
 
     return () => { window.clearTimeout(timer); window.clearInterval(tick); };
   }, []);
@@ -1476,6 +1487,7 @@ export function AdminPanelClient() {
 
   function switchTab(id: TabId) {
     setActiveTab(id as typeof activeTab);
+    if (typeof window !== "undefined") localStorage.setItem("adminTab", id);
     // Scroll the active pill into view on mobile
     setTimeout(() => {
       if (navScrollRef.current) {
