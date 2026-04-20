@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: "Streamers | NewHopeGGN",
     description: "Watch NewHopeGGN community members stream Once Human live on Twitch and YouTube.",
     type: "website",
+    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 

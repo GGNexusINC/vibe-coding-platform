@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: "Community | NewHopeGGN",
     description: "Join the NewHopeGGN Discord community. Live voice channels, messages, and member activity.",
     type: "website",
+    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 
