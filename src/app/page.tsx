@@ -413,6 +413,23 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Quick Links Footer */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          {[
+            { href: "/store",     label: "🛒 Store" },
+            { href: "/community", label: "👥 Community" },
+            { href: "/support",   label: "🎫 Support" },
+            { href: "/minigame",  label: "☣️ Minigame" },
+            { href: "/bans",      label: "🔨 Ban List" },
+            { href: "/rules",     label: "📋 Rules" },
+          ].map(link => (
+            <a key={link.href} href={link.href}
+              className="rounded-full border border-white/8 bg-white/3 px-4 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 hover:text-white transition">
+              {link.label}
+            </a>
+          ))}
+        </div>
       </section>
     </div>
   );

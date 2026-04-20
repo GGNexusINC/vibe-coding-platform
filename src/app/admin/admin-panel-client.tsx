@@ -388,7 +388,10 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets">("dashboard");
+  const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketStatusMsg, setTicketStatusMsg] = useState("");
   const [wipeAt, setWipeAt] = useState("");
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [wipeSaving, setWipeSaving] = useState(false);
@@ -1373,9 +1376,17 @@ export function AdminPanelClient() {
     setBroadcastStatus(`Preset loaded: ${preset.label}`);
   }
 
+  async function loadTickets() {
+    setTicketsLoading(true);
+    const d = await fetch("/api/admin/tickets").then(r => r.json()).catch(() => ({}));
+    setTickets(d.tickets ?? []);
+    setTicketsLoading(false);
+  }
+
   const isOwner = stats?.viewer?.isOwner ?? false;
   const pendingAdmins = roster.filter((a) => a.status === "pending").length;
   const pendingStreamers = streamers.filter((s) => s.status === "pending").length;
+  const openTickets = tickets.filter((t) => t.status === "open").length;
 
   const tabs = [
     { id: "dashboard" as const, label: "Overview",   icon: "▣" },
@@ -1387,6 +1398,7 @@ export function AdminPanelClient() {
     { id: "arena"     as const, label: "Arena",      icon: "⚔️" },
     { id: "inventory" as const, label: "Inventory",  icon: "🎒" },
     { id: "modlog" as const, label: "Mod Log", icon: "⚑" },
+    { id: "tickets" as const, label: "Tickets", icon: "🎫", badge: openTickets },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
   ] as const;
 
@@ -1403,6 +1415,7 @@ export function AdminPanelClient() {
       void loadInventory();
       void loadPackageLogs();
     }
+    if (id === "tickets") void loadTickets();
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -3265,6 +3278,89 @@ export function AdminPanelClient() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ════ TICKETS ════ */}
+          {activeTab === "tickets" && (
+            <div className="grid gap-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Support Tickets</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">View and manage user support requests.</p>
+                </div>
+                <div className="flex gap-2">
+                  {[{label:"Open",val:tickets.filter(t=>t.status==="open").length,color:"text-amber-400"},{label:"Resolved",val:tickets.filter(t=>t.status==="resolved").length,color:"text-emerald-400"},{label:"Closed",val:tickets.filter(t=>t.status==="closed").length,color:"text-slate-500"}].map(s=>(
+                    <div key={s.label} className="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-center">
+                      <div className={`text-sm font-black ${s.color}`}>{s.val}</div>
+                      <div className="text-[10px] text-slate-600">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {ticketStatusMsg && (
+                <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${ticketStatusMsg.startsWith("✓") ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-300" : "border-rose-500/20 bg-rose-500/8 text-rose-300"}`}>{ticketStatusMsg}</div>
+              )}
+              {ticketsLoading && <div className="text-sm text-slate-500 animate-pulse">Loading tickets…</div>}
+              <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
+                <div className="divide-y divide-white/4">
+                  {tickets.length === 0 && !ticketsLoading && (
+                    <div className="py-10 text-center text-sm text-slate-600">No tickets yet.</div>
+                  )}
+                  {tickets.map((ticket) => (
+                    <div key={ticket.id} className="px-5 py-4 flex flex-col gap-2">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${
+                              ticket.status === "open" ? "border-amber-400/25 bg-amber-400/10 text-amber-300" :
+                              ticket.status === "resolved" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" :
+                              "border-slate-500/20 bg-slate-500/10 text-slate-400"
+                            }`}>{ticket.status}</span>
+                            <span className="text-sm font-semibold text-slate-100 truncate">{ticket.subject}</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            <span className="text-slate-400">{ticket.guest_username}</span>
+                            <span className="mx-1.5 text-slate-700">·</span>
+                            {new Date(ticket.created_at).toLocaleString()}
+                          </div>
+                          <div className="mt-1.5 text-sm text-slate-400 line-clamp-2 bg-slate-900/60 rounded-xl px-3 py-2 border border-white/5">{ticket.message}</div>
+                          {ticket.discord_channel_id && (
+                            <div className="mt-1 text-[11px] text-slate-600">Discord channel: <code className="text-slate-500">{ticket.discord_channel_id}</code></div>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-1.5">
+                          {ticket.status !== "resolved" && (
+                            <button type="button"
+                              onClick={async () => {
+                                setTicketStatusMsg("");
+                                const res = await fetch("/api/admin/tickets", { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: ticket.id, status:"resolved"}) });
+                                const d = await res.json().catch(()=>({}));
+                                if (d.ok) { setTickets(prev => prev.map(t => t.id === ticket.id ? {...t, status:"resolved"} : t)); setTicketStatusMsg("✓ Ticket marked resolved."); }
+                                else setTicketStatusMsg(d.error || "Failed.");
+                              }}
+                              className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition">✓ Resolve</button>
+                          )}
+                          {ticket.status !== "closed" && (
+                            <button type="button"
+                              onClick={async () => {
+                                setTicketStatusMsg("");
+                                if (ticket.discord_channel_id) {
+                                  await fetch(`/api/support/ticket/${ticket.id}/close`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({channelId: ticket.discord_channel_id}) });
+                                }
+                                const res = await fetch("/api/admin/tickets", { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: ticket.id, status:"closed"}) });
+                                const d = await res.json().catch(()=>({}));
+                                if (d.ok) { setTickets(prev => prev.map(t => t.id === ticket.id ? {...t, status:"closed"} : t)); setTicketStatusMsg("✓ Ticket closed."); }
+                                else setTicketStatusMsg(d.error || "Failed.");
+                              }}
+                              className="rounded-lg border border-slate-500/20 bg-slate-500/10 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-slate-500/20 transition">🔒 Close</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
