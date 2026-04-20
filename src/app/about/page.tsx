@@ -51,7 +51,7 @@ const ownerStyles: Record<string, { border: string; bg: string; glow: string; te
   Zeus:      { border: "rgba(99,102,241,0.5)",  bg: "rgba(99,102,241,0.1)",  glow: "rgba(99,102,241,0.25)",  text: "#a5b4fc", badge: "🌩️ Owner" },
   Hope:      { border: "rgba(244,114,182,0.5)", bg: "rgba(244,114,182,0.1)", glow: "rgba(244,114,182,0.25)", text: "#f9a8d4", badge: "💗 Owner" },
   Jon:       { border: "rgba(74,222,128,0.5)",  bg: "rgba(74,222,128,0.1)",  glow: "rgba(74,222,128,0.25)",  text: "#86efac", badge: "🛡️ Owner" },
-  Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.1)",  glow: "rgba(251,146,60,0.25)",  text: "#fdba74", badge: "🔥 Admin" },
+  Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.1)",  glow: "rgba(251,146,60,0.25)",  text: "#fdba74", badge: "🔥 Owner" },
 };
 
 export default function AboutPage() {
