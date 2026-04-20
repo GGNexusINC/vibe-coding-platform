@@ -51,21 +51,33 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = getSupabase();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const usingKey = serviceKey ? "service_role" : "anon";
+  console.log("[upload] Using key:", usingKey, "URL:", supabaseUrl?.slice(0, 30));
+
+  const supabase = createClient(supabaseUrl, serviceKey || anonKey, {
+    auth: { persistSession: false },
+  });
+
+  // List existing buckets for debug
+  const { data: buckets, error: listErr } = await supabase.storage.listBuckets();
+  console.log("[upload] Existing buckets:", buckets?.map(b => b.name), "listErr:", listErr?.message);
 
   // Ensure bucket exists
-  const { error: bucketError } = await supabase.storage.createBucket(BUCKET, {
-    public: true,
-    fileSizeLimit: MAX_BYTES,
-    allowedMimeTypes: ALLOWED_TYPES,
-  });
-  if (bucketError && !bucketError.message?.includes("already exists")) {
-    console.error("[upload] Bucket creation failed:", bucketError);
-    // Try to continue anyway — bucket might exist but return a different error
+  if (!buckets?.find(b => b.name === BUCKET)) {
+    const { error: bucketError } = await supabase.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: MAX_BYTES,
+      allowedMimeTypes: ALLOWED_TYPES,
+    });
+    if (bucketError) {
+      console.error("[upload] Bucket creation failed:", bucketError);
+    } else {
+      console.log("[upload] Bucket created successfully");
+    }
   }
-
-  // Also ensure the bucket is public (in case it was created private)
-  await supabase.storage.updateBucket(BUCKET, { public: true }).catch(() => {});
 
   const ext = EXT_MAP[file.type] || ".png";
   const uniqueId = crypto.randomBytes(8).toString("hex");
@@ -80,9 +92,9 @@ export async function POST(req: Request) {
     });
 
   if (uploadError) {
-    console.error("[upload] Supabase storage upload error:", JSON.stringify(uploadError));
+    console.error("[upload] Upload error:", JSON.stringify(uploadError));
     return NextResponse.json(
-      { ok: false, error: `Upload failed: ${uploadError.message}. Make sure the "uploads" storage bucket exists in your Supabase dashboard (Storage → New Bucket → name: "uploads" → Public).` },
+      { ok: false, error: `Upload failed (${usingKey} key): ${uploadError.message}. Buckets found: ${buckets?.map(b => b.name).join(", ") || "none"}` },
       { status: 500 }
     );
   }
