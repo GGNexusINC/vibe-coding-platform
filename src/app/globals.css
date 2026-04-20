@@ -299,6 +299,15 @@ body {
   border: 1px solid var(--line);
 }
 
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Shine animation for gold support icon */
 @keyframes shine {
   0% {

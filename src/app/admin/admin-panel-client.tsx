@@ -1524,7 +1524,7 @@ export function AdminPanelClient() {
               </div>
             </div>
 
-            <div className="p-4 md:p-6 pb-24 md:pb-6">
+            <div className="p-4 md:p-6 pb-28 md:pb-6">
 
           {/* ════ OVERVIEW ════ */}
           {activeTab === "dashboard" && (
@@ -3757,27 +3757,31 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-white/8 bg-slate-950/98 backdrop-blur-xl md:hidden safe-area-inset-bottom">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => switchTab(tab.id)}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[9px] font-bold transition-all duration-150 active:scale-90 ${
-              activeTab === tab.id ? "text-cyan-300" : "text-slate-600 hover:text-slate-400"
-            }`}
-          >
-            {activeTab === tab.id && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-            )}
-            <span className={`text-lg leading-none transition-transform duration-150 ${activeTab === tab.id ? "scale-110" : ""}`}>{tab.icon}</span>
-            {tab.label}
-            {"badge" in tab && tab.badge > 0 && (
-              <span className="absolute right-[18%] top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[8px] font-black text-slate-950">{tab.badge}</span>
-            )}
-          </button>
-        ))}
+      {/* Mobile bottom nav — horizontally scrollable */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-slate-950/98 backdrop-blur-xl md:hidden">
+        <div className="flex overflow-x-auto scrollbar-none px-2 py-2 gap-1.5" style={{ WebkitOverflowScrolling: "touch" }}>
+          {tabs.map((tab) => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => switchTab(tab.id)}
+                className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${
+                  active
+                    ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 shadow-[0_0_10px_rgba(34,211,238,0.15)]"
+                    : "text-slate-500 border border-transparent hover:bg-white/5 hover:text-slate-300"
+                }`}
+              >
+                <span className={`text-base leading-none ${active ? "scale-110" : ""} transition-transform duration-150`}>{tab.icon}</span>
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {"badge" in tab && tab.badge > 0 && (
+                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-black text-slate-950">{tab.badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );
