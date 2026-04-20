@@ -201,8 +201,10 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const innerRef  = useRef<HTMLDivElement>(null);
   const audioRef  = useRef<ReturnType<typeof createAudio>>(null);
 
-  /* phases: intro → boot → glitch → reveal → lore → done */
-  const [phase, setPhase] = useState<"intro"|"boot"|"glitch"|"reveal"|"lore"|"done">("intro");
+  /* phases: os → intro → boot → glitch → reveal → lore → done */
+  const [phase, setPhase] = useState<"os"|"intro"|"boot"|"glitch"|"reveal"|"lore"|"done">("os");
+  const [osStep, setOsStep] = useState(0);
+  const [osBar, setOsBar] = useState(0);
   const [countdown, setCountdown] = useState<3|2|1|0>(3);
   const [countFlash, setCountFlash] = useState(false);
   const [glitchFrame, setGlitchFrame] = useState(0);
@@ -345,9 +347,36 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
     return () => { alive = false; cancelAnimationFrame(pRaf.current); };
   }, [burst, shake]);
 
-  /* ── cinematic countdown (also inits audio — component mounted from a click event so AudioContext is allowed) ── */
+  /* ── OS boot sequence ── */
+  const OS_CHECKS = [
+    "Initializing NEXUS kernel v4.2.1...",
+    "Loading community modules... OK",
+    "Mounting wipe cycle registry... OK",
+    "Establishing Discord bridge... OK",
+    "Verifying signal integrity... OK",
+    "Decrypting classified archives...",
+    "ACCESS GRANTED",
+  ];
+
   useEffect(() => {
+    if (phase !== "os") return;
     audioRef.current = createAudio();
+    const a = audioRef.current;
+    // step through each check line
+    const stepTimers = OS_CHECKS.map((_, i) => setTimeout(() => {
+      setOsStep(i + 1);
+      setOsBar(Math.round(((i + 1) / OS_CHECKS.length) * 100));
+      a?.countTick(180 + i * 18);
+    }, 400 + i * 520));
+    // transition to countdown
+    const done = setTimeout(() => setPhase("intro"), 400 + OS_CHECKS.length * 520 + 600);
+    return () => { stepTimers.forEach(clearTimeout); clearTimeout(done); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  /* ── cinematic countdown ── */
+  useEffect(() => {
+    if (phase !== "intro") return;
     const a = audioRef.current;
     const flash = (n: 3|2|1|0) => {
       setCountdown(n);
@@ -360,7 +389,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
     const t2 = setTimeout(() => { flash(1); a?.countTick(300); }, 1800);
     const t3 = setTimeout(() => { flash(0); a?.goBlast(); setPhase("boot"); }, 2650);
     return () => [t0,t1,t2,t3].forEach(clearTimeout);
-  }, []);
+  }, [phase]);
 
   /* ── phase timeline (fires after boot begins) ── */
   useEffect(() => {
@@ -424,6 +453,57 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             opacity: ringScale,
           }} />
       ))}
+
+      {/* ── Phase: OS boot ── */}
+      {phase === "os" && (
+        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0, background:"#000", userSelect:"none" }}>
+
+          {/* Logo mark */}
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:"2.5rem" }}>
+            {/* Hexagon icon */}
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom:"1rem", filter:"drop-shadow(0 0 18px rgba(249,115,22,0.8))" }}>
+              <polygon points="32,4 58,18 58,46 32,60 6,46 6,18" fill="none" stroke="#f97316" strokeWidth="2"/>
+              <polygon points="32,12 50,22 50,42 32,52 14,42 14,22" fill="rgba(249,115,22,0.08)" stroke="#fbbf24" strokeWidth="1"/>
+              <text x="32" y="37" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="900" fontFamily="monospace" letterSpacing="-1">NH</text>
+            </svg>
+            <div style={{ fontSize:"1.5rem", fontWeight:900, letterSpacing:"0.18em", textTransform:"uppercase", color:"#fff", lineHeight:1 }}>
+              New<span style={{ color:"#f97316" }}>Hope</span><span style={{ color:"#fbbf24" }}>GGN</span>
+            </div>
+            <div style={{ marginTop:"0.35rem", fontSize:"0.65rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"#475569", fontFamily:"monospace" }}>
+              NEXUS OS · Version 4.2.1 · Build 2026.04
+            </div>
+          </div>
+
+          {/* System check lines */}
+          <div style={{ width:"min(420px,85vw)", fontFamily:"monospace", fontSize:"0.72rem", display:"flex", flexDirection:"column", gap:"0.3rem", marginBottom:"1.8rem" }}>
+            {OS_CHECKS.slice(0, osStep).map((line, i) => (
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:"0.5rem",
+                color: line === "ACCESS GRANTED" ? "#f97316" : i === osStep - 1 ? "#e2e8f0" : "#475569",
+                fontWeight: line === "ACCESS GRANTED" ? 700 : 400,
+                animation: "eggCountIn 0.15s ease",
+              }}>
+                <span style={{ color: line.endsWith("OK") ? "#34d399" : line === "ACCESS GRANTED" ? "#f97316" : "#fbbf24", flexShrink:0 }}>
+                  {line.endsWith("OK") ? "✓" : line === "ACCESS GRANTED" ? "▶" : "›"}
+                </span>
+                {line}
+              </div>
+            ))}
+            {osStep < OS_CHECKS.length && (
+              <div style={{ color:"#1e293b", fontFamily:"monospace", fontSize:"0.72rem" }}>_<span style={{ animation:"pulse 0.8s infinite" }}>▋</span></div>
+            )}
+          </div>
+
+          {/* Loading bar */}
+          <div style={{ width:"min(320px,80vw)", height:"2px", background:"rgba(255,255,255,0.06)", borderRadius:"99px", overflow:"hidden" }}>
+            <div style={{ height:"100%", borderRadius:"99px", background:"linear-gradient(90deg,#f97316,#fbbf24)",
+              boxShadow:"0 0 8px rgba(249,115,22,0.8)",
+              width:`${osBar}%`, transition:"width 0.45s cubic-bezier(0.4,0,0.2,1)" }} />
+          </div>
+          <div style={{ marginTop:"0.5rem", fontFamily:"monospace", fontSize:"9px", letterSpacing:"0.2em", color:"#1e293b", textTransform:"uppercase" }}>
+            {osBar < 100 ? `Loading ${osBar}%` : "System Ready"}
+          </div>
+        </div>
+      )}
 
       {/* ── Phase: intro countdown ── */}
       {phase === "intro" && (
