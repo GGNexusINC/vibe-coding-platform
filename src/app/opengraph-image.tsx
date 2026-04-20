@@ -179,7 +179,7 @@ export default function OgImage() {
             letterSpacing: "0.1em",
           }}
         >
-          newhopeggn.com
+          newhopeggn-ggnexusteam.vercel.app
         </div>
       </div>
     ),

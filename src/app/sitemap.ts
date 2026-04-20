@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://newhopeggn.com";
+  const base = "https://newhopeggn-ggnexusteam.vercel.app";
   const routes = [
     { url: "/",          priority: 1.0,  changeFrequency: "daily"   as const },
     { url: "/store",     priority: 0.9,  changeFrequency: "weekly"  as const },

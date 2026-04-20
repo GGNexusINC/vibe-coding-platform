@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: "About | NewHopeGGN",
     description: "Learn about NewHopeGGN — a dedicated Once Human private server community.",
     type: "website",
-    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
+    images: [{ url: "https://newhopeggn-ggnexusteam.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 

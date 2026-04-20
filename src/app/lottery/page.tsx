@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: "Lottery | NewHopeGGN",
     description: "Enter the NewHopeGGN lottery for a chance to win Once Human supply packs and rare gear.",
     type: "website",
-    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
+    images: [{ url: "https://newhopeggn-ggnexusteam.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 

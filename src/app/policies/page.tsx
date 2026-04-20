@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: "Policies | NewHopeGGN",
     description: "Refund policy, fair service terms, and enforcement guidelines.",
     type: "website",
-    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
+    images: [{ url: "https://newhopeggn-ggnexusteam.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 

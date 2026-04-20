@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "Store | NewHopeGGN",
     description: "Buy wipe packs for Once Human. Construction, Defense, PvP, and Clan packages with VIP perks.",
     type: "website",
-    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
+    images: [{ url: "https://newhopeggn-ggnexusteam.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
 };
 
