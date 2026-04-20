@@ -324,8 +324,10 @@ client.once("ready", async () => {
   await registerSlashCommands();
 
   // Initial sync on startup, then every 10 minutes
-  await syncMembers();
-  setInterval(() => { void syncMembers(); }, 10 * 60 * 1000);
+  // TEMPORARILY DISABLED TO DEBUG HANGING ISSUE
+  // await syncMembers();
+  // setInterval(() => { void syncMembers(); }, 10 * 60 * 1000);
+  console.log("[bot] Member sync temporarily disabled for debugging");
 });
 
 async function syncMembers() {
