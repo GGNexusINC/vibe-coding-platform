@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const packName = String(body?.packName ?? "").trim();
   const price = Number(body?.price ?? 0);
+  const referredBy = String(body?.referredBy ?? "Not specified").trim() || "Not specified";
 
   if (!packName) {
     return NextResponse.json(
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     globalName: user?.global_name,
     discriminator: user?.discriminator,
     profile: user?.discord_profile,
-    details: `Started purchase flow for ${packName} ($${price}).`,
+    details: `Started purchase flow for ${packName} ($${price}). Referred by: ${referredBy}.`,
   });
 
   try {
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
         `Discord ID: \`${discordId}\`\n` +
         `Pack: **${packName}**\n` +
         `Price / Precio: **$${price}**\n` +
+        `👥 Referred by / Referido por: **${referredBy}**\n` +
         `Time / Hora (UTC): \`${now}\`\n` +
         `Route / Ruta: \`/api/store/intent\`\n` +
         `IP (x-forwarded-for): \`${forwardedFor}\`\n` +

@@ -453,7 +453,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -519,6 +519,10 @@ export function AdminPanelClient() {
   const [imageUploading, setImageUploading] = useState(false);
 
   // Inventory state
+  const [salesLeaderboard, setSalesLeaderboard] = useState<{name:string;count:number;revenue:number;recent:{buyer:string;pack:string;at:string}[]}[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesTotal, setSalesTotal] = useState(0);
+
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryFilter, setInventoryFilter] = useState("all");
@@ -674,6 +678,7 @@ export function AdminPanelClient() {
     else if (saved === "lottery") void loadLottery();
     else if (saved === "arena") void loadArena();
     else if (saved === "inventory") { void loadInventory(); void loadPackageLogs(); }
+    else if (saved === "sales") void loadSales();
     else if (saved === "tickets") void loadTickets();
 
     return () => { window.clearTimeout(timer); window.clearInterval(tick); };
@@ -764,6 +769,14 @@ export function AdminPanelClient() {
     const reader = new FileReader();
     reader.onload = (ev) => setImagePreview(String(ev.target?.result ?? ""));
     reader.readAsDataURL(file);
+  }
+
+  async function loadSales() {
+    setSalesLoading(true);
+    const res = await fetch("/api/admin/sales", { cache: "no-store" });
+    const data = await res.json().catch(() => null);
+    if (data?.ok) { setSalesLeaderboard(data.leaderboard ?? []); setSalesTotal(data.total ?? 0); }
+    setSalesLoading(false);
   }
 
   async function loadRoster() {
@@ -1481,6 +1494,7 @@ export function AdminPanelClient() {
     { id: "modlog" as const, label: "Mod Log", icon: "⚑" },
     { id: "tickets" as const, label: "Tickets", icon: "🎫", badge: openTickets },
     { id: "wipe" as const, label: "Wipe Timer", icon: "⏳" },
+    { id: "sales" as const, label: "Sales", icon: "💰" },
   ] as const;
 
   type TabId = (typeof tabs)[number]["id"];
@@ -1505,6 +1519,7 @@ export function AdminPanelClient() {
       void loadPackageLogs();
     }
     if (id === "tickets") void loadTickets();
+    if (id === "sales") void loadSales();
     if (id === "wipe") {
       fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
         if (d.ok) {
@@ -3717,6 +3732,89 @@ export function AdminPanelClient() {
                   <div className="text-xs text-slate-400 mt-0.5">{new Date(wipeAt).toLocaleString()}</div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ════ SALES LEADERBOARD ════ */}
+          {activeTab === "sales" && (
+            <div className="grid gap-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">💰 Sales Leaderboard</h1>
+                  <p className="text-xs text-slate-500 mt-0.5">{salesTotal} purchase intent{salesTotal !== 1 ? "s" : ""} tracked total</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadSales()}
+                  disabled={salesLoading}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 transition disabled:opacity-40"
+                >
+                  {salesLoading ? "Loading…" : "↻ Refresh"}
+                </button>
+              </div>
+
+              {salesLoading ? (
+                <div className="py-12 text-center text-sm text-slate-600">Loading sales data…</div>
+              ) : salesLeaderboard.length === 0 ? (
+                <div className="rounded-2xl border border-white/8 bg-white/3 py-12 text-center text-sm text-slate-600">
+                  No purchase intents logged yet. Data will appear here once buyers start going through checkout.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {salesLeaderboard.map((entry, i) => {
+                    const isNone = entry.name === "None / Self" || entry.name === "Not specified";
+                    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
+                    return (
+                      <div
+                        key={entry.name}
+                        className={`rounded-2xl border p-5 transition ${
+                          isNone
+                            ? "border-white/6 bg-white/3"
+                            : i === 0
+                            ? "border-amber-400/30 bg-amber-400/8"
+                            : "border-white/8 bg-white/4"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl leading-none">{isNone ? "👤" : medal}</span>
+                            <div>
+                              <div className={`text-base font-bold ${ i === 0 && !isNone ? "text-amber-200" : "text-white"}` }>
+                                {entry.name}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {entry.count} pack{entry.count !== 1 ? "s" : ""} referred
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className={`text-xl font-black ${ i === 0 && !isNone ? "text-amber-300" : "text-emerald-400"}`}>
+                              ${entry.revenue}
+                            </div>
+                            <div className="text-[10px] text-slate-600 uppercase tracking-widest">est. revenue</div>
+                          </div>
+                        </div>
+
+                        {entry.recent.length > 0 && (
+                          <div className="mt-4 border-t border-white/5 pt-3 grid gap-1.5">
+                            {entry.recent.map((r, ri) => (
+                              <div key={ri} className="flex items-center justify-between text-xs text-slate-500">
+                                <span className="text-slate-400 font-medium">{r.buyer}</span>
+                                <span className="text-slate-600">{r.pack}</span>
+                                <span className="font-mono text-[10px]">{new Date(r.at).toLocaleDateString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-white/6 bg-white/3 p-4 text-xs text-slate-500 leading-relaxed">
+                💡 This tracks purchase intents — when a buyer clicks Buy and goes through the referral modal. It does not confirm payment was completed. Use this to see which staff members are actively selling.
+              </div>
             </div>
           )}
 
