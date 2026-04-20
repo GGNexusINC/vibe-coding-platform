@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 const translations = {
   en: {
@@ -297,9 +298,16 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const gx = isGlitching ? `${(Math.random()-0.5)*10}px` : "0px";
   const gsk = isGlitching ? `${(Math.random()-0.5)*6}deg` : "0deg";
 
-  return (
+  /* Lock body scroll while open */
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const overlay = (
     <div
-      style={{ position:"fixed", inset:0, width:"100vw", height:"100vh", zIndex:9999, background:"rgba(0,0,0,0.97)", overflow:"hidden" }}
+      style={{ position:"fixed", top:0, left:0, width:"100vw", height:"100vh", zIndex:2147483647, background:"#000", overflow:"hidden", isolation:"isolate" }}
       onClick={onClose}
     >
       <div ref={innerRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
@@ -416,33 +424,33 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
               <span style={{ width:"10px", height:"10px", borderRadius:"50%", background:"#14b8a6", display:"inline-block" }} />
               <span style={{ marginLeft:"0.75rem", fontFamily:"monospace", fontSize:"10px", color:"rgba(20,184,166,0.6)", letterSpacing:"0.2em" }}>NEXUS_CLASSIFIED.EXE</span>
             </div>
-            <div style={{ padding:"1.5rem", fontFamily:"monospace", fontSize:"0.875rem", display:"flex", flexDirection:"column", gap:"0.75rem" }}>
-              <div className="text-teal-400">
-                <span className="text-teal-600 mr-2">&gt;_</span>{lore1}<span className="animate-pulse">▋</span>
+            <div style={{ padding:"1.25rem", fontFamily:"monospace", fontSize:"0.85rem", display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+              <div style={{ color:"#2dd4bf" }}>
+                <span style={{ color:"#0d9488", marginRight:"0.5rem" }}>&gt;_</span>{lore1}<span style={{ animation:"pulse 1s infinite" }}>▋</span>
               </div>
               {lore1.length >= 22 && (
-                <div className="text-orange-300">
-                  <span className="text-teal-600 mr-2">&gt;_</span>{lore2}<span className="animate-pulse">▋</span>
+                <div style={{ color:"#fdba74" }}>
+                  <span style={{ color:"#0d9488", marginRight:"0.5rem" }}>&gt;_</span>{lore2}<span style={{ animation:"pulse 1s infinite" }}>▋</span>
                 </div>
               )}
               {lore2.length >= 28 && (
-                <div className="mt-2 text-white font-bold text-base">
-                  <span className="text-teal-600 mr-2">&gt;_</span>{lore3}<span className="animate-pulse text-orange-400">█</span>
+                <div style={{ color:"#fff", fontWeight:"bold", fontSize:"1rem", marginTop:"0.25rem" }}>
+                  <span style={{ color:"#0d9488", marginRight:"0.5rem" }}>&gt;_</span>{lore3}<span style={{ color:"#f97316", animation:"pulse 1s infinite" }}>█</span>
                 </div>
               )}
               {lore3.length >= 21 && (
-                <div className="mt-4 pt-4 border-t border-white/8">
-                  <div className="text-[10px] text-slate-600 uppercase tracking-widest mb-3">// COMMUNITY INTEL //</div>
-                  <div className="grid grid-cols-2 gap-3 text-[11px]">
-                    {[
-                      { k: "STATUS", v: "ACTIVE", c: "text-teal-400" },
-                      { k: "WIPE CYCLE", v: "ONGOING", c: "text-amber-400" },
-                      { k: "FOUNDING BASE", v: "SECURED", c: "text-emerald-400" },
-                      { k: "YOUR RANK", v: "SIGNAL BEARER", c: "text-orange-300" },
-                    ].map(({k,v,c}) => (
-                      <div key={k} className="rounded-lg border border-white/6 bg-white/3 px-3 py-2">
-                        <div className="text-slate-600 text-[9px] uppercase tracking-wider">{k}</div>
-                        <div className={`font-bold mt-0.5 ${c}`}>{v}</div>
+                <div style={{ marginTop:"0.75rem", paddingTop:"0.75rem", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize:"9px", color:"#475569", textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"0.6rem" }}>// COMMUNITY INTEL //</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.5rem", fontSize:"11px" }}>
+                    {([
+                      { k:"STATUS",       v:"ACTIVE",       col:"#2dd4bf" },
+                      { k:"WIPE CYCLE",   v:"ONGOING",      col:"#fbbf24" },
+                      { k:"FOUNDING BASE",v:"SECURED",      col:"#34d399" },
+                      { k:"YOUR RANK",    v:"SIGNAL BEARER",col:"#fdba74" },
+                    ] as {k:string;v:string;col:string}[]).map(({k,v,col}) => (
+                      <div key={k} style={{ borderRadius:"0.5rem", border:"1px solid rgba(255,255,255,0.06)", background:"rgba(255,255,255,0.03)", padding:"0.4rem 0.6rem" }}>
+                        <div style={{ fontSize:"9px", color:"#475569", textTransform:"uppercase", letterSpacing:"0.15em" }}>{k}</div>
+                        <div style={{ fontWeight:"bold", marginTop:"0.15rem", color:col }}>{v}</div>
                       </div>
                     ))}
                   </div>
@@ -451,21 +459,39 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Lore text */}
+          {/* Waveform bars */}
           {lore3.length >= 21 && (
-            <div className="mt-6 max-w-md text-center text-sm text-slate-400 leading-relaxed animate-[fadeIn_0.6s_ease]">
-              Before the servers, before the wipes — there was a signal.<br />
-              A small group heard it first. They called it{" "}
-              <span className="font-bold text-orange-300" style={{ textShadow: "0 0 20px rgba(249,115,22,0.8)" }}>NewHopeGGN</span>.
+            <div style={{ display:"flex", alignItems:"flex-end", gap:"3px", height:"32px", marginTop:"1rem" }}>
+              {Array.from({length:28},(_,i)=>i).map(i => (
+                <div key={i} style={{
+                  width:"5px", borderRadius:"2px",
+                  background:`hsl(${170+i*3},80%,55%)`,
+                  boxShadow:`0 0 6px hsl(${170+i*3},80%,55%)`,
+                  height:`${Math.sin(i*0.7)*40+55}%`,
+                  animation:`waveBar ${0.4+Math.random()*0.6}s ease-in-out ${i*0.04}s infinite alternate`,
+                }} />
+              ))}
             </div>
           )}
 
-          <div style={{ marginTop:"1.5rem", fontSize:"10px", color:"#334155", textTransform:"uppercase", letterSpacing:"0.2em" }} className="animate-pulse">tap anywhere to return</div>
+          {/* Lore text */}
+          {lore3.length >= 21 && (
+            <div style={{ marginTop:"1rem", maxWidth:"28rem", textAlign:"center", fontSize:"0.875rem", color:"#94a3b8", lineHeight:1.6 }}>
+              Before the servers, before the wipes — there was a signal.<br/>
+              A small group heard it first. They called it{" "}
+              <span style={{ fontWeight:"bold", color:"#fdba74", textShadow:"0 0 20px rgba(249,115,22,0.8)" }}>NewHopeGGN</span>.
+            </div>
+          )}
+
+          <div style={{ marginTop:"1.5rem", fontSize:"10px", color:"#334155", textTransform:"uppercase", letterSpacing:"0.2em", animation:"pulse 2s infinite" }}>tap anywhere to dismiss</div>
         </div>
       )}
       </div>
     </div>
   );
+
+  if (typeof window === "undefined") return null;
+  return createPortal(overlay, document.body);
 }
 
 export default function Home() {
