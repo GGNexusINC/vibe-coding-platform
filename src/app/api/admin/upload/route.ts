@@ -53,23 +53,38 @@ export async function POST(req: Request) {
 
   const supabase = getSupabase();
 
-  // Ensure bucket exists (idempotent — ignores if already created)
-  await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+  // Ensure bucket exists
+  const { error: bucketError } = await supabase.storage.createBucket(BUCKET, {
+    public: true,
+    fileSizeLimit: MAX_BYTES,
+    allowedMimeTypes: ALLOWED_TYPES,
+  });
+  if (bucketError && !bucketError.message?.includes("already exists")) {
+    console.error("[upload] Bucket creation failed:", bucketError);
+    // Try to continue anyway — bucket might exist but return a different error
+  }
+
+  // Also ensure the bucket is public (in case it was created private)
+  await supabase.storage.updateBucket(BUCKET, { public: true }).catch(() => {});
 
   const ext = EXT_MAP[file.type] || ".png";
   const uniqueId = crypto.randomBytes(8).toString("hex");
   const filePath = `arena/${uniqueId}${ext}`;
+  const buffer = Buffer.from(arrayBuffer);
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
-    .upload(filePath, Buffer.from(arrayBuffer), {
+    .upload(filePath, buffer, {
       contentType: file.type,
       upsert: true,
     });
 
   if (uploadError) {
-    console.error("[upload] Supabase storage error:", uploadError);
-    return NextResponse.json({ ok: false, error: uploadError.message }, { status: 500 });
+    console.error("[upload] Supabase storage upload error:", JSON.stringify(uploadError));
+    return NextResponse.json(
+      { ok: false, error: `Upload failed: ${uploadError.message}. Make sure the "uploads" storage bucket exists in your Supabase dashboard (Storage → New Bucket → name: "uploads" → Public).` },
+      { status: 500 }
+    );
   }
 
   const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
