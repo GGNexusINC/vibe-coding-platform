@@ -18,6 +18,15 @@ type Widget = {
   members: WidgetMember[];
 };
 
+const ownerStyles: Record<string, { border: string; bg: string; glow: string; text: string; badge: string }> = {
+  Kilo:      { border: "rgba(250,204,21,0.5)",  bg: "rgba(250,204,21,0.08)",  glow: "rgba(250,204,21,0.2)",  text: "#fde047", badge: "👑 Owner" },
+  Buzzworthy:{ border: "rgba(34,211,238,0.5)",  bg: "rgba(34,211,238,0.08)",  glow: "rgba(34,211,238,0.2)",  text: "#67e8f9", badge: "⚡ Owner" },
+  Zeus:      { border: "rgba(99,102,241,0.5)",  bg: "rgba(99,102,241,0.08)",  glow: "rgba(99,102,241,0.2)",  text: "#a5b4fc", badge: "🌩️ Owner" },
+  Hope:      { border: "rgba(244,114,182,0.5)", bg: "rgba(244,114,182,0.08)", glow: "rgba(244,114,182,0.2)", text: "#f9a8d4", badge: "💗 Owner" },
+  Jon:       { border: "rgba(74,222,128,0.5)",  bg: "rgba(74,222,128,0.08)",  glow: "rgba(74,222,128,0.2)",  text: "#86efac", badge: "🛡️ Owner" },
+  Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.08)",  glow: "rgba(251,146,60,0.2)",  text: "#fdba74", badge: "🔥 Admin" },
+};
+
 export default function SupportClient() {
   const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
   const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
@@ -238,42 +247,29 @@ export default function SupportClient() {
             <div className="flex flex-wrap gap-2">
               {supportStaff.map((name) => {
                 const isOnline = onlineStaff.has(name);
-                if (name === "Encriptado") {
-                  return (
-                    <span
-                      key={name}
-                      className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 hover:scale-105"
-                      style={{
-                        background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(168,85,247,0.12))",
-                        boxShadow: "0 0 0 1px rgba(168,85,247,0.35), 0 0 10px rgba(168,85,247,0.12)",
-                      }}
-                    >
-                      <span className="h-2 w-2 rounded-full shrink-0 bg-slate-600" />
-                      <span style={{
-                        background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)",
-                        backgroundSize: "200% auto",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        animation: "shimmer 3s linear infinite",
-                      }}>{name}</span>
-                      <span className="ml-1 text-[9px] text-purple-400 opacity-80">✨ soon</span>
-                    </span>
-                  );
-                }
+                if (name === "Encriptado") return (
+                  <span key={name} className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 hover:scale-105"
+                    style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(168,85,247,0.12))", boxShadow: "0 0 0 1px rgba(168,85,247,0.35), 0 0 10px rgba(168,85,247,0.12)" }}>
+                    <span className="h-2 w-2 rounded-full shrink-0 bg-slate-600" />
+                    <span style={{ background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)", backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "shimmer 3s linear infinite" }}>{name}</span>
+                    <span className="ml-1 text-[9px] text-purple-400 opacity-80">✨ soon</span>
+                  </span>
+                );
+                const s = ownerStyles[name];
+                if (s) return (
+                  <span key={name} className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 hover:scale-105"
+                    style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 10px ${s.glow}` }}>
+                    <span className={`h-2 w-2 rounded-full shrink-0 transition-all duration-300 ${isOnline ? "animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" : ""}`}
+                      style={{ background: isOnline ? "#4ade80" : s.text, opacity: isOnline ? 1 : 0.5 }} />
+                    <span style={{ color: s.text }}>{name}</span>
+                    <span className="ml-1 text-[9px] opacity-60" style={{ color: s.text }}>{s.badge}</span>
+                  </span>
+                );
                 return (
-                  <span
-                    key={name}
-                    className={`group relative flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:scale-105 ${
-                      isOnline
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                        : "border-white/10 bg-white/5 text-slate-300 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 hover:shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                    }`}
-                  >
-                    <span className={`h-2 w-2 rounded-full shrink-0 transition-all duration-300 ${
-                      isOnline 
-                        ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" 
-                        : "bg-slate-600"
-                    }`} />
+                  <span key={name} className={`group relative flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:scale-105 ${
+                    isOnline ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-white/5 text-slate-300"
+                  }`}>
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${isOnline ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
                     {name}
                   </span>
                 );

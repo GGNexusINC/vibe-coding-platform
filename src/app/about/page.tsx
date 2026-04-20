@@ -45,6 +45,15 @@ const gameScreenshots = [
   },
 ];
 
+const ownerStyles: Record<string, { border: string; bg: string; glow: string; text: string; badge: string }> = {
+  Kilo:      { border: "rgba(250,204,21,0.5)",  bg: "rgba(250,204,21,0.1)",  glow: "rgba(250,204,21,0.25)",  text: "#fde047", badge: "👑 Owner" },
+  Buzzworthy:{ border: "rgba(34,211,238,0.5)",  bg: "rgba(34,211,238,0.1)",  glow: "rgba(34,211,238,0.25)",  text: "#67e8f9", badge: "⚡ Owner" },
+  Zeus:      { border: "rgba(99,102,241,0.5)",  bg: "rgba(99,102,241,0.1)",  glow: "rgba(99,102,241,0.25)",  text: "#a5b4fc", badge: "🌩️ Owner" },
+  Hope:      { border: "rgba(244,114,182,0.5)", bg: "rgba(244,114,182,0.1)", glow: "rgba(244,114,182,0.25)", text: "#f9a8d4", badge: "💗 Owner" },
+  Jon:       { border: "rgba(74,222,128,0.5)",  bg: "rgba(74,222,128,0.1)",  glow: "rgba(74,222,128,0.25)",  text: "#86efac", badge: "🛡️ Owner" },
+  Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.1)",  glow: "rgba(251,146,60,0.25)",  text: "#fdba74", badge: "🔥 Admin" },
+};
+
 export default function AboutPage() {
   const admins = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
 
@@ -139,38 +148,28 @@ export default function AboutPage() {
           <div className="rz-surface rz-panel-border rounded-2xl p-6">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-lime-400 mb-4">👥 Staff & Admin Team</div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {admins.map((admin) => admin === "Encriptado" ? (
-                <div
-                  key={admin}
-                  className="relative rounded-xl px-3 py-3 text-center text-sm font-bold transition hover:-translate-y-0.5"
-                  style={{
-                    background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(234,179,8,0.12),rgba(34,197,94,0.12),rgba(59,130,246,0.12),rgba(168,85,247,0.12))",
-                    border: "1px solid transparent",
-                    backgroundClip: "padding-box",
-                    boxShadow: "0 0 0 1px rgba(168,85,247,0.3), 0 0 12px rgba(168,85,247,0.15)",
-                  }}
-                >
-                  <span
-                    style={{
-                      background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)",
-                      backgroundSize: "200% auto",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      animation: "shimmer 3s linear infinite",
-                    }}
-                  >
+              {admins.map((admin) => {
+                if (admin === "Encriptado") return (
+                  <div key={admin} className="relative rounded-xl px-3 py-3 text-center text-sm font-bold transition hover:-translate-y-0.5"
+                    style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(168,85,247,0.12))", boxShadow: "0 0 0 1px rgba(168,85,247,0.35), 0 0 12px rgba(168,85,247,0.12)" }}>
+                    <span style={{ background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)", backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "shimmer 3s linear infinite" }}>{admin}</span>
+                    <div className="mt-1 text-[9px] font-semibold tracking-widest text-purple-300 uppercase opacity-80">✨ Coming Back Soon</div>
+                  </div>
+                );
+                const s = ownerStyles[admin];
+                if (s) return (
+                  <div key={admin} className="relative rounded-xl px-3 py-3 text-center text-sm font-bold transition hover:-translate-y-1"
+                    style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 14px ${s.glow}` }}>
+                    <div style={{ color: s.text }}>{admin}</div>
+                    <div className="mt-1 text-[9px] font-semibold tracking-widest opacity-70" style={{ color: s.text }}>{s.badge}</div>
+                  </div>
+                );
+                return (
+                  <div key={admin} className="rounded-xl border border-orange-400/15 bg-orange-400/5 px-3 py-3 text-center text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-orange-400/35 hover:bg-orange-400/10">
                     {admin}
-                  </span>
-                  <div className="mt-1 text-[9px] font-semibold tracking-widest text-purple-300 uppercase opacity-80">✨ Coming Back Soon</div>
-                </div>
-              ) : (
-                <div
-                  key={admin}
-                  className="rounded-xl border border-orange-400/15 bg-orange-400/5 px-3 py-3 text-center text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-orange-400/35 hover:bg-orange-400/10"
-                >
-                  {admin}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
             <p className="mt-4 text-xs text-stone-500 leading-relaxed">
               Our staff team keeps the server running, tickets answered, and the community positive. Need help? Use the <a href="/support" className="text-orange-400 hover:underline">Support page</a> to open a ticket and chat with staff directly.
