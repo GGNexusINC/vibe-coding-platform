@@ -13,17 +13,17 @@ export const metadata: Metadata = {
 
 const gameScreenshots = [
   {
-    src: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/header.jpg",
+    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/header.jpg",
     label: "Open World Survival",
     desc: "Explore a vast contaminated open world with dynamic weather and day/night cycles.",
   },
   {
-    src: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1f3e6c9b4a5d2e8f0c7b3a1d9e4f2b5a6c8e0f3.1920x1080.jpg",
+    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/capsule_616x353.jpg",
     label: "Base Building",
     desc: "Construct and fortify your base to survive contamination waves and enemy raids.",
   },
   {
-    src: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/capsule_616x353.jpg",
+    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/page_bg_generated_v6b.jpg",
     label: "Co-op & PvP",
     desc: "Team up with allies or face other survivors in intense PvPvE encounters.",
   },
