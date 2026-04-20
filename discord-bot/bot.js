@@ -110,8 +110,8 @@ function avatarOf(user) {
 
 // ── Slash command definitions ─────────────────────────────────────────────
 const translateCommand = new SlashCommandBuilder()
-  .setName("translate")
-  .setDescription("Translate text to any language (auto-detects source)")
+  .setName("nhtranslate")
+  .setDescription("[NewHopeGGN] Translate text to any language (auto-detects source language)")
   .addStringOption(opt =>
     opt.setName("text")
        .setDescription("The text to translate")
@@ -274,7 +274,7 @@ async function relayMessage(msg) {
 // ── Slash command handler ─────────────────────────────────────────────────
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName !== "translate") return;
+  if (interaction.commandName !== "nhtranslate") return;
 
   await interaction.deferReply();
 
