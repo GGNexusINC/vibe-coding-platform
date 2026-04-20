@@ -826,7 +826,14 @@ client.on("error", (err) => {
   console.error("[bot] Discord client error:", err.message);
 });
 
+console.log("[bot] Attempting to login to Discord...");
+const loginTimeout = setTimeout(() => {
+  console.error("[bot] Login timeout - Discord client is hanging during login");
+  process.exit(1);
+}, 30000); // 30 second timeout
+
 client.login(BOT_TOKEN).catch((err) => {
+  clearTimeout(loginTimeout);
   console.error("[bot] Login failed:", err.message);
   process.exit(1);
 });
