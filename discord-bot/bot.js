@@ -112,17 +112,34 @@ function avatarOf(user) {
 // ── Slash command definitions ─────────────────────────────────────────────
 const translateCommand = new SlashCommandBuilder()
   .setName("nhtranslate")
-  .setDescription("[NewHopeGGN] Translate text to any language (auto-detects source language)")
+  .setDescription("Translate text to another language (auto-detects source)")
   .addStringOption(opt =>
     opt.setName("text")
-       .setDescription("The text to translate")
+       .setDescription("The text you want to translate")
        .setRequired(true)
        .setMaxLength(500)
   )
   .addStringOption(opt =>
     opt.setName("to")
-       .setDescription("Target language code, e.g. en, es, fr, pt, de, ar, zh (default: en)")
+       .setDescription("Translate to which language? (default: English)")
        .setRequired(false)
+       .addChoices(
+         { name: "🇺🇸 English",    value: "en" },
+         { name: "🇪🇸 Spanish",    value: "es" },
+         { name: "🇵🇹 Portuguese", value: "pt" },
+         { name: "🇫🇷 French",     value: "fr" },
+         { name: "🇩🇪 German",     value: "de" },
+         { name: "🇮🇹 Italian",    value: "it" },
+         { name: "🇳🇱 Dutch",      value: "nl" },
+         { name: "🇷🇺 Russian",    value: "ru" },
+         { name: "🇨🇳 Chinese",    value: "zh" },
+         { name: "🇯🇵 Japanese",   value: "ja" },
+         { name: "🇰🇷 Korean",     value: "ko" },
+         { name: "🇸🇦 Arabic",     value: "ar" },
+         { name: "🇹🇷 Turkish",    value: "tr" },
+         { name: "🇵🇱 Polish",     value: "pl" },
+         { name: "🇮🇳 Hindi",      value: "hi" },
+       )
   )
   .toJSON();
 
@@ -144,16 +161,20 @@ async function registerSlashCommands() {
  * Auto-detects source language, translates to `targetLang`.
  */
 async function translateText(text, targetLang) {
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${encodeURIComponent(targetLang)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`MyMemory HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.responseStatus !== 200) throw new Error(json.responseMessage || "Translation failed");
-  const translated = json.responseData?.translatedText;
-  return {
-    translated,
-    detectedFrom: json.responseData?.match?.toString() ?? null,
-  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${encodeURIComponent(targetLang)}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.responseStatus !== 200) throw new Error(json.responseMessage || "Translation failed");
+    return { translated: json.responseData?.translatedText ?? "*(no result)*" };
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 client.once("clientReady", async () => {
@@ -277,7 +298,7 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "nhtranslate") return;
 
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: false });
 
   const text = interaction.options.getString("text", true);
   const targetLang = (interaction.options.getString("to") ?? TRANSLATE_TARGET).toLowerCase().trim();
@@ -286,10 +307,10 @@ client.on("interactionCreate", async (interaction) => {
     const { translated } = await translateText(text, targetLang);
 
     const LANG_NAMES = {
-      en: "English", es: "Spanish", fr: "French", pt: "Portuguese",
-      de: "German", it: "Italian", ar: "Arabic", zh: "Chinese",
-      ru: "Russian", ja: "Japanese", ko: "Korean", nl: "Dutch",
-      pl: "Polish", tr: "Turkish", hi: "Hindi", vi: "Vietnamese",
+      en: "🇺🇸 English", es: "🇪🇸 Spanish", fr: "🇫🇷 French", pt: "🇵🇹 Portuguese",
+      de: "🇩🇪 German",  it: "🇮🇹 Italian",  ar: "🇸🇦 Arabic",  zh: "🇨🇳 Chinese",
+      ru: "🇷🇺 Russian", ja: "🇯🇵 Japanese", ko: "🇰🇷 Korean",  nl: "🇳🇱 Dutch",
+      pl: "🇵🇱 Polish",  tr: "🇹🇷 Turkish",  hi: "🇮🇳 Hindi",
     };
     const targetName = LANG_NAMES[targetLang] ?? targetLang.toUpperCase();
 
