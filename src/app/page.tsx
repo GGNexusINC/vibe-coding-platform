@@ -110,7 +110,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const mRef  = useRef<MatrixDrop[]>([]);
   const pRaf  = useRef<number>(0);
   const mRaf  = useRef<number>(0);
-  const shakeRef = useRef<HTMLDivElement>(null);
+  const innerRef  = useRef<HTMLDivElement>(null);
 
   /* phases: intro → boot → glitch → reveal → lore → done */
   const [phase, setPhase] = useState<"intro"|"boot"|"glitch"|"reveal"|"lore"|"done">("intro");
@@ -126,7 +126,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
 
   /* ── screen shake ── */
   const shake = useCallback(() => {
-    const el = shakeRef.current;
+    const el = innerRef.current;
     if (!el) return;
     let t = 0;
     const iv = setInterval(() => {
@@ -298,19 +298,20 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const gsk = isGlitching ? `${(Math.random()-0.5)*6}deg` : "0deg";
 
   return (
-    <div ref={shakeRef} className="fixed inset-0 z-[9999] overflow-hidden" style={{ background: "rgba(0,0,0,0.95)" }} onClick={onClose}>
+    <div
+      style={{ position:"fixed", inset:0, width:"100vw", height:"100vh", zIndex:9999, background:"rgba(0,0,0,0.97)", overflow:"hidden" }}
+      onClick={onClose}
+    >
+      <div ref={innerRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
 
       {/* Matrix rain */}
-      <canvas ref={matrixCanvas} className="pointer-events-none absolute inset-0"
-        style={{ opacity: showMatrix ? 0.55 : 0, transition: "opacity 1.2s" }} />
+      <canvas ref={matrixCanvas} style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", opacity: showMatrix ? 0.55 : 0, transition:"opacity 1.2s" }} />
 
       {/* Particles */}
-      <canvas ref={particleCanvas} className="pointer-events-none absolute inset-0" />
+      <canvas ref={particleCanvas} style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none" }} />
 
       {/* Scanlines */}
-      <div className="pointer-events-none absolute inset-0" style={{
-        backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.22) 3px,rgba(0,0,0,0.22) 4px)",
-      }} />
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.22) 3px,rgba(0,0,0,0.22) 4px)" }} />
 
       {/* Pulsing rings */}
       {[0,1,2].map(i => (
@@ -372,19 +373,19 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
 
       {/* ── Phase: glitch ── */}
       {(phase === "glitch" || phase === "reveal") && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative select-none" style={{ transform: `translateX(${gx}) skewX(${gsk})`, transition: "transform 0.04s" }}>
-            <div className="text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] text-white leading-none"
-              style={{ textShadow: isGlitching ? "6px 0 #f43f5e,-6px 0 #14b8a6,0 0 60px #f97316" : "0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.5)" }}>
-              NEW<span style={{ color: "#f97316" }}>HOPE</span><span style={{ color: "#fbbf24" }}>GGN</span>
+        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+          <div style={{ position:"relative", userSelect:"none", transform:`translateX(${gx}) skewX(${gsk})`, transition:"transform 0.04s", maxWidth:"90vw", textAlign:"center" }}>
+            <div style={{ fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", color:"#fff", lineHeight:1, whiteSpace:"nowrap",
+              textShadow: isGlitching ? "5px 0 #f43f5e,-5px 0 #14b8a6,0 0 50px #f97316" : "0 0 70px rgba(249,115,22,1),0 0 140px rgba(249,115,22,0.5)" }}>
+              NEW<span style={{ color:"#f97316" }}>HOPE</span><span style={{ color:"#fbbf24" }}>GGN</span>
             </div>
             {isGlitching && <>
-              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
-                style={{ color: "#f43f5e", opacity: 0.7, transform: "translateX(7px) translateY(-3px) scaleX(1.01)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
-              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
-                style={{ color: "#14b8a6", opacity: 0.7, transform: "translateX(-7px) translateY(3px) scaleX(0.99)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
-              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
-                style={{ color: "#8338ec", opacity: 0.4, transform: "translateY(5px)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
+              <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
+                color:"#f43f5e", opacity:0.7, transform:"translateX(6px) translateY(-3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
+              <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
+                color:"#14b8a6", opacity:0.7, transform:"translateX(-6px) translateY(3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
+              <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
+                color:"#8338ec", opacity:0.4, transform:"translateY(4px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
             </>}
           </div>
         </div>
@@ -392,30 +393,30 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
 
       {/* ── Phase: lore ── */}
       {phase === "lore" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0 px-4" onClick={e => e.stopPropagation()}>
+        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"1rem", overflowY:"auto" }} onClick={e => e.stopPropagation()}>
 
           {/* Big glowing title */}
-          <div className="mb-8 text-center select-none">
-            <div className="text-[clamp(2.5rem,8vw,5.5rem)] font-black uppercase tracking-[0.1em] leading-none"
-              style={{ textShadow: "0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.6),0 0 240px rgba(249,115,22,0.3)" }}>
-              <span style={{ color: "#fed7aa" }}>NEW</span><span style={{ color: "#f97316" }}>HOPE</span><span style={{ color: "#fbbf24" }}>GGN</span>
+          <div style={{ marginBottom:"2rem", textAlign:"center", userSelect:"none" }}>
+            <div style={{ fontSize:"clamp(2rem,6vw,4rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.1em", lineHeight:1,
+              textShadow:"0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.6)" }}>
+              <span style={{ color:"#fed7aa" }}>NEW</span><span style={{ color:"#f97316" }}>HOPE</span><span style={{ color:"#fbbf24" }}>GGN</span>
             </div>
-            <div className="mt-2 font-mono text-xs sm:text-sm tracking-[0.35em] uppercase text-teal-300/80"
-              style={{ textShadow: "0 0 20px rgba(20,184,166,0.9)" }}>
+            <div style={{ marginTop:"0.5rem", fontFamily:"monospace", fontSize:"0.7rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(94,234,212,0.8)",
+              textShadow:"0 0 20px rgba(20,184,166,0.9)" }}>
               ── SIGNAL RECEIVED ──
             </div>
           </div>
 
           {/* Terminal card */}
-          <div className="w-full max-w-lg rounded-2xl border border-teal-500/25 bg-black/70 overflow-hidden backdrop-blur-sm"
-            style={{ boxShadow: "0 0 60px rgba(20,184,166,0.15),0 0 120px rgba(249,115,22,0.08),inset 0 1px 0 rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-2 border-b border-teal-500/15 bg-teal-500/5 px-5 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-teal-400" />
-              <span className="ml-3 font-mono text-[10px] text-teal-400/60 tracking-widest">NEXUS_CLASSIFIED.EXE</span>
+          <div style={{ width:"100%", maxWidth:"32rem", borderRadius:"1rem", border:"1px solid rgba(20,184,166,0.25)", background:"rgba(0,0,0,0.75)", overflow:"hidden",
+            boxShadow:"0 0 60px rgba(20,184,166,0.15),0 0 120px rgba(249,115,22,0.08),inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", borderBottom:"1px solid rgba(20,184,166,0.15)", background:"rgba(20,184,166,0.05)", padding:"0.75rem 1.25rem" }}>
+              <span style={{ width:"10px", height:"10px", borderRadius:"50%", background:"#f43f5e", display:"inline-block" }} />
+              <span style={{ width:"10px", height:"10px", borderRadius:"50%", background:"#fbbf24", display:"inline-block" }} />
+              <span style={{ width:"10px", height:"10px", borderRadius:"50%", background:"#14b8a6", display:"inline-block" }} />
+              <span style={{ marginLeft:"0.75rem", fontFamily:"monospace", fontSize:"10px", color:"rgba(20,184,166,0.6)", letterSpacing:"0.2em" }}>NEXUS_CLASSIFIED.EXE</span>
             </div>
-            <div className="p-6 font-mono text-sm space-y-3">
+            <div style={{ padding:"1.5rem", fontFamily:"monospace", fontSize:"0.875rem", display:"flex", flexDirection:"column", gap:"0.75rem" }}>
               <div className="text-teal-400">
                 <span className="text-teal-600 mr-2">&gt;_</span>{lore1}<span className="animate-pulse">▋</span>
               </div>
@@ -459,9 +460,10 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <div className="mt-6 text-[10px] text-slate-700 uppercase tracking-widest animate-pulse">tap anywhere to return</div>
+          <div style={{ marginTop:"1.5rem", fontSize:"10px", color:"#334155", textTransform:"uppercase", letterSpacing:"0.2em" }} className="animate-pulse">tap anywhere to return</div>
         </div>
       )}
+      </div>
     </div>
   );
 }
