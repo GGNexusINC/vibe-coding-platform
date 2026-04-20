@@ -937,6 +937,67 @@ export default function Home() {
           );
         })()}
 
+        {/* Inventory Teaser */}
+        <div className="mt-8 rounded-[2rem] border border-teal-500/20 bg-slate-950/60 overflow-hidden relative">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(20,184,166,0.04),transparent_60%)]" />
+
+          {/* Header */}
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-7 pt-6 pb-4 border-b border-teal-500/10">
+            <div>
+              <div className="rz-chip">🎒 Member Inventory</div>
+              <p className="mt-2 text-xs text-slate-500 max-w-sm">Sign in to access your personal inventory — items, perks, and pack history tracked per wipe.</p>
+            </div>
+            <a
+              href="/auth/discord/start?next=/dashboard"
+              className="shrink-0 inline-flex h-10 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.35)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+              Sign in with Discord
+            </a>
+          </div>
+
+          {/* Mock inventory grid — blurred with lock overlay */}
+          <div className="relative px-7 py-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ filter:"blur(3px)", pointerEvents:"none", userSelect:"none", opacity:0.45 }}>
+              {[
+                { name:"Construction Package", tag:"ACTIVE", color:"#14b8a6", icon:"🏗️", sub:"Expires end of wipe" },
+                { name:"Tactical Package",     tag:"USED",   color:"#f97316", icon:"⚔️", sub:"Redeemed this wipe" },
+                { name:"VIP Role",             tag:"ACTIVE", color:"#a78bfa", icon:"👑", sub:"Wipe season perk" },
+                { name:"Defense Package",      tag:"PENDING",color:"#fbbf24", icon:"🛡️", sub:"Awaiting fulfillment" },
+                { name:"Anti-Raid Insurance",  tag:"ACTIVE", color:"#34d399", icon:"🔒", sub:"1 use remaining" },
+                { name:"Season Pass",          tag:"LOCKED", color:"#475569", icon:"🎟️", sub:"Purchase to unlock" },
+              ].map((item) => (
+                <div key={item.name} className="flex items-center gap-3 rounded-[1.25rem] border border-white/8 bg-slate-950/60 px-4 py-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-lg">{item.icon}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-white">{item.name}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">{item.sub}</div>
+                  </div>
+                  <div className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: item.color, background: `${item.color}18`, border: `1px solid ${item.color}30` }}>
+                    {item.tag}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Lock overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-slate-950/85 px-8 py-5 backdrop-blur-sm text-center">
+                <div className="text-2xl">🔐</div>
+                <div className="text-sm font-bold text-white">Your inventory lives here</div>
+                <div className="text-xs text-slate-400 max-w-xs">Pack history, active perks, and wipe items — all in one place after you sign in.</div>
+                <a
+                  href="/auth/discord/start?next=/dashboard"
+                  className="mt-2 inline-flex h-9 items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 text-xs font-bold text-teal-300 hover:bg-teal-500/20 transition"
+                >
+                  Unlock Dashboard →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Staff & Admin Team Section */}
         <div className="mt-12 rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
