@@ -24,8 +24,9 @@ const BOT_TOKEN      = process.env.BOT_TOKEN;
 const SITE_URL       = process.env.SITE_URL       || "https://newhopeggn.vercel.app";
 const INGEST_SECRET  = process.env.INGEST_SECRET  || "newhopeggn-bot-secret";
 const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
-const LOG_CHANNEL_ID    = process.env.LOG_CHANNEL_ID || "";
-const TRANSLATE_TARGET  = process.env.TRANSLATE_TARGET_LANG || "en"; // default translate-to language
+const LOG_CHANNEL_ID       = process.env.LOG_CHANNEL_ID || "";
+const TRANSLATE_TARGET     = process.env.TRANSLATE_TARGET_LANG || "en";
+const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "";
 
 process.stderr.write(`[bot] BOT_TOKEN present: ${!!BOT_TOKEN}\n`);
 process.stderr.write(`[bot] SITE_URL: ${SITE_URL}\n`);
@@ -303,6 +304,36 @@ client.on("interactionCreate", async (interaction) => {
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
+
+    // Also post to Staff Voice webhook if configured
+    if (STAFF_VOICE_WEBHOOK) {
+      try {
+        await fetch(STAFF_VOICE_WEBHOOK, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            username: "NewHopeGGN Translate",
+            avatar_url: BOT_AVATAR,
+            embeds: [{
+              color: 0x5865f2,
+              author: {
+                name: `${interaction.user.displayName ?? interaction.user.username} — Translation`,
+                icon_url: interaction.user.displayAvatarURL({ size: 64 }),
+              },
+              fields: [
+                { name: "📝 Original",        value: text.slice(0, 1024) },
+                { name: `🌐 → ${targetName}`, value: (translated ?? "*(no result)*").slice(0, 1024) },
+                { name: "Channel",            value: `<#${interaction.channelId}>`, inline: true },
+              ],
+              footer: { text: "NewHopeGGN Translate • Staff Voice Log", icon_url: BOT_AVATAR },
+              timestamp: new Date().toISOString(),
+            }],
+          }),
+        });
+      } catch (webhookErr) {
+        console.error("[bot] Staff voice webhook error:", webhookErr.message);
+      }
+    }
   } catch (e) {
     console.error("[bot] Translation error:", e.message);
     await interaction.editReply({ content: `❌ Translation failed: ${e.message}` });
