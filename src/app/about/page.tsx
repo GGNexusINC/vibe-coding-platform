@@ -14,19 +14,34 @@ export const metadata: Metadata = {
 
 const gameScreenshots = [
   {
-    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/header.jpg",
-    label: "Open World Survival",
-    desc: "Explore a vast contaminated open world with dynamic weather and day/night cycles.",
+    src: "/GANGGGPCITURE.png",
+    label: "Where It All Started",
+    desc: "The OG crew hanging at base — Buzzworthy, the gang, and good vibes. This is how NewHopeGGN was born.",
+    wide: true,
   },
   {
-    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/capsule_616x353.jpg",
-    label: "Base Building",
-    desc: "Construct and fortify your base to survive contamination waves and enemy raids.",
+    src: "/GANG.png",
+    label: "Gang Gang",
+    desc: "Surveying the base from above. We built this from nothing.",
+    wide: false,
   },
   {
-    src: "https://cdn.cloudflare.steamstatic.com/steam/apps/2139460/page_bg_generated_v6b.jpg",
-    label: "Co-op & PvP",
-    desc: "Team up with allies or face other survivors in intense PvPvE encounters.",
+    src: "/THANOO.png",
+    label: "Community Vibes",
+    desc: "Chilling at the compound — this is what the server is really about.",
+    wide: false,
+  },
+  {
+    src: "/CORTEZ.png",
+    label: "Cortez Hours",
+    desc: "Late night storage runs with the squad. Every wipe has moments like this.",
+    wide: false,
+  },
+  {
+    src: "/bro.png",
+    label: "On the Move",
+    desc: "Buzzworthy and crew rolling out — AosPrivateServer represent.",
+    wide: false,
   },
 ];
 
@@ -64,19 +79,35 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* ── Game screenshots ── */}
+        {/* ── Community photos ── */}
         <div>
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">📸 Once Human — The Game</div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {gameScreenshots.map((shot) => (
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">📸 The Community — Real Moments</div>
+          {/* Wide hero shot */}
+          <div className="rz-surface rz-panel-border rounded-2xl overflow-hidden group mb-4">
+            <div className="relative h-56 sm:h-72 bg-stone-900">
+              <img
+                src={gameScreenshots[0].src}
+                alt={gameScreenshots[0].label}
+                className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute bottom-3 left-4">
+                <div className="text-sm font-bold text-orange-300">{gameScreenshots[0].label}</div>
+                <div className="text-xs text-stone-400 mt-0.5">{gameScreenshots[0].desc}</div>
+              </div>
+            </div>
+          </div>
+          {/* 2x2 grid of remaining 4 */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {gameScreenshots.slice(1).map((shot) => (
               <div key={shot.label} className="rz-surface rz-panel-border rounded-2xl overflow-hidden group">
-                <div className="relative h-36 bg-stone-900">
+                <div className="relative h-40 bg-stone-900">
                   <img
                     src={shot.src}
                     alt={shot.label}
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
                   <div className="absolute bottom-2 left-3 text-xs font-bold text-orange-300">{shot.label}</div>
                 </div>
                 <div className="p-3 text-xs text-stone-400 leading-relaxed">{shot.desc}</div>
