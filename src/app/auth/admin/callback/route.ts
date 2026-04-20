@@ -9,6 +9,8 @@ import { sendDiscordWebhook } from "@/lib/discord";
 import { logActivity } from "@/lib/activity-log";
 import { upsertAdmin, getAdminByDiscordId } from "@/lib/admin-roster";
 
+const STAFF_WEBHOOK = "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5";
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const origin = url.origin;
@@ -57,14 +59,21 @@ export async function GET(req: Request) {
       // Notify existing admins via webhook that someone is waiting
       try {
         await sendDiscordWebhook({
-          content:
-            `⏳ **Admin Access Request**\n` +
-            `**${username}** (ID: \`${u.id}\`) requested admin access.\n` +
-            `Go to the Admin Roster panel to approve or deny.\n` +
-            `Time (UTC): \`${now}\``,
-          username: "NewHopeGGN Admin Gate",
+          username: "NewHopeGGN Security",
           avatar_url: avatarUrl ?? undefined,
-        });
+          embeds: [{
+            title: "⏳ Admin Access Request",
+            color: 0xf59e0b,
+            description: `**${username}** wants admin access.\nGo to the Admin Roster panel to approve or deny.`,
+            fields: [
+              { name: "Discord ID", value: `\`${u.id}\``, inline: true },
+              { name: "Time", value: `<t:${Math.floor(Date.now()/1000)}:F>`, inline: true },
+            ],
+            thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+            footer: { text: "NewHopeGGN Admin Panel" },
+            timestamp: now,
+          }],
+        }, { webhookUrl: STAFF_WEBHOOK });
       } catch {
         // non-fatal
       }
@@ -88,15 +97,21 @@ export async function GET(req: Request) {
         details: "Admin signed in via Discord OAuth.",
       });
       await sendDiscordWebhook({
-        content:
-          `🔐 **Admin Login**\n` +
-          `Admin: **${username}**\n` +
-          `Discord ID: \`${u.id}\`\n` +
-          `Time (UTC): \`${now}\`\n` +
-          `Origin: \`${origin}\``,
-        username: "NewHopeGGN Logs",
+        username: "NewHopeGGN Security",
         avatar_url: avatarUrl ?? undefined,
-      });
+        embeds: [{
+          title: "🔐 Admin Logged In",
+          color: 0x22c55e,
+          description: `Admin session started <t:${Math.floor(Date.now()/1000)}:R>.`,
+          fields: [
+            { name: "Admin", value: `<@${u.id}> (${username})`, inline: true },
+            { name: "Origin", value: `\`${origin}\``, inline: true },
+          ],
+          thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+          footer: { text: "NewHopeGGN Admin Panel" },
+          timestamp: now,
+        }],
+      }, { webhookUrl: STAFF_WEBHOOK });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
       console.error("Admin login webhook failed", msg);
