@@ -26,7 +26,7 @@ const INGEST_SECRET  = process.env.INGEST_SECRET  || "newhopeggn-bot-secret";
 const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
 const LOG_CHANNEL_ID       = process.env.LOG_CHANNEL_ID || "";
 const TRANSLATE_TARGET     = process.env.TRANSLATE_TARGET_LANG || "en";
-const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "";
+const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "https://discord.com/api/webhooks/1495921032996065371/26WHqlDgpGOu4-Vau922YxmCWLmbo1VSdF_6E8I-CTQi87vtLIfcekLk0TnHh4pOCyeC";
 
 process.stderr.write(`[bot] BOT_TOKEN present: ${!!BOT_TOKEN}\n`);
 process.stderr.write(`[bot] SITE_URL: ${SITE_URL}\n`);
