@@ -104,6 +104,93 @@ function useTypewriter(text: string, speed = 45, active = true) {
   return displayed;
 }
 
+/* ── Web Audio sound engine ── */
+function createAudio() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    const boom = () => {
+      // Deep cinematic bass hit
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 1.2, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate;
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 4) * 0.9
+                + Math.sin(2 * Math.PI * 55 * t) * Math.exp(-t * 3) * 0.8
+                + Math.sin(2 * Math.PI * 28 * t) * Math.exp(-t * 2) * 0.6;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+      src.connect(gain); gain.connect(ctx.destination);
+      src.start();
+    };
+
+    const glitchStatic = () => {
+      // Short digital static burst
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.18, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate;
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 12) * 0.5;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      src.connect(gain); gain.connect(ctx.destination);
+      src.start();
+    };
+
+    const countTick = (pitch = 220) => {
+      // Sharp metallic click for countdown
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(pitch, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(pitch * 0.4, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.12);
+    };
+
+    const riseChord = () => {
+      // Ascending synth chord on lore reveal
+      [110, 165, 220, 330].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 1.8);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.12);
+        osc.stop(ctx.currentTime + i * 0.12 + 1.8);
+      });
+    };
+
+    const goBlast = () => {
+      // "GO!" power blast — rising sweep + boom
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(80, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.4);
+      setTimeout(boom, 80);
+    };
+
+    return { boom, glitchStatic, countTick, riseChord, goBlast };
+  } catch { return null; }
+}
+
 function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const particleCanvas = useRef<HTMLCanvasElement>(null);
   const matrixCanvas  = useRef<HTMLCanvasElement>(null);
@@ -112,6 +199,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const pRaf  = useRef<number>(0);
   const mRaf  = useRef<number>(0);
   const innerRef  = useRef<HTMLDivElement>(null);
+  const audioRef  = useRef<ReturnType<typeof createAudio>>(null);
 
   /* phases: intro → boot → glitch → reveal → lore → done */
   const [phase, setPhase] = useState<"intro"|"boot"|"glitch"|"reveal"|"lore"|"done">("intro");
@@ -257,30 +345,34 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
     return () => { alive = false; cancelAnimationFrame(pRaf.current); };
   }, [burst, shake]);
 
-  /* ── cinematic countdown ── */
+  /* ── cinematic countdown (also inits audio — component mounted from a click event so AudioContext is allowed) ── */
   useEffect(() => {
+    audioRef.current = createAudio();
+    const a = audioRef.current;
     const flash = (n: 3|2|1|0) => {
       setCountdown(n);
       setCountFlash(true);
       setTimeout(() => setCountFlash(false), 120);
     };
     // 3 … 2 … 1 … GO
-    const t0 = setTimeout(() => flash(3), 100);
-    const t1 = setTimeout(() => flash(2), 950);
-    const t2 = setTimeout(() => flash(1), 1800);
-    const t3 = setTimeout(() => { flash(0); setPhase("boot"); }, 2650);
+    const t0 = setTimeout(() => { flash(3); a?.countTick(200); }, 100);
+    const t1 = setTimeout(() => { flash(2); a?.countTick(240); }, 950);
+    const t2 = setTimeout(() => { flash(1); a?.countTick(300); }, 1800);
+    const t3 = setTimeout(() => { flash(0); a?.goBlast(); setPhase("boot"); }, 2650);
     return () => [t0,t1,t2,t3].forEach(clearTimeout);
   }, []);
 
   /* ── phase timeline (fires after boot begins) ── */
   useEffect(() => {
     if (phase !== "boot") return;
+    const a = audioRef.current;
     shake();
     const timers = [
       setTimeout(() => setRingScale(1), 200),
-      setTimeout(() => { setPhase("glitch"); shake(); }, 800),
+      setTimeout(() => { setPhase("glitch"); shake(); a?.glitchStatic(); }, 800),
+      setTimeout(() => { a?.glitchStatic(); }, 1200),
       setTimeout(() => setPhase("reveal"), 1800),
-      setTimeout(() => { setPhase("lore"); setShowMatrix(false); }, 3200),
+      setTimeout(() => { setPhase("lore"); setShowMatrix(false); a?.riseChord(); }, 3200),
       setTimeout(() => setPhase("done"), 11000),
     ];
     let gCount = 0;
