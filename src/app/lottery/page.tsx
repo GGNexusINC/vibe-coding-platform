@@ -8,9 +8,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Lottery | NewHopeGGN",
     description: "Enter the NewHopeGGN lottery for a chance to win Once Human supply packs and rare gear.",
+    url: "https://newhopeggn.vercel.app/lottery",
     type: "website",
     images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
+  twitter: { card: "summary_large_image", images: ["https://newhopeggn.vercel.app/opengraph-image"] },
 };
 
 export default function LotteryPage() {

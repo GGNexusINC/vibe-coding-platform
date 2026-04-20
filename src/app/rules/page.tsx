@@ -7,9 +7,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Rules | NewHopeGGN",
     description: "Community rules and guidelines for NewHopeGGN Once Human server.",
+    url: "https://newhopeggn.vercel.app/rules",
     type: "website",
     images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
+  twitter: { card: "summary_large_image", images: ["https://newhopeggn.vercel.app/opengraph-image"] },
 };
 
 const rules = [

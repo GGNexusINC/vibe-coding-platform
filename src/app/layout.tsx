@@ -35,11 +35,13 @@ export const metadata: Metadata = {
     url: "https://newhopeggn.vercel.app",
     siteName: "NewHopeGGN",
     type: "website",
+    images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "NewHopeGGN | Once Human Community",
     description: "Wipe packs, VIP perks, live Discord feed, and more.",
+    images: ["https://newhopeggn.vercel.app/opengraph-image"],
   },
 };
 
