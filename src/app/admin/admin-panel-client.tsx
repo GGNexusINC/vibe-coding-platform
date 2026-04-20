@@ -392,6 +392,8 @@ export function AdminPanelClient() {
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketStatusMsg, setTicketStatusMsg] = useState("");
+  const [navScrolled, setNavScrolled] = useState(false);
+  const navScrollRef = useRef<HTMLDivElement>(null);
   const [wipeAt, setWipeAt] = useState("");
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [wipeSaving, setWipeSaving] = useState(false);
@@ -1406,6 +1408,13 @@ export function AdminPanelClient() {
 
   function switchTab(id: TabId) {
     setActiveTab(id as typeof activeTab);
+    // Scroll the active pill into view on mobile
+    setTimeout(() => {
+      if (navScrollRef.current) {
+        const btn = navScrollRef.current.querySelector(`[data-tabid="${id}"]`) as HTMLElement | null;
+        btn?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }, 50);
     if (id === "roster")  void loadRoster();
     if (id === "streamers") void loadStreamers();
     if (id === "lottery") void loadLottery();
@@ -3759,12 +3768,28 @@ export function AdminPanelClient() {
 
       {/* Mobile bottom nav — horizontally scrollable */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-slate-950/98 backdrop-blur-xl md:hidden">
-        <div className="flex overflow-x-auto scrollbar-none px-2 py-2 gap-1.5" style={{ WebkitOverflowScrolling: "touch" }}>
+        {/* Swipe hint pill — disappears after first scroll */}
+        {!navScrolled && (
+          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-slate-900/95 px-2.5 py-1 text-[10px] font-semibold text-slate-400 shadow-lg backdrop-blur animate-pulse">
+            swipe ›
+          </div>
+        )}
+        {/* Right-edge fade — always visible until scrolled to end */}
+        {!navScrolled && (
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 z-10 bg-gradient-to-l from-slate-950 to-transparent" />
+        )}
+        <div
+          ref={navScrollRef}
+          className="flex overflow-x-auto scrollbar-none px-2 py-2 gap-1.5"
+          style={{ WebkitOverflowScrolling: "touch" }}
+          onScroll={() => { if (!navScrolled) setNavScrolled(true); }}
+        >
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                data-tabid={tab.id}
                 type="button"
                 onClick={() => switchTab(tab.id)}
                 className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${
