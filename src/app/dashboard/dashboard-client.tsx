@@ -17,6 +17,8 @@ const quickLinks = [
   { href: "/community", emoji: "💬", label: "Community",     desc: "Live Discord feed & voice channels",   color: "border-purple-400/25 bg-purple-400/8 hover:bg-purple-400/12" },
   { href: "/lottery",   emoji: "🎰", label: "Lottery",       desc: "Try your luck on the server lottery",  color: "border-yellow-400/25 bg-yellow-400/8 hover:bg-yellow-400/12" },
   { href: "/minigame",  emoji: "🐹", label: "Whack-a-Mole",  desc: "Play for a chance to win prizes",      color: "border-pink-400/25 bg-pink-400/8 hover:bg-pink-400/12" },
+  { href: "/streamers", emoji: "📺", label: "Streamers",     desc: "Watch community members live",         color: "border-rose-400/25 bg-rose-400/8 hover:bg-rose-400/12" },
+  { href: "/bans",      emoji: "🔨", label: "Ban List",      desc: "Public moderation record",             color: "border-red-400/25 bg-red-400/8 hover:bg-red-400/12" },
 ];
 
 export default function DashboardClient({ user, msg }: { user: User | null; msg?: string }) {
