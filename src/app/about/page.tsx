@@ -28,7 +28,7 @@ const gameScreenshots = [
   {
     src: "/THANOO.png",
     label: "Community Vibes",
-    desc: "Chilling at the compound — this is what the server is really about.",
+    desc: "Chilling with Thanos at the compound — this is what the server is really about.",
     wide: false,
   },
   {
@@ -40,7 +40,7 @@ const gameScreenshots = [
   {
     src: "/bro.png",
     label: "On the Move",
-    desc: "Buzzworthy and crew rolling out — AosPrivateServer represent.",
+    desc: "Buzzworthy and the crew rolling out — NewHopeGGN on the move.",
     wide: false,
   },
 ];
