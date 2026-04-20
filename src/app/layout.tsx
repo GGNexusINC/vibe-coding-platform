@@ -34,14 +34,12 @@ export const metadata: Metadata = {
     description: "NewHopeGGN — your Once Human private server community. Wipe packs, VIP perks, live Discord feed, and more.",
     url: "https://newhopeggn.com",
     siteName: "NewHopeGGN",
-    images: [{ url: "https://newhopeggn.com/raidzone-bg.png", width: 512, height: 512, alt: "NewHopeGGN" }],
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "NewHopeGGN | Once Human Community",
     description: "Wipe packs, VIP perks, live Discord feed, and more.",
-    images: ["https://newhopeggn.com/raidzone-bg.png"],
   },
 };
 
