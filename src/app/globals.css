@@ -52,6 +52,13 @@ body {
   }
 }
 
+@keyframes eggCountIn {
+  0%   { transform: scale(2.2) rotate(-4deg); opacity: 0; }
+  60%  { transform: scale(0.92) rotate(1deg); opacity: 1; }
+  80%  { transform: scale(1.04) rotate(0deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
 @keyframes rzFloat {
   0%,
   100% {

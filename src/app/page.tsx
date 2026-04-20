@@ -112,8 +112,10 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
   const mRaf  = useRef<number>(0);
   const shakeRef = useRef<HTMLDivElement>(null);
 
-  /* phases: boot → glitch → reveal → lore → done */
-  const [phase, setPhase] = useState<"boot"|"glitch"|"reveal"|"lore"|"done">("boot");
+  /* phases: intro → boot → glitch → reveal → lore → done */
+  const [phase, setPhase] = useState<"intro"|"boot"|"glitch"|"reveal"|"lore"|"done">("intro");
+  const [countdown, setCountdown] = useState<3|2|1|0>(3);
+  const [countFlash, setCountFlash] = useState(false);
   const [glitchFrame, setGlitchFrame] = useState(0);
   const [showMatrix, setShowMatrix] = useState(true);
   const [ringScale, setRingScale] = useState(0);
@@ -254,8 +256,24 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
     return () => { alive = false; cancelAnimationFrame(pRaf.current); };
   }, [burst, shake]);
 
-  /* ── phase timeline ── */
+  /* ── cinematic countdown ── */
   useEffect(() => {
+    const flash = (n: 3|2|1|0) => {
+      setCountdown(n);
+      setCountFlash(true);
+      setTimeout(() => setCountFlash(false), 120);
+    };
+    // 3 … 2 … 1 … GO
+    const t0 = setTimeout(() => flash(3), 100);
+    const t1 = setTimeout(() => flash(2), 950);
+    const t2 = setTimeout(() => flash(1), 1800);
+    const t3 = setTimeout(() => { flash(0); setPhase("boot"); }, 2650);
+    return () => [t0,t1,t2,t3].forEach(clearTimeout);
+  }, []);
+
+  /* ── phase timeline (fires after boot begins) ── */
+  useEffect(() => {
+    if (phase !== "boot") return;
     shake();
     const timers = [
       setTimeout(() => setRingScale(1), 200),
@@ -264,7 +282,6 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
       setTimeout(() => { setPhase("lore"); setShowMatrix(false); }, 3200),
       setTimeout(() => setPhase("done"), 11000),
     ];
-    /* glitch flicker */
     let gCount = 0;
     const giv = setInterval(() => {
       setGlitchFrame(f => f + 1);
@@ -272,7 +289,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
       if (gCount > 18) clearInterval(giv);
     }, 80);
     return () => { timers.forEach(clearTimeout); clearInterval(giv); };
-  }, [shake]);
+  }, [phase, shake]);
 
   useEffect(() => { if (phase === "done") onClose(); }, [phase, onClose]);
 
@@ -306,6 +323,45 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             opacity: ringScale,
           }} />
       ))}
+
+      {/* ── Phase: intro countdown ── */}
+      {phase === "intro" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 select-none">
+          {/* Vignette flash on each number */}
+          <div className="pointer-events-none absolute inset-0 transition-opacity duration-100"
+            style={{ background: "radial-gradient(ellipse at center, transparent 30%, rgba(249,115,22,0.18) 100%)", opacity: countFlash ? 1 : 0.3 }} />
+
+          {/* Countdown number */}
+          <div key={countdown} className="relative" style={{ animation: "eggCountIn 0.25s cubic-bezier(0.34,1.56,0.64,1)" }}>
+            {countdown > 0 ? (
+              <div className="text-[clamp(6rem,25vw,14rem)] font-black leading-none tabular-nums"
+                style={{
+                  color: countdown === 3 ? "#f97316" : countdown === 2 ? "#fbbf24" : "#f43f5e",
+                  textShadow: `0 0 60px currentColor, 0 0 120px currentColor`,
+                  WebkitTextStroke: "2px currentColor",
+                }}>
+                {countdown}
+              </div>
+            ) : (
+              <div className="text-[clamp(3rem,12vw,8rem)] font-black leading-none uppercase tracking-widest text-white"
+                style={{ textShadow: "0 0 80px #fff, 0 0 160px rgba(249,115,22,0.9)", animation: "eggCountIn 0.2s cubic-bezier(0.34,1.56,0.64,1)" }}>
+                GO!
+              </div>
+            )}
+          </div>
+
+          {/* Sub-label */}
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-slate-500">
+            {countdown === 3 ? "SIGNAL INTERCEPTED" : countdown === 2 ? "DECRYPTING…" : countdown === 1 ? "BREACH IMMINENT" : "NEXUS ONLINE"}
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-48 h-0.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full bg-orange-500 transition-all duration-[850ms] ease-linear"
+              style={{ width: countdown === 3 ? "33%" : countdown === 2 ? "66%" : "100%" }} />
+          </div>
+        </div>
+      )}
 
       {/* ── Phase: boot ── */}
       {phase === "boot" && (
