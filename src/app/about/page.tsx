@@ -21,14 +21,14 @@ const gameScreenshots = [
   },
   {
     src: "/GANG.png",
-    label: "Gang Gang",
-    desc: "Surveying the base from above. We built this from nothing.",
+    label: "Building Together",
+    desc: "The team out building bases side by side — every wipe starts here.",
     wide: false,
   },
   {
     src: "/THANOO.png",
-    label: "Community Vibes",
-    desc: "Chilling with Thanos at the compound — this is what the server is really about.",
+    label: "More Than a Game",
+    desc: "Chilling with Thanos at the compound — it’s about spending time with friends and building real friendships.",
     wide: false,
   },
   {
@@ -39,8 +39,8 @@ const gameScreenshots = [
   },
   {
     src: "/bro.png",
-    label: "On the Move",
-    desc: "Buzzworthy and the crew rolling out — NewHopeGGN on the move.",
+    label: "GG Nexus Crew",
+    desc: "The GG Nexus crew rolling out together — the people behind NewHopeGGN.",
     wide: false,
   },
 ];
