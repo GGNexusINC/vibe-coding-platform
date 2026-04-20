@@ -238,6 +238,28 @@ export default function SupportClient() {
             <div className="flex flex-wrap gap-2">
               {supportStaff.map((name) => {
                 const isOnline = onlineStaff.has(name);
+                if (name === "Encriptado") {
+                  return (
+                    <span
+                      key={name}
+                      className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 hover:scale-105"
+                      style={{
+                        background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(168,85,247,0.12))",
+                        boxShadow: "0 0 0 1px rgba(168,85,247,0.35), 0 0 10px rgba(168,85,247,0.12)",
+                      }}
+                    >
+                      <span className="h-2 w-2 rounded-full shrink-0 bg-slate-600" />
+                      <span style={{
+                        background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)",
+                        backgroundSize: "200% auto",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        animation: "shimmer 3s linear infinite",
+                      }}>{name}</span>
+                      <span className="ml-1 text-[9px] text-purple-400 opacity-80">✨ soon</span>
+                    </span>
+                  );
+                }
                 return (
                   <span
                     key={name}
