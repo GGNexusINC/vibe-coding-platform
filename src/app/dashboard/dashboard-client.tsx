@@ -13,6 +13,7 @@ type User = {
 const quickLinks = [
   { href: "/store",     emoji: "🛒", label: "Wipe Store",    desc: "Buy packs for the current wipe",      color: "border-orange-400/25 bg-orange-400/8 hover:bg-orange-400/12" },
   { href: "/support",   emoji: "🎫", label: "Open Ticket",   desc: "Get help from staff via Discord",      color: "border-blue-400/25 bg-blue-400/8 hover:bg-blue-400/12" },
+  { href: "/support?subject=Prize+Claim+%E2%80%93+", emoji: "🏆", label: "Claim Prize",   desc: "Won something? Submit your claim here", color: "border-amber-400/25 bg-amber-400/8 hover:bg-amber-400/12" },
   { href: "/rules",     emoji: "📋", label: "Server Rules",  desc: "Read the Once Human server rules",     color: "border-lime-400/25 bg-lime-400/8 hover:bg-lime-400/12" },
   { href: "/community", emoji: "💬", label: "Community",     desc: "Live Discord feed & voice channels",   color: "border-purple-400/25 bg-purple-400/8 hover:bg-purple-400/12" },
   { href: "/lottery",   emoji: "🎰", label: "Lottery",       desc: "Try your luck on the server lottery",  color: "border-yellow-400/25 bg-yellow-400/8 hover:bg-yellow-400/12" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { TicketChat } from "./ticket-chat";
 
@@ -22,7 +23,8 @@ export default function SupportClient() {
   const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
   const [loadingStaff, setLoadingStaff] = useState(true);
 
-  const [subject, setSubject] = useState("");
+  const searchParams = useSearchParams();
+  const [subject, setSubject] = useState(searchParams.get("subject") ?? "");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
