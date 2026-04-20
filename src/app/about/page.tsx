@@ -149,7 +149,7 @@ export default function AboutPage() {
               ))}
             </div>
             <p className="mt-4 text-xs text-stone-500 leading-relaxed">
-              Our staff team keeps the server running, tickets answered, and the community positive. Reach them anytime through Discord.
+              Our staff team keeps the server running, tickets answered, and the community positive. Need help? Use the <a href="/support" className="text-orange-400 hover:underline">Support page</a> to open a ticket and chat with staff directly.
             </p>
           </div>
         </div>
