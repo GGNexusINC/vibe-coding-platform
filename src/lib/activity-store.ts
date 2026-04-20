@@ -104,6 +104,16 @@ export async function appendActivityEntry(entry: ActivityLogEntry, maxLogs: numb
     const { error } = await supabase.from(TABLE_NAME).insert(mapEntryToRow(entry));
 
     if (!error) {
+      // Persist active day permanently so pruning logs never resets the counter
+      if (entry.discordId) {
+        const day = entry.createdAt.slice(0, 10);
+        await Promise.resolve(
+          supabase
+            .from("user_active_days")
+            .upsert({ discord_id: entry.discordId, day }, { onConflict: "discord_id,day" })
+        ).catch(() => {});
+      }
+
       const { data: overflowRows } = await supabase
         .from(TABLE_NAME)
         .select("id")

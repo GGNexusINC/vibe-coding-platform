@@ -2,9 +2,67 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { logActivity } from "@/lib/activity-log";
 import { env } from "@/lib/env";
+import { createClient } from "@supabase/supabase-js";
 import type { DiscordWebhookPayload } from "@/lib/discord";
 
+export const dynamic = "force-dynamic";
+
 const allowedTargets = ["ban-page", "general-chat", "staff-page", "wipe"];
+
+export type CustomWebhook = { id: string; label: string; url: string };
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
+async function getCustomWebhooks(): Promise<CustomWebhook[]> {
+  try {
+    const sb = getSupabase();
+    const { data } = await sb.from("site_settings").select("value").eq("key", "custom_webhooks").single();
+    return (data?.value as CustomWebhook[]) ?? [];
+  } catch { return []; }
+}
+
+async function saveCustomWebhooks(hooks: CustomWebhook[]) {
+  const sb = getSupabase();
+  await sb.from("site_settings").upsert({ key: "custom_webhooks", value: hooks }, { onConflict: "key" });
+}
+
+// GET — return custom webhooks list
+export async function GET() {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  const hooks = await getCustomWebhooks();
+  return NextResponse.json({ ok: true, hooks });
+}
+
+// DELETE — remove a custom webhook by id
+export async function DELETE(req: Request) {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  const { id } = await req.json().catch(() => ({}));
+  if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+  const hooks = await getCustomWebhooks();
+  await saveCustomWebhooks(hooks.filter(h => h.id !== id));
+  return NextResponse.json({ ok: true });
+}
+
+// PUT — add a new custom webhook
+export async function PUT(req: Request) {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  const { label, url } = await req.json().catch(() => ({}));
+  if (!label || !url) return NextResponse.json({ ok: false, error: "Label and URL required" }, { status: 400 });
+  try { new URL(url); } catch { return NextResponse.json({ ok: false, error: "Invalid URL" }, { status: 400 }); }
+  const hooks = await getCustomWebhooks();
+  hooks.push({ id: crypto.randomUUID(), label: String(label).slice(0, 60), url: String(url).slice(0, 500) });
+  await saveCustomWebhooks(hooks);
+  return NextResponse.json({ ok: true, hooks });
+}
 
 function parseDiscordColor(input: string) {
   const raw = input.trim().replace("#", "");
@@ -47,11 +105,15 @@ export async function POST(req: Request) {
     imageUrl = String(body?.imageUrl ?? "").trim();
   }
 
+  // Look up custom webhook URL if target is not a built-in
+  let customWebhookUrl: string | undefined;
   if (!allowedTargets.includes(target)) {
-    return NextResponse.json(
-      { ok: false, error: "Choose a valid destination." },
-      { status: 400 },
-    );
+    const customHooks = await getCustomWebhooks();
+    const found = customHooks.find(h => h.id === target);
+    if (!found) {
+      return NextResponse.json({ ok: false, error: "Choose a valid destination." }, { status: 400 });
+    }
+    customWebhookUrl = found.url;
   }
 
   if (!title || !message) {
@@ -103,7 +165,7 @@ export async function POST(req: Request) {
       details: `Broadcast sent for ${target}: ${title}${audienceLabel ? ` (${audienceLabel})` : ""}`,
     });
 
-    const webhookUrl = env.discordWebhookUrlForPage(target);
+    const webhookUrl = customWebhookUrl || env.discordWebhookUrlForPage(target);
     if (!webhookUrl) {
       return NextResponse.json(
         {
@@ -120,11 +182,13 @@ export async function POST(req: Request) {
     const attachmentName = `broadcast.${ext}`;
     const embedImageUrl = imageUrl || (hasFile ? `attachment://${attachmentName}` : undefined);
 
+    const customHooksForLabel = await getCustomWebhooks();
     const targetLabel: Record<string, string> = {
       "general-chat": "💬 General Chat",
       "ban-page": "🔨 Ban Page",
       "staff-page": "🛡️ Staff Page",
       "wipe": "😺 Wipe Channel",
+      ...Object.fromEntries(customHooksForLabel.map(h => [h.id, `🔗 ${h.label}`])),
     };
 
     const payload: DiscordWebhookPayload = {

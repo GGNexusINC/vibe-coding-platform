@@ -24,20 +24,26 @@ async function getGuildMembers() {
   return data ?? [];
 }
 
-// Get true active day counts per user from the full activity_logs table
+// Get true active day counts per user from user_active_days (permanent, never pruned)
 async function getActiveDaysMap(): Promise<Map<string, number>> {
   const sb = getSupabaseClient();
   if (!sb) return new Map();
 
-  const { data, error } = await sb.rpc("get_active_days_per_user");
+  // Primary: read from persistent user_active_days table
+  const { data: persistentDays, error: persistentErr } = await sb
+    .from("user_active_days")
+    .select("discord_id, day");
 
-  if (!error && data) {
-    return new Map(
-      (data as { discord_id: string; active_days: number }[]).map((r) => [r.discord_id, r.active_days])
-    );
+  if (!persistentErr && persistentDays && persistentDays.length > 0) {
+    const map = new Map<string, number>();
+    for (const row of persistentDays) {
+      if (!row.discord_id) continue;
+      map.set(row.discord_id, (map.get(row.discord_id) ?? 0) + 1);
+    }
+    return map;
   }
 
-  // Fallback: raw query
+  // Fallback: count distinct days from activity_logs (may be incomplete due to pruning)
   const { data: raw } = await sb
     .from("activity_logs")
     .select("discord_id, created_at")

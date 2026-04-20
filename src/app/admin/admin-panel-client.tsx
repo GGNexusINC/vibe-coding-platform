@@ -381,6 +381,11 @@ export function AdminPanelClient() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [customWebhooks, setCustomWebhooks] = useState<{id:string;label:string;url:string}[]>([]);
+  const [newWebhookLabel, setNewWebhookLabel] = useState("");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState("");
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory">("dashboard");
   const [wipeAt, setWipeAt] = useState("");
@@ -565,6 +570,11 @@ export function AdminPanelClient() {
     const timer = window.setTimeout(() => {
       void loadStats();
     }, 0);
+
+    // Load custom webhooks
+    fetch("/api/admin/broadcast").then(r => r.json()).then(d => {
+      if (d.ok) setCustomWebhooks(d.hooks ?? []);
+    }).catch(() => {});
 
     // Load wipe timer for dashboard display
     fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
@@ -1728,6 +1738,11 @@ export function AdminPanelClient() {
               <form className="grid gap-3" onSubmit={handleBroadcast}>
                 <select className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none focus:border-cyan-400/30" value={target} onChange={(e) => setTarget(e.target.value)}>
                   {pageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  {customWebhooks.length > 0 && (
+                    <optgroup label="── Custom Webhooks ──">
+                      {customWebhooks.map(h => <option key={h.id} value={h.id}>🔗 {h.label}</option>)}
+                    </optgroup>
+                  )}
                 </select>
                 <input className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                   value={audienceLabel} onChange={(e) => setAudienceLabel(e.target.value)} placeholder="Audience label (optional)" maxLength={80} />
@@ -1771,6 +1786,65 @@ export function AdminPanelClient() {
                   </div>
                 )}
               </form>
+
+              {/* ── Custom Webhooks Manager ── */}
+              <div className="mt-6 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
+                <h3 className="text-sm font-bold text-slate-300 mb-3">🔗 Custom Webhooks</h3>
+                {customWebhooks.length > 0 && (
+                  <div className="grid gap-2 mb-4">
+                    {customWebhooks.map(h => (
+                      <div key={h.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/6 bg-slate-950/60 px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-200 truncate">{h.label}</div>
+                          <div className="text-[10px] text-slate-600 truncate">{h.url.slice(0, 60)}…</div>
+                        </div>
+                        <button type="button" onClick={async () => {
+                          await fetch("/api/admin/broadcast", { method: "DELETE", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: h.id }) });
+                          setCustomWebhooks(prev => prev.filter(w => w.id !== h.id));
+                        }} className="shrink-0 text-xs text-rose-500 hover:text-rose-300 transition">✕ Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="grid gap-2">
+                  <input
+                    className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                    value={newWebhookLabel} onChange={e => setNewWebhookLabel(e.target.value)}
+                    placeholder={"Label — what is this webhook for?"} maxLength={60}
+                  />
+                  <input
+                    className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                    value={newWebhookUrl} onChange={e => setNewWebhookUrl(e.target.value)}
+                    placeholder="Discord webhook URL" maxLength={500}
+                  />
+                  <button type="button" disabled={webhookSaving || !newWebhookLabel.trim() || !newWebhookUrl.trim()}
+                    onClick={async () => {
+                      setWebhookSaving(true); setWebhookStatus("");
+                      const res = await fetch("/api/admin/broadcast", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ label: newWebhookLabel.trim(), url: newWebhookUrl.trim() }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      setWebhookSaving(false);
+                      if (data.ok) {
+                        setCustomWebhooks(data.hooks ?? []);
+                        setNewWebhookLabel(""); setNewWebhookUrl("");
+                        setWebhookStatus("✓ Webhook added.");
+                      } else {
+                        setWebhookStatus(data.error || "Failed to add webhook.");
+                      }
+                    }}
+                    className="h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 disabled:opacity-40 transition">
+                    {webhookSaving ? "Adding…" : "+ Add Webhook"}
+                  </button>
+                  {webhookStatus && (
+                    <div className={`rounded-xl border px-3 py-2 text-xs font-medium ${webhookStatus.startsWith("✓") ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-300" : "border-rose-500/20 bg-rose-500/8 text-rose-300"}`}>
+                      {webhookStatus}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
