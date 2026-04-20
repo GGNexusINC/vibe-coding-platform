@@ -316,7 +316,7 @@ async function translateText(text, targetLang) {
   }
 }
 
-client.once("clientReady", async () => {
+client.once("ready", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
   console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
 
