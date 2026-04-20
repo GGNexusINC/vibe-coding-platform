@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const sections = [
   {
@@ -34,6 +35,7 @@ const sections = [
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="lg:hidden">
@@ -90,7 +92,11 @@ export function MobileNav() {
                         key={link.href}
                         href={link.href}
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-3 bg-white/[0.03] border border-white/6 text-sm font-semibold text-stone-300 hover:bg-orange-400/8 hover:text-orange-100 hover:border-orange-400/20 transition-all"
+                        className={`flex items-center gap-2.5 rounded-xl px-3 py-3 border text-sm font-semibold transition-all ${
+                          pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href))
+                            ? "bg-orange-400/12 border-orange-400/25 text-orange-200"
+                            : "bg-white/[0.03] border-white/6 text-stone-300 hover:bg-orange-400/8 hover:text-orange-100 hover:border-orange-400/20"
+                        }`}
                       >
                         <span className="text-base shrink-0">{link.emoji}</span>
                         {link.label}
