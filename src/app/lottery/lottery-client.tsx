@@ -12,6 +12,7 @@ export default function LotteryClient() {
   const [error, setError] = useState("");
   const [draws, setDraws] = useState<{ winnerUsername: string; prize: string; drawnAt: string }[]>([]);
   const [lastUpdated, setLastUpdated] = useState("");
+  const [isStaff, setIsStaff] = useState(false);
 
   const fetchLiveData = useCallback(async () => {
     const [entriesRes, drawsRes] = await Promise.all([
@@ -20,7 +21,10 @@ export default function LotteryClient() {
     ]);
     const entriesData = await entriesRes.json().catch(() => null);
     const drawsData = await drawsRes.json().catch(() => null);
-    if (entriesData?.ok) setTotalEntries(entriesData.totalEntries);
+    if (entriesData?.ok) {
+      setTotalEntries(entriesData.totalEntries);
+      if (entriesData.isStaff) setIsStaff(true);
+    }
     if (drawsData?.ok) setDraws(drawsData.draws ?? []);
     setLastUpdated(new Date().toLocaleTimeString());
   }, []);
@@ -80,7 +84,11 @@ export default function LotteryClient() {
               </div>
             </div>
 
-            {entered ? (
+            {isStaff ? (
+              <div className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-300">
+                🔒 Staff members are not eligible to enter the lottery.
+              </div>
+            ) : entered ? (
               <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300">
                 ✅ {status}
               </div>

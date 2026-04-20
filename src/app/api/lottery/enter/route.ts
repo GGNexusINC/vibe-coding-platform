@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { enterLottery, getLotteryEntries } from "@/lib/lottery-store";
+import { getAdminByDiscordId } from "@/lib/admin-roster";
 import { env } from "@/lib/env";
 
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session?.discord_id) {
     return NextResponse.json({ ok: false, error: "Sign in with Discord to enter." }, { status: 401 });
+  }
+
+  // Block approved staff from entering
+  const adminEntry = await getAdminByDiscordId(session.discord_id);
+  if (adminEntry?.status === "approved") {
+    return NextResponse.json({ ok: false, error: "Staff members are not eligible to enter the lottery." }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -59,6 +66,12 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const session = await getSession();
   const entries = await getLotteryEntries();
-  return NextResponse.json({ ok: true, entries, totalEntries: entries.length });
+  let isStaff = false;
+  if (session?.discord_id) {
+    const adminEntry = await getAdminByDiscordId(session.discord_id);
+    isStaff = adminEntry?.status === "approved";
+  }
+  return NextResponse.json({ ok: true, entries, totalEntries: entries.length, isStaff });
 }
