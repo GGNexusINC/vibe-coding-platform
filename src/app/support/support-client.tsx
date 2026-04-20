@@ -18,6 +18,14 @@ type Widget = {
   members: WidgetMember[];
 };
 
+const staffRoles: Record<string, { text: string; border: string; bg: string; glow: string; badge: string }> = {
+  "BÛTTÊR":     { text: "#93c5fd", border: "rgba(147,197,253,0.4)", bg: "rgba(147,197,253,0.07)", glow: "rgba(147,197,253,0.15)", badge: "🎫 Support" },
+  "reda":        { text: "#6ee7b7", border: "rgba(110,231,183,0.4)", bg: "rgba(110,231,183,0.07)", glow: "rgba(110,231,183,0.15)", badge: "🎮 In-Game Support" },
+  "Rem":         { text: "#c4b5fd", border: "rgba(196,181,253,0.4)", bg: "rgba(196,181,253,0.07)", glow: "rgba(196,181,253,0.15)", badge: "🛡️ Discord Mod" },
+  "♠Zenon♠":    { text: "#fca5a5", border: "rgba(252,165,165,0.4)", bg: "rgba(252,165,165,0.07)", glow: "rgba(252,165,165,0.15)", badge: "🎫 Support" },
+  "Whiispperss": { text: "#d8b4fe", border: "rgba(216,180,254,0.4)", bg: "rgba(216,180,254,0.07)", glow: "rgba(216,180,254,0.15)", badge: "🛡️ Discord Mod" },
+};
+
 const ownerStyles: Record<string, { border: string; bg: string; glow: string; text: string; badge: string }> = {
   Kilo:      { border: "rgba(250,204,21,0.5)",  bg: "rgba(250,204,21,0.08)",  glow: "rgba(250,204,21,0.2)",  text: "#fde047", badge: "👑 Owner" },
   Buzzworthy:{ border: "rgba(34,211,238,0.5)",  bg: "rgba(34,211,238,0.08)",  glow: "rgba(34,211,238,0.2)",  text: "#67e8f9", badge: "⚡ Owner" },
@@ -29,6 +37,7 @@ const ownerStyles: Record<string, { border: string; bg: string; glow: string; te
 
 export default function SupportClient() {
   const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
+  const modStaff = ["BÛTTÊR", "reda", "Rem", "♠Zenon♠", "Whiispperss"];
   const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
   const [loadingStaff, setLoadingStaff] = useState(true);
 
@@ -274,6 +283,26 @@ export default function SupportClient() {
                   </span>
                 );
               })}
+            </div>
+            {/* Mods & Support Staff */}
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">🎫 Mods & Support</div>
+              <div className="flex flex-wrap gap-2">
+                {modStaff.map((name) => {
+                  const isOnline = onlineStaff.has(name);
+                  const s = staffRoles[name];
+                  if (!s) return null;
+                  return (
+                    <span key={name} className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-300 hover:scale-105"
+                      style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 8px ${s.glow}` }}>
+                      <span className={`h-2 w-2 rounded-full shrink-0 transition-all duration-300 ${isOnline ? "animate-pulse" : ""}`}
+                        style={{ background: isOnline ? "#4ade80" : s.text, opacity: isOnline ? 1 : 0.4 }} />
+                      <span style={{ color: s.text }}>{name}</span>
+                      <span className="ml-1 text-[9px] opacity-60" style={{ color: s.text }}>{s.badge}</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

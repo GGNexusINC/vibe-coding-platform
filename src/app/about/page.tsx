@@ -54,8 +54,17 @@ const ownerStyles: Record<string, { border: string; bg: string; glow: string; te
   Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.1)",  glow: "rgba(251,146,60,0.25)",  text: "#fdba74", badge: "🔥 Owner" },
 };
 
+const staffRoles: Record<string, { text: string; border: string; bg: string; glow: string; badge: string }> = {
+  "BÛTTÊR":     { text: "#93c5fd", border: "rgba(147,197,253,0.4)", bg: "rgba(147,197,253,0.07)", glow: "rgba(147,197,253,0.15)", badge: "🎫 Support" },
+  "reda":        { text: "#6ee7b7", border: "rgba(110,231,183,0.4)", bg: "rgba(110,231,183,0.07)", glow: "rgba(110,231,183,0.15)", badge: "🎮 In-Game Support" },
+  "Rem":         { text: "#c4b5fd", border: "rgba(196,181,253,0.4)", bg: "rgba(196,181,253,0.07)", glow: "rgba(196,181,253,0.15)", badge: "🛡️ Discord Mod" },
+  "♠Zenon♠":    { text: "#fca5a5", border: "rgba(252,165,165,0.4)", bg: "rgba(252,165,165,0.07)", glow: "rgba(252,165,165,0.15)", badge: "🎫 Support" },
+  "Whiispperss": { text: "#d8b4fe", border: "rgba(216,180,254,0.4)", bg: "rgba(216,180,254,0.07)", glow: "rgba(216,180,254,0.15)", badge: "🛡️ Discord Mod" },
+};
+
 export default function AboutPage() {
   const admins = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
+  const staff = ["BÛTTÊR", "reda", "Rem", "♠Zenon♠", "Whiispperss"];
 
   return (
     <div className="relative overflow-hidden">
@@ -170,6 +179,22 @@ export default function AboutPage() {
                   </div>
                 );
               })}
+            </div>
+            <div className="mt-5 pt-4 border-t border-white/5">
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🎫 Moderators & Support</div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {staff.map((name) => {
+                  const s = staffRoles[name];
+                  if (!s) return null;
+                  return (
+                    <div key={name} className="relative rounded-xl px-3 py-3 text-center text-sm font-semibold transition hover:-translate-y-0.5"
+                      style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 10px ${s.glow}` }}>
+                      <div style={{ color: s.text }}>{name}</div>
+                      <div className="mt-1 text-[9px] font-semibold tracking-widest opacity-70" style={{ color: s.text }}>{s.badge}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <p className="mt-4 text-xs text-stone-500 leading-relaxed">
               Our staff team keeps the server running, tickets answered, and the community positive. Need help? Use the <a href="/support" className="text-orange-400 hover:underline">Support page</a> to open a ticket and chat with staff directly.
