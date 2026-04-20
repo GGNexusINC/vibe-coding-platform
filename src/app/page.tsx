@@ -367,9 +367,9 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
       setOsStep(i + 1);
       setOsBar(Math.round(((i + 1) / OS_CHECKS.length) * 100));
       a?.countTick(180 + i * 18);
-    }, 400 + i * 520));
-    // transition to countdown
-    const done = setTimeout(() => setPhase("intro"), 400 + OS_CHECKS.length * 520 + 600);
+    }, 800 + i * 1100));
+    // transition to countdown — linger on "ACCESS GRANTED" for 2.5s
+    const done = setTimeout(() => setPhase("intro"), 800 + OS_CHECKS.length * 1100 + 2500);
     return () => { stepTimers.forEach(clearTimeout); clearTimeout(done); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -384,10 +384,10 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
       setTimeout(() => setCountFlash(false), 120);
     };
     // 3 … 2 … 1 … GO
-    const t0 = setTimeout(() => { flash(3); a?.countTick(200); }, 100);
-    const t1 = setTimeout(() => { flash(2); a?.countTick(240); }, 950);
-    const t2 = setTimeout(() => { flash(1); a?.countTick(300); }, 1800);
-    const t3 = setTimeout(() => { flash(0); a?.goBlast(); setPhase("boot"); }, 2650);
+    const t0 = setTimeout(() => { flash(3); a?.countTick(200); }, 200);
+    const t1 = setTimeout(() => { flash(2); a?.countTick(240); }, 1500);
+    const t2 = setTimeout(() => { flash(1); a?.countTick(300); }, 2800);
+    const t3 = setTimeout(() => { flash(0); a?.goBlast(); setPhase("boot"); }, 4100);
     return () => [t0,t1,t2,t3].forEach(clearTimeout);
   }, [phase]);
 
@@ -397,12 +397,12 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
     const a = audioRef.current;
     shake();
     const timers = [
-      setTimeout(() => setRingScale(1), 200),
-      setTimeout(() => { setPhase("glitch"); shake(); a?.glitchStatic(); }, 800),
-      setTimeout(() => { a?.glitchStatic(); }, 1200),
-      setTimeout(() => setPhase("reveal"), 1800),
-      setTimeout(() => { setPhase("lore"); setShowMatrix(false); a?.riseChord(); }, 3200),
-      setTimeout(() => setPhase("done"), 11000),
+      setTimeout(() => setRingScale(1), 300),
+      setTimeout(() => { setPhase("glitch"); shake(); a?.glitchStatic(); }, 1200),
+      setTimeout(() => { a?.glitchStatic(); }, 1900),
+      setTimeout(() => setPhase("reveal"), 3000),
+      setTimeout(() => { setPhase("lore"); setShowMatrix(false); a?.riseChord(); }, 5500),
+      setTimeout(() => setPhase("done"), 18000),
     ];
     let gCount = 0;
     const giv = setInterval(() => {
