@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import fs from "fs/promises";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -12,6 +11,14 @@ const EXT_MAP: Record<string, string> = {
   "image/gif": ".gif",
   "image/webp": ".webp",
 };
+const BUCKET = "uploads";
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function POST(req: Request) {
   const admin = await getAdminSession();
@@ -44,18 +51,29 @@ export async function POST(req: Request) {
     );
   }
 
-  // Save to /public/uploads/ with a unique filename
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await fs.mkdir(uploadsDir, { recursive: true });
+  const supabase = getSupabase();
+
+  // Ensure bucket exists (idempotent — ignores if already created)
+  await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
 
   const ext = EXT_MAP[file.type] || ".png";
   const uniqueId = crypto.randomBytes(8).toString("hex");
-  const filename = `${uniqueId}${ext}`;
-  const filePath = path.join(uploadsDir, filename);
+  const filePath = `arena/${uniqueId}${ext}`;
 
-  await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(filePath, Buffer.from(arrayBuffer), {
+      contentType: file.type,
+      upsert: true,
+    });
 
-  const url = `/uploads/${filename}`;
+  if (uploadError) {
+    console.error("[upload] Supabase storage error:", uploadError);
+    return NextResponse.json({ ok: false, error: uploadError.message }, { status: 500 });
+  }
+
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+  const url = urlData.publicUrl;
 
   return NextResponse.json({ ok: true, url, name: file.name, type: file.type });
 }

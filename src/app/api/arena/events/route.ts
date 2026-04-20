@@ -34,12 +34,21 @@ async function sendDiscordDM(userId: string, message: string) {
   }
 }
 
-// GET all events
-export async function GET() {
-  const { data: events, error } = await supabase
+// GET all events (exclude completed unless ?all=true)
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const showAll = searchParams.get("all") === "true";
+
+  let query = supabase
     .from("arena_events")
     .select("*, arena_teams(count)")
     .order("created_at", { ascending: false });
+
+  if (!showAll) {
+    query = query.neq("status", "completed");
+  }
+
+  const { data: events, error } = await query;
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
