@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const translations = {
   en: {
@@ -75,6 +75,162 @@ type AdminEntry = {
   lastSeen: string | null;
 };
 
+/* ── Easter Egg ── */
+const REQUIRED_CLICKS = 5;
+const EGG_MESSAGES = [
+  "YOU FOUND IT.",
+  "THE SIGNAL WAS ALWAYS THERE.",
+  "SURVIVE. ADAPT. CONTROL.",
+  "THE NEXUS REMEMBERS YOU.",
+];
+
+type Particle = { id: number; x: number; y: number; vx: number; vy: number; size: number; color: string; life: number };
+
+function EasterEggOverlay({ onClose }: { onClose: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const rafRef = useRef<number>(0);
+  const [phase, setPhase] = useState<"explode" | "reveal" | "done">("explode");
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [glitch, setGlitch] = useState(false);
+
+  const colors = ["#f97316","#fbbf24","#14b8a6","#a78bfa","#f43f5e","#34d399","#60a5fa","#fff"];
+
+  const spawnBurst = useCallback((cx: number, cy: number, count: number) => {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      const speed = 4 + Math.random() * 14;
+      particlesRef.current.push({
+        id: Date.now() + i + Math.random(),
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - Math.random() * 4,
+        size: 2 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Initial mega burst
+    spawnBurst(canvas.width / 2, canvas.height / 2, 220);
+    setTimeout(() => spawnBurst(canvas.width * 0.25, canvas.height * 0.35, 80), 120);
+    setTimeout(() => spawnBurst(canvas.width * 0.75, canvas.height * 0.4, 80), 240);
+    setTimeout(() => spawnBurst(canvas.width / 2, canvas.height * 0.65, 120), 360);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particlesRef.current = particlesRef.current.filter(p => p.life > 0.01);
+      particlesRef.current.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.22; // gravity
+        p.vx *= 0.985;
+        p.life -= 0.012;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      rafRef.current = requestAnimationFrame(draw);
+    };
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [spawnBurst]);
+
+  // Phase sequence
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("reveal"), 900);
+    const t2 = setTimeout(() => {
+      setGlitch(true);
+      setTimeout(() => setGlitch(false), 300);
+    }, 1200);
+    const t3 = setTimeout(() => setPhase("done"), 6500);
+    // Cycle messages
+    const iv = setInterval(() => setMsgIdx(i => (i + 1) % EGG_MESSAGES.length), 1800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearInterval(iv); };
+  }, []);
+
+  useEffect(() => { if (phase === "done") onClose(); }, [phase, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-black/92 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0" />
+
+      {/* Scanline overlay */}
+      <div className="pointer-events-none absolute inset-0" style={{
+        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px)",
+      }} />
+
+      {/* Central content */}
+      {phase !== "explode" && (
+        <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center select-none">
+          {/* Glitch logo */}
+          <div className="relative">
+            <div
+              className="text-5xl sm:text-7xl font-black uppercase tracking-[0.12em] text-white"
+              style={{
+                textShadow: glitch
+                  ? "4px 0 #f43f5e, -4px 0 #14b8a6, 0 0 40px #f97316"
+                  : "0 0 60px rgba(249,115,22,0.9), 0 0 120px rgba(249,115,22,0.4)",
+                transform: glitch ? `skewX(${(Math.random()-0.5)*8}deg) translateX(${(Math.random()-0.5)*6}px)` : "none",
+                transition: "transform 0.05s",
+              }}
+            >
+              NEW<span style={{ color: "#f97316" }}>HOPE</span>GGN
+            </div>
+            {/* Glitch clone layers */}
+            {glitch && (
+              <>
+                <div className="absolute inset-0 text-5xl sm:text-7xl font-black uppercase tracking-[0.12em]" style={{ color: "#f43f5e", opacity: 0.6, transform: "translateX(5px) translateY(-2px)", mixBlendMode: "screen" }}>NEWHOPEGNN</div>
+                <div className="absolute inset-0 text-5xl sm:text-7xl font-black uppercase tracking-[0.12em]" style={{ color: "#14b8a6", opacity: 0.6, transform: "translateX(-5px) translateY(2px)", mixBlendMode: "screen" }}>NEWHOPEGNN</div>
+              </>
+            )}
+          </div>
+
+          {/* Cycling secret message */}
+          <div className="font-mono text-sm sm:text-lg font-bold uppercase tracking-[0.3em] text-teal-300"
+            style={{ textShadow: "0 0 20px rgba(20,184,166,0.8)", minHeight: "2rem" }}>
+            {EGG_MESSAGES[msgIdx]}
+          </div>
+
+          {/* Lore card */}
+          <div className="mt-2 rounded-2xl border border-orange-500/30 bg-orange-500/8 px-8 py-5 max-w-md backdrop-blur-sm"
+            style={{ boxShadow: "0 0 40px rgba(249,115,22,0.2), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 mb-2">// CLASSIFIED — NEXUS LORE //</div>
+            <p className="text-sm text-slate-200 leading-relaxed">
+              Before the servers, before the wipes — there was a signal. A small group heard it first.
+              They built a base not of metal, but of trust. They called it <span className="font-bold text-orange-300">NewHopeGGN</span>.
+              You found the signal too.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-teal-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-400 shadow-[0_0_6px_rgba(20,184,166,1)]" />
+              SIGNAL RECEIVED
+            </div>
+          </div>
+
+          <div className="mt-2 text-[10px] text-slate-600 uppercase tracking-widest">tap anywhere to return</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [lang, setLang] = useState<"en" | "es">("en");
   const [staff, setStaff] = useState<AdminEntry[]>([]);
@@ -82,6 +238,22 @@ export default function Home() {
   const [wipeMs, setWipeMs] = useState<number | null>(null);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [now, setNow] = useState(Date.now());
+  const [eggClicks, setEggClicks] = useState(0);
+  const [eggActive, setEggActive] = useState(false);
+  const eggTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleChipClick = useCallback(() => {
+    setEggClicks(prev => {
+      const next = prev + 1;
+      if (eggTimerRef.current) clearTimeout(eggTimerRef.current);
+      if (next >= REQUIRED_CLICKS) {
+        setEggActive(true);
+        return 0;
+      }
+      eggTimerRef.current = setTimeout(() => setEggClicks(0), 2500);
+      return next;
+    });
+  }, []);
 
   const t = translations[lang];
 
@@ -152,7 +324,14 @@ export default function Home() {
 
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
-            <div className="rz-chip rz-float">{t.chip}</div>
+            <div
+              className="rz-chip rz-float cursor-pointer select-none"
+              onClick={handleChipClick}
+              title="..."
+            >{t.chip}{eggClicks > 0 && eggClicks < REQUIRED_CLICKS && (
+              <span className="ml-1 font-mono text-[10px] text-orange-300/60">{"·".repeat(eggClicks)}</span>
+            )}</div>
+            {eggActive && <EasterEggOverlay onClose={() => setEggActive(false)} />}
 
             <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-4xl font-semibold uppercase tracking-[0.06em] text-white sm:text-5xl xl:text-6xl">
               {t.title}
