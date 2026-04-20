@@ -100,7 +100,7 @@ export default function Home() {
 
   useEffect(() => {
     const fetchWipe = () => {
-      fetch("/api/admin/wipe-timer")
+      fetch("/api/admin/wipe-timer", { cache: "no-store" })
         .then(r => r.json())
         .then(d => {
           if (d.ok && d.wipeAt) {
@@ -112,7 +112,7 @@ export default function Home() {
         }).catch(() => {});
     };
     fetchWipe();
-    const poll = setInterval(fetchWipe, 60000);
+    const poll = setInterval(fetchWipe, 30000);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(poll); clearInterval(tick); };
   }, []);

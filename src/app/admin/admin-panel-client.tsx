@@ -569,7 +569,10 @@ export function AdminPanelClient() {
     // Load wipe timer for dashboard display
     fetch("/api/admin/wipe-timer").then(r => r.json()).then(d => {
       if (d.ok && d.wipeAt) {
-        setWipeAt(new Date(d.wipeAt).toISOString().slice(0, 16));
+        // Convert UTC ISO to local datetime-local format for the input
+        const dt = new Date(d.wipeAt);
+        const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        setWipeAt(local);
         setWipeLabel(d.label ?? "Server Wipe");
       }
     }).catch(() => {});
