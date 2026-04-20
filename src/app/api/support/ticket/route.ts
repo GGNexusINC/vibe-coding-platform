@@ -73,25 +73,29 @@ export async function POST(req: Request) {
     const ticketId = randomUUID();
     
     // Save ticket to database
+    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      sbKey,
+      { auth: { persistSession: false } }
     );
 
     const { error: dbError } = await supabase
       .from("tickets")
       .insert({
         id: ticketId,
-        user_id: (user as any)?.id,
+        user_id: (user as any)?.id ?? null,
         guest_username: (user as any)?.username ?? "Guest",
         subject,
         message,
-        discord_channel_id: ticketChannelId,
+        discord_channel_id: ticketChannelId ?? null,
         status: "open",
       });
 
     if (dbError) {
-      console.error("[ticket] Failed to save ticket:", dbError);
+      console.error("[ticket] Failed to save ticket:", JSON.stringify(dbError));
+    } else {
+      console.log("[ticket] Saved to DB:", ticketId);
     }
 
     // Also send to logs webhook as backup
