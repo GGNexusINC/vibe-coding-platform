@@ -361,6 +361,71 @@ function formatActiveTime(days: number, minutes?: number): string {
   return parts.join(" ") || (d > 0 ? `${d}d` : "—");
 }
 
+function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string; channelId: string; adminName: string }) {
+  const [msgs, setMsgs] = useState<{id:string;author_username:string;author_avatar?:string;content:string;created_at:string}[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  async function loadMsgs() {
+    const d = await fetch(`/api/support/ticket/${ticketId}/messages?channelId=${channelId}`).then(r=>r.json()).catch(()=>({}));
+    if (d.ok) setMsgs(d.messages ?? []);
+  }
+
+  useEffect(() => { void loadMsgs(); const t = setInterval(loadMsgs, 5000); return () => clearInterval(t); }, [channelId]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim()) return;
+    setSending(true);
+    await fetch(`/api/support/ticket/${ticketId}/messages`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ message: `[Admin: ${adminName}] ${input.trim()}`, channelId }),
+    });
+    setInput(""); setSending(false); void loadMsgs();
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-cyan-400/20 bg-slate-950/80 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-cyan-500/5">
+        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+        <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-widest">Live Chat</span>
+        <span className="ml-auto text-[10px] text-slate-600">auto-refreshes every 5s</span>
+      </div>
+      <div className="h-48 overflow-y-auto px-3 py-2 space-y-2 scrollbar-none">
+        {msgs.length === 0 && <div className="text-xs text-slate-600 text-center py-4">No messages yet</div>}
+        {msgs.map(m => (
+          <div key={m.id} className="flex items-start gap-2">
+            {m.author_avatar
+              ? <img src={m.author_avatar} className="h-5 w-5 rounded-full shrink-0 mt-0.5" alt="" />
+              : <div className="h-5 w-5 rounded-full bg-slate-700 shrink-0 mt-0.5 flex items-center justify-center text-[9px] text-slate-400">{m.author_username[0]}</div>
+            }
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400">{m.author_username} </span>
+              <span className="text-[10px] text-slate-600">{new Date(m.created_at).toLocaleTimeString()}</span>
+              <div className="text-xs text-slate-300 break-words">{m.content}</div>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      <form onSubmit={send} className="flex items-center gap-2 px-3 py-2 border-t border-white/5">
+        <input
+          value={input} onChange={e => setInput(e.target.value)}
+          placeholder="Reply as admin…"
+          className="flex-1 h-8 rounded-lg border border-white/8 bg-slate-900 px-3 text-xs text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30"
+          maxLength={500}
+        />
+        <button type="submit" disabled={sending || !input.trim()}
+          className="rounded-lg bg-cyan-500/20 border border-cyan-400/20 px-3 h-8 text-xs font-bold text-cyan-300 hover:bg-cyan-500/30 transition disabled:opacity-40">
+          {sending ? "…" : "Send"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export function AdminPanelClient() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -390,6 +455,7 @@ export function AdminPanelClient() {
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets">("dashboard");
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
+  const [liveTicketId, setLiveTicketId] = useState<string|null>(null);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketStatusMsg, setTicketStatusMsg] = useState("");
   const [navScrolled, setNavScrolled] = useState(false);
@@ -3340,12 +3406,26 @@ export function AdminPanelClient() {
                             {new Date(ticket.created_at).toLocaleString()}
                           </div>
                           <div className="mt-1.5 text-sm text-slate-400 line-clamp-2 bg-slate-900/60 rounded-xl px-3 py-2 border border-white/5">{ticket.message}</div>
+                          {liveTicketId === ticket.id && ticket.discord_channel_id && (
+                            <AdminTicketChat ticketId={ticket.id} channelId={ticket.discord_channel_id} adminName={stats?.viewer?.username ?? "Admin"} />
+                          )}
                           {ticket.discord_channel_id && (
-                            <div className="mt-1 text-[11px] text-slate-600">Discord channel: <code className="text-slate-500">{ticket.discord_channel_id}</code></div>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <code className="text-[11px] text-slate-600 font-mono">{ticket.discord_channel_id}</code>
+                              <button type="button"
+                                onClick={() => setLiveTicketId(liveTicketId === ticket.id ? null : ticket.id)}
+                                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold border transition ${
+                                  liveTicketId === ticket.id
+                                    ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-300"
+                                    : "border-white/10 bg-white/5 text-slate-400 hover:text-cyan-300 hover:border-cyan-400/20"
+                                }`}>
+                                {liveTicketId === ticket.id ? "✕ Hide Chat" : "💬 Join Chat"}
+                              </button>
+                            </div>
                           )}
                         </div>
-                        <div className="flex shrink-0 gap-1.5">
-                          {ticket.status !== "resolved" && (
+                        <div className="flex shrink-0 gap-1.5 flex-wrap">
+                          {ticket.status !== "resolved" && ticket.status !== "closed" && (
                             <button type="button"
                               onClick={async () => {
                                 setTicketStatusMsg("");
@@ -3360,12 +3440,10 @@ export function AdminPanelClient() {
                             <button type="button"
                               onClick={async () => {
                                 setTicketStatusMsg("");
-                                if (ticket.discord_channel_id) {
-                                  await fetch(`/api/support/ticket/${ticket.id}/close`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({channelId: ticket.discord_channel_id}) });
-                                }
-                                const res = await fetch("/api/admin/tickets", { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: ticket.id, status:"closed"}) });
+                                const adminName = stats?.viewer?.username ?? "Admin";
+                                const res = await fetch(`/api/support/ticket/${ticket.id}/close`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({channelId: ticket.discord_channel_id ?? "", closedBy: adminName}) });
                                 const d = await res.json().catch(()=>({}));
-                                if (d.ok) { setTickets(prev => prev.map(t => t.id === ticket.id ? {...t, status:"closed"} : t)); setTicketStatusMsg("✓ Ticket closed."); }
+                                if (d.ok) { setTickets(prev => prev.map(t => t.id === ticket.id ? {...t, status:"closed"} : t)); setLiveTicketId(null); setTicketStatusMsg("✓ Ticket closed."); }
                                 else setTicketStatusMsg(d.error || "Failed.");
                               }}
                               className="rounded-lg border border-slate-500/20 bg-slate-500/10 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-slate-500/20 transition">🔒 Close</button>
