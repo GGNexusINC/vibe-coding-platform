@@ -22,12 +22,7 @@ const { joinVoiceChannel, getVoiceConnection, EndBehaviorType } = require("@disc
 const { createClient: createDeepgramClient } = require("@deepgram/sdk");
 const { pipeline } = require("stream");
 const sodium = require("libsodium-wrappers");
-
-// Initialize sodium for voice encryption
-(async () => {
-  await sodium.ready;
-  console.log("[bot] libsodium initialized");
-})();
+// libsodium-wrappers initializes lazily when needed
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
