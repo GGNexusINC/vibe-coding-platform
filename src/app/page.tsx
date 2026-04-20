@@ -77,154 +77,333 @@ type AdminEntry = {
 
 /* ── Easter Egg ── */
 const REQUIRED_CLICKS = 5;
-const EGG_MESSAGES = [
-  "YOU FOUND IT.",
-  "THE SIGNAL WAS ALWAYS THERE.",
-  "SURVIVE. ADAPT. CONTROL.",
-  "THE NEXUS REMEMBERS YOU.",
-];
 
-type Particle = { id: number; x: number; y: number; vx: number; vy: number; size: number; color: string; life: number };
+type EParticle = {
+  x: number; y: number; vx: number; vy: number;
+  size: number; color: string; life: number; shape: "circle"|"star"|"ring";
+};
+type MatrixDrop = { x: number; y: number; speed: number; chars: string[]; opacity: number };
+
+const MATRIX_CHARS = "NEWHOPEGGNSURVIVEADAPTCONTROL01アイウエオカキクケコ▓▒░█▄▀◆◇".split("");
+const PARTICLE_COLORS = ["#f97316","#fbbf24","#14b8a6","#a78bfa","#f43f5e","#34d399","#60a5fa","#ffffff","#ff006e","#8338ec"];
+
+function useTypewriter(text: string, speed = 45, active = true) {
+  const [displayed, setDisplayed] = useState("");
+  useEffect(() => {
+    if (!active) { setDisplayed(""); return; }
+    setDisplayed("");
+    let i = 0;
+    const iv = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) clearInterval(iv);
+    }, speed);
+    return () => clearInterval(iv);
+  }, [text, speed, active]);
+  return displayed;
+}
 
 function EasterEggOverlay({ onClose }: { onClose: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
-  const rafRef = useRef<number>(0);
-  const [phase, setPhase] = useState<"explode" | "reveal" | "done">("explode");
-  const [msgIdx, setMsgIdx] = useState(0);
-  const [glitch, setGlitch] = useState(false);
+  const particleCanvas = useRef<HTMLCanvasElement>(null);
+  const matrixCanvas  = useRef<HTMLCanvasElement>(null);
+  const pRef  = useRef<EParticle[]>([]);
+  const mRef  = useRef<MatrixDrop[]>([]);
+  const pRaf  = useRef<number>(0);
+  const mRaf  = useRef<number>(0);
+  const shakeRef = useRef<HTMLDivElement>(null);
 
-  const colors = ["#f97316","#fbbf24","#14b8a6","#a78bfa","#f43f5e","#34d399","#60a5fa","#fff"];
+  /* phases: boot → glitch → reveal → lore → done */
+  const [phase, setPhase] = useState<"boot"|"glitch"|"reveal"|"lore"|"done">("boot");
+  const [glitchFrame, setGlitchFrame] = useState(0);
+  const [showMatrix, setShowMatrix] = useState(true);
+  const [ringScale, setRingScale] = useState(0);
 
-  const spawnBurst = useCallback((cx: number, cy: number, count: number) => {
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
-      const speed = 4 + Math.random() * 14;
-      particlesRef.current.push({
-        id: Date.now() + i + Math.random(),
+  const lore1 = useTypewriter("SIGNAL ORIGIN: UNKNOWN", 38, phase === "lore");
+  const lore2 = useTypewriter("FOUNDING MEMBERS: CLASSIFIED", 38, phase === "lore");
+  const lore3 = useTypewriter("YOU ARE ONE OF US NOW.", 55, phase === "lore");
+
+  /* ── screen shake ── */
+  const shake = useCallback(() => {
+    const el = shakeRef.current;
+    if (!el) return;
+    let t = 0;
+    const iv = setInterval(() => {
+      const s = Math.max(0, 1 - t / 500);
+      el.style.transform = `translate(${(Math.random()-0.5)*18*s}px,${(Math.random()-0.5)*12*s}px) rotate(${(Math.random()-0.5)*1.5*s}deg)`;
+      t += 16;
+      if (t > 500) { el.style.transform = ""; clearInterval(iv); }
+    }, 16);
+  }, []);
+
+  /* ── particle burst ── */
+  const burst = useCallback((cx: number, cy: number, n: number, force = 1) => {
+    for (let i = 0; i < n; i++) {
+      const angle = (Math.PI * 2 * i) / n + Math.random() * 0.6;
+      const speed = (3 + Math.random() * 16) * force;
+      const shapes: EParticle["shape"][] = ["circle","circle","circle","star","ring"];
+      pRef.current.push({
         x: cx, y: cy,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - Math.random() * 4,
-        size: 2 + Math.random() * 5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        life: 1,
+        vy: Math.sin(angle) * speed - Math.random() * 5 * force,
+        size: 2 + Math.random() * 6,
+        color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
+        life: 0.9 + Math.random() * 0.3,
+        shape: shapes[Math.floor(Math.random() * shapes.length)],
       });
     }
   }, []);
 
+  /* ── matrix rain ── */
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = matrixCanvas.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    canvas.width = window.innerWidth;
+    canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
-
-    // Initial mega burst
-    spawnBurst(canvas.width / 2, canvas.height / 2, 220);
-    setTimeout(() => spawnBurst(canvas.width * 0.25, canvas.height * 0.35, 80), 120);
-    setTimeout(() => spawnBurst(canvas.width * 0.75, canvas.height * 0.4, 80), 240);
-    setTimeout(() => spawnBurst(canvas.width / 2, canvas.height * 0.65, 120), 360);
-
+    const cols = Math.floor(canvas.width / 18);
+    mRef.current = Array.from({ length: cols }, (_, i) => ({
+      x: i * 18 + 9, y: Math.random() * -canvas.height,
+      speed: 1.5 + Math.random() * 3,
+      chars: Array.from({ length: 28 }, () => MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]),
+      opacity: 0.3 + Math.random() * 0.5,
+    }));
+    let alive = true;
     const draw = () => {
+      if (!alive) return;
+      ctx.fillStyle = "rgba(0,0,0,0.06)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      mRef.current.forEach(d => {
+        d.y += d.speed;
+        if (d.y > canvas.height + 200) { d.y = -200; d.speed = 1.5 + Math.random() * 3; }
+        d.chars.forEach((ch, k) => {
+          const alpha = Math.max(0, d.opacity - k * 0.035);
+          if (alpha < 0.01) return;
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = k === 0 ? "#ffffff" : k < 3 ? "#f97316" : "#14b8a6";
+          ctx.font = `bold ${k === 0 ? 14 : 11}px monospace`;
+          ctx.fillText(ch, d.x, d.y - k * 16);
+          if (Math.random() < 0.01) d.chars[k] = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        });
+      });
+      ctx.globalAlpha = 1;
+      mRaf.current = requestAnimationFrame(draw);
+    };
+    mRaf.current = requestAnimationFrame(draw);
+    return () => { alive = false; cancelAnimationFrame(mRaf.current); };
+  }, []);
+
+  /* ── particle canvas ── */
+  useEffect(() => {
+    const canvas = particleCanvas.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+
+    burst(cx, cy, 300, 1.4);
+    setTimeout(() => burst(cx * 0.4,  cy * 0.6, 120, 1), 100);
+    setTimeout(() => burst(cx * 1.6,  cy * 0.7, 120, 1), 200);
+    setTimeout(() => burst(cx,        cy * 1.5,  150, 0.9), 340);
+    setTimeout(() => burst(cx * 0.3,  cy * 1.4,  80, 0.7), 480);
+    setTimeout(() => burst(cx * 1.7,  cy * 1.3,  80, 0.7), 580);
+    setTimeout(() => { burst(cx, cy, 200, 0.6); shake(); }, 1400);
+
+    let alive = true;
+    const draw = () => {
+      if (!alive) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particlesRef.current = particlesRef.current.filter(p => p.life > 0.01);
-      particlesRef.current.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.22; // gravity
-        p.vx *= 0.985;
-        p.life -= 0.012;
+      pRef.current = pRef.current.filter(p => p.life > 0.01);
+      pRef.current.forEach(p => {
+        p.x  += p.vx; p.y  += p.vy;
+        p.vy += 0.18; p.vx *= 0.988;
+        p.life -= 0.008 + Math.random() * 0.003;
+        const a = Math.max(0, p.life);
         ctx.save();
-        ctx.globalAlpha = Math.max(0, p.life);
-        ctx.fillStyle = p.color;
-        ctx.shadowBlur = 12;
+        ctx.globalAlpha = a;
+        ctx.fillStyle   = p.color;
+        ctx.shadowBlur  = 16;
         ctx.shadowColor = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-        ctx.fill();
+        if (p.shape === "star") {
+          ctx.beginPath();
+          for (let k = 0; k < 5; k++) {
+            const r1 = p.size * p.life, r2 = r1 * 0.45;
+            const a1 = (k * Math.PI * 2) / 5 - Math.PI / 2;
+            const a2 = a1 + Math.PI / 5;
+            if (k === 0) ctx.moveTo(p.x + Math.cos(a1)*r1, p.y + Math.sin(a1)*r1);
+            else ctx.lineTo(p.x + Math.cos(a1)*r1, p.y + Math.sin(a1)*r1);
+            ctx.lineTo(p.x + Math.cos(a2)*r2, p.y + Math.sin(a2)*r2);
+          }
+          ctx.closePath(); ctx.fill();
+        } else if (p.shape === "ring") {
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth   = 1.5;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.life * 2, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       });
-      rafRef.current = requestAnimationFrame(draw);
+      pRaf.current = requestAnimationFrame(draw);
     };
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [spawnBurst]);
+    pRaf.current = requestAnimationFrame(draw);
+    return () => { alive = false; cancelAnimationFrame(pRaf.current); };
+  }, [burst, shake]);
 
-  // Phase sequence
+  /* ── phase timeline ── */
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("reveal"), 900);
-    const t2 = setTimeout(() => {
-      setGlitch(true);
-      setTimeout(() => setGlitch(false), 300);
-    }, 1200);
-    const t3 = setTimeout(() => setPhase("done"), 6500);
-    // Cycle messages
-    const iv = setInterval(() => setMsgIdx(i => (i + 1) % EGG_MESSAGES.length), 1800);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearInterval(iv); };
-  }, []);
+    shake();
+    const timers = [
+      setTimeout(() => setRingScale(1), 200),
+      setTimeout(() => { setPhase("glitch"); shake(); }, 800),
+      setTimeout(() => setPhase("reveal"), 1800),
+      setTimeout(() => { setPhase("lore"); setShowMatrix(false); }, 3200),
+      setTimeout(() => setPhase("done"), 11000),
+    ];
+    /* glitch flicker */
+    let gCount = 0;
+    const giv = setInterval(() => {
+      setGlitchFrame(f => f + 1);
+      gCount++;
+      if (gCount > 18) clearInterval(giv);
+    }, 80);
+    return () => { timers.forEach(clearTimeout); clearInterval(giv); };
+  }, [shake]);
 
   useEffect(() => { if (phase === "done") onClose(); }, [phase, onClose]);
 
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-black/92 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0" />
+  const isGlitching = phase === "glitch" || (phase === "reveal" && glitchFrame % 7 < 2);
+  const gx = isGlitching ? `${(Math.random()-0.5)*10}px` : "0px";
+  const gsk = isGlitching ? `${(Math.random()-0.5)*6}deg` : "0deg";
 
-      {/* Scanline overlay */}
+  return (
+    <div ref={shakeRef} className="fixed inset-0 z-[9999] overflow-hidden" style={{ background: "rgba(0,0,0,0.95)" }} onClick={onClose}>
+
+      {/* Matrix rain */}
+      <canvas ref={matrixCanvas} className="pointer-events-none absolute inset-0"
+        style={{ opacity: showMatrix ? 0.55 : 0, transition: "opacity 1.2s" }} />
+
+      {/* Particles */}
+      <canvas ref={particleCanvas} className="pointer-events-none absolute inset-0" />
+
+      {/* Scanlines */}
       <div className="pointer-events-none absolute inset-0" style={{
-        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px)",
+        backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.22) 3px,rgba(0,0,0,0.22) 4px)",
       }} />
 
-      {/* Central content */}
-      {phase !== "explode" && (
-        <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center select-none">
-          {/* Glitch logo */}
-          <div className="relative">
-            <div
-              className="text-5xl sm:text-7xl font-black uppercase tracking-[0.12em] text-white"
-              style={{
-                textShadow: glitch
-                  ? "4px 0 #f43f5e, -4px 0 #14b8a6, 0 0 40px #f97316"
-                  : "0 0 60px rgba(249,115,22,0.9), 0 0 120px rgba(249,115,22,0.4)",
-                transform: glitch ? `skewX(${(Math.random()-0.5)*8}deg) translateX(${(Math.random()-0.5)*6}px)` : "none",
-                transition: "transform 0.05s",
-              }}
-            >
-              NEW<span style={{ color: "#f97316" }}>HOPE</span>GGN
+      {/* Pulsing rings */}
+      {[0,1,2].map(i => (
+        <div key={i} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-500/20"
+          style={{
+            width:  `${(i+1) * 280}px`, height: `${(i+1) * 280}px`,
+            transform: `translate(-50%,-50%) scale(${ringScale})`,
+            transition: `transform ${0.6 + i*0.25}s cubic-bezier(0.34,1.56,0.64,1)`,
+            boxShadow: `0 0 ${20+i*10}px rgba(249,115,22,${0.12-i*0.03}), inset 0 0 ${30+i*15}px rgba(249,115,22,${0.06-i*0.015})`,
+            opacity: ringScale,
+          }} />
+      ))}
+
+      {/* ── Phase: boot ── */}
+      {phase === "boot" && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="font-mono text-xs text-teal-400/60 animate-pulse tracking-widest">SIGNAL DETECTED…</div>
+        </div>
+      )}
+
+      {/* ── Phase: glitch ── */}
+      {(phase === "glitch" || phase === "reveal") && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative select-none" style={{ transform: `translateX(${gx}) skewX(${gsk})`, transition: "transform 0.04s" }}>
+            <div className="text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] text-white leading-none"
+              style={{ textShadow: isGlitching ? "6px 0 #f43f5e,-6px 0 #14b8a6,0 0 60px #f97316" : "0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.5)" }}>
+              NEW<span style={{ color: "#f97316" }}>HOPE</span><span style={{ color: "#fbbf24" }}>GGN</span>
             </div>
-            {/* Glitch clone layers */}
-            {glitch && (
-              <>
-                <div className="absolute inset-0 text-5xl sm:text-7xl font-black uppercase tracking-[0.12em]" style={{ color: "#f43f5e", opacity: 0.6, transform: "translateX(5px) translateY(-2px)", mixBlendMode: "screen" }}>NEWHOPEGNN</div>
-                <div className="absolute inset-0 text-5xl sm:text-7xl font-black uppercase tracking-[0.12em]" style={{ color: "#14b8a6", opacity: 0.6, transform: "translateX(-5px) translateY(2px)", mixBlendMode: "screen" }}>NEWHOPEGNN</div>
-              </>
-            )}
+            {isGlitching && <>
+              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
+                style={{ color: "#f43f5e", opacity: 0.7, transform: "translateX(7px) translateY(-3px) scaleX(1.01)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
+              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
+                style={{ color: "#14b8a6", opacity: 0.7, transform: "translateX(-7px) translateY(3px) scaleX(0.99)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
+              <div className="absolute inset-0 text-[clamp(3rem,10vw,7rem)] font-black uppercase tracking-[0.08em] leading-none"
+                style={{ color: "#8338ec", opacity: 0.4, transform: "translateY(5px)", mixBlendMode: "screen", pointerEvents: "none" }}>NEWHOPEGNN</div>
+            </>}
           </div>
+        </div>
+      )}
 
-          {/* Cycling secret message */}
-          <div className="font-mono text-sm sm:text-lg font-bold uppercase tracking-[0.3em] text-teal-300"
-            style={{ textShadow: "0 0 20px rgba(20,184,166,0.8)", minHeight: "2rem" }}>
-            {EGG_MESSAGES[msgIdx]}
-          </div>
+      {/* ── Phase: lore ── */}
+      {phase === "lore" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0 px-4" onClick={e => e.stopPropagation()}>
 
-          {/* Lore card */}
-          <div className="mt-2 rounded-2xl border border-orange-500/30 bg-orange-500/8 px-8 py-5 max-w-md backdrop-blur-sm"
-            style={{ boxShadow: "0 0 40px rgba(249,115,22,0.2), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
-            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 mb-2">// CLASSIFIED — NEXUS LORE //</div>
-            <p className="text-sm text-slate-200 leading-relaxed">
-              Before the servers, before the wipes — there was a signal. A small group heard it first.
-              They built a base not of metal, but of trust. They called it <span className="font-bold text-orange-300">NewHopeGGN</span>.
-              You found the signal too.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-teal-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-400 shadow-[0_0_6px_rgba(20,184,166,1)]" />
-              SIGNAL RECEIVED
+          {/* Big glowing title */}
+          <div className="mb-8 text-center select-none">
+            <div className="text-[clamp(2.5rem,8vw,5.5rem)] font-black uppercase tracking-[0.1em] leading-none"
+              style={{ textShadow: "0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.6),0 0 240px rgba(249,115,22,0.3)" }}>
+              <span style={{ color: "#fed7aa" }}>NEW</span><span style={{ color: "#f97316" }}>HOPE</span><span style={{ color: "#fbbf24" }}>GGN</span>
+            </div>
+            <div className="mt-2 font-mono text-xs sm:text-sm tracking-[0.35em] uppercase text-teal-300/80"
+              style={{ textShadow: "0 0 20px rgba(20,184,166,0.9)" }}>
+              ── SIGNAL RECEIVED ──
             </div>
           </div>
 
-          <div className="mt-2 text-[10px] text-slate-600 uppercase tracking-widest">tap anywhere to return</div>
+          {/* Terminal card */}
+          <div className="w-full max-w-lg rounded-2xl border border-teal-500/25 bg-black/70 overflow-hidden backdrop-blur-sm"
+            style={{ boxShadow: "0 0 60px rgba(20,184,166,0.15),0 0 120px rgba(249,115,22,0.08),inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center gap-2 border-b border-teal-500/15 bg-teal-500/5 px-5 py-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-teal-400" />
+              <span className="ml-3 font-mono text-[10px] text-teal-400/60 tracking-widest">NEXUS_CLASSIFIED.EXE</span>
+            </div>
+            <div className="p-6 font-mono text-sm space-y-3">
+              <div className="text-teal-400">
+                <span className="text-teal-600 mr-2">&gt;_</span>{lore1}<span className="animate-pulse">▋</span>
+              </div>
+              {lore1.length >= 22 && (
+                <div className="text-orange-300">
+                  <span className="text-teal-600 mr-2">&gt;_</span>{lore2}<span className="animate-pulse">▋</span>
+                </div>
+              )}
+              {lore2.length >= 28 && (
+                <div className="mt-2 text-white font-bold text-base">
+                  <span className="text-teal-600 mr-2">&gt;_</span>{lore3}<span className="animate-pulse text-orange-400">█</span>
+                </div>
+              )}
+              {lore3.length >= 21 && (
+                <div className="mt-4 pt-4 border-t border-white/8">
+                  <div className="text-[10px] text-slate-600 uppercase tracking-widest mb-3">// COMMUNITY INTEL //</div>
+                  <div className="grid grid-cols-2 gap-3 text-[11px]">
+                    {[
+                      { k: "STATUS", v: "ACTIVE", c: "text-teal-400" },
+                      { k: "WIPE CYCLE", v: "ONGOING", c: "text-amber-400" },
+                      { k: "FOUNDING BASE", v: "SECURED", c: "text-emerald-400" },
+                      { k: "YOUR RANK", v: "SIGNAL BEARER", c: "text-orange-300" },
+                    ].map(({k,v,c}) => (
+                      <div key={k} className="rounded-lg border border-white/6 bg-white/3 px-3 py-2">
+                        <div className="text-slate-600 text-[9px] uppercase tracking-wider">{k}</div>
+                        <div className={`font-bold mt-0.5 ${c}`}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Lore text */}
+          {lore3.length >= 21 && (
+            <div className="mt-6 max-w-md text-center text-sm text-slate-400 leading-relaxed animate-[fadeIn_0.6s_ease]">
+              Before the servers, before the wipes — there was a signal.<br />
+              A small group heard it first. They called it{" "}
+              <span className="font-bold text-orange-300" style={{ textShadow: "0 0 20px rgba(249,115,22,0.8)" }}>NewHopeGGN</span>.
+            </div>
+          )}
+
+          <div className="mt-6 text-[10px] text-slate-700 uppercase tracking-widest animate-pulse">tap anywhere to return</div>
         </div>
       )}
     </div>
