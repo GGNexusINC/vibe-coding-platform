@@ -84,7 +84,6 @@ export async function POST(req: Request) {
       .from("tickets")
       .insert({
         id: ticketId,
-        user_id: (user as any)?.id ?? null,
         guest_username: (user as any)?.username ?? "Guest",
         subject,
         message,

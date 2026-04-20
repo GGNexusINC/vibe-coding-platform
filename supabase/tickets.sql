@@ -1,6 +1,6 @@
 create table if not exists public.tickets (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   guest_email text,
   guest_username text not null,
   subject text not null,
