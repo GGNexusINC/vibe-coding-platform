@@ -113,6 +113,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fire embed to ticket logs channel
+    const TICKET_LOGS_WEBHOOK = "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki";
+    const ts = Math.floor(Date.now() / 1000);
+    const discordId = (user as any)?.discord_id;
+    const username = (user as any)?.username ?? "Guest";
+    fetch(TICKET_LOGS_WEBHOOK, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        username: "NewHopeGGN Support",
+        embeds: [{
+          title: "🎫 New Support Ticket",
+          color: 0x06b6d4,
+          description: `**${subject}**\n\`\`\`${message.slice(0, 500)}${message.length > 500 ? "…" : ""}\`\`\``,
+          fields: [
+            { name: "User", value: discordId ? `<@${discordId}> (${username})` : username, inline: true },
+            { name: "Submitted", value: `<t:${ts}:R>`, inline: true },
+            ...(ticketChannelId ? [{ name: "Channel", value: `<#${ticketChannelId}>`, inline: true }] : []),
+          ],
+          footer: { text: `Ticket ID: ${ticketId}` },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => {});
+
     return NextResponse.json({ 
       ok: true, 
       ticketId,
