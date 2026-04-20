@@ -386,6 +386,7 @@ export function AdminPanelClient() {
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [webhookSaving, setWebhookSaving] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState("");
+  const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory">("dashboard");
   const [wipeAt, setWipeAt] = useState("");
@@ -1787,8 +1788,89 @@ export function AdminPanelClient() {
                 )}
               </form>
 
+              {/* ── Webhook Tutorial ── */}
+              <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-b from-indigo-950/40 to-slate-950/60 overflow-hidden">
+                <div className="px-5 pt-5 pb-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📺</span>
+                        <h3 className="text-sm font-bold text-white tracking-tight">How to Add a Webhook</h3>
+                        <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300">Tutorial</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">Step-by-step guide to adding a Discord webhook for broadcast.</p>
+                    </div>
+                    <div className="flex rounded-xl border border-white/8 bg-slate-900/60 p-0.5 gap-0.5">
+                      <button type="button" onClick={() => setTutorialVideoMode("voiceover")}
+                        className={`rounded-[10px] px-3 py-1.5 text-xs font-semibold transition ${tutorialVideoMode === "voiceover" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
+                        🔊 With Voice
+                      </button>
+                      <button type="button" onClick={() => setTutorialVideoMode("silent")}
+                        className={`rounded-[10px] px-3 py-1.5 text-xs font-semibold transition ${tutorialVideoMode === "silent" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
+                        🔇 Silent
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video Player */}
+                <div className="relative mx-4 mb-4 rounded-xl overflow-hidden border border-white/8 bg-slate-950 group cursor-zoom-in"
+                  style={{ aspectRatio: "16/9" }}
+                  onClick={(e) => {
+                    const el = e.currentTarget.querySelector("video") as HTMLVideoElement | null;
+                    if (!el) return;
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen();
+                    } else {
+                      el.requestFullscreen?.().catch(() => {});
+                    }
+                  }}>
+                  {tutorialVideoMode === "voiceover" ? (
+                    <video
+                      key="voiceover"
+                      src="/Server Profile _ Raidzone NewHopeGGn - Discord 2026-04-20 04-36-23.mp4"
+                      controls
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <video
+                      key="silent"
+                      src="/Screen Recording 2026-04-20 042211.mp4"
+                      controls
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+                    />
+                  )}
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400 pointer-events-none opacity-0 group-hover:opacity-100 transition">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+                    Click to fullscreen
+                  </div>
+                </div>
+
+                {/* Step-by-step subtitles */}
+                <div className="px-4 pb-5 grid gap-2">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-1">Steps shown in video</div>
+                  {([ 
+                    { n: "1", icon: "⚙️", title: "Open Discord Server Settings", desc: "Right-click your server icon → Server Settings → Integrations → Webhooks" },
+                    { n: "2", icon: "➕", title: "Create New Webhook", desc: "Click New Webhook, give it a name, choose the channel, and copy the Webhook URL" },
+                    { n: "3", icon: "📋", title: "Copy the URL", desc: "Click Copy Webhook URL — it looks like discord.com/api/webhooks/..." },
+                    { n: "4", icon: "🔗", title: "Paste into the panel below", desc: "Enter a label for what it is and paste the URL, then click + Add Webhook" },
+                    { n: "5", icon: "✅", title: "Select & broadcast", desc: "Your new webhook appears in the destination dropdown — select it and send!" },
+                  ] as {n:string;icon:string;title:string;desc:string}[]).map(step => (
+                    <div key={step.n} className="flex items-start gap-3 rounded-xl border border-white/5 bg-slate-900/50 px-3 py-2.5">
+                      <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/20 text-[10px] font-black text-indigo-300">{step.n}</div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200"><span>{step.icon}</span>{step.title}</div>
+                        <div className="mt-0.5 text-[11px] text-slate-500 leading-relaxed">{step.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* ── Custom Webhooks Manager ── */}
-              <div className="mt-6 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
+              <div className="rounded-2xl border border-white/8 bg-slate-900/50 p-4">
                 <h3 className="text-sm font-bold text-slate-300 mb-3">🔗 Custom Webhooks</h3>
                 {customWebhooks.length > 0 && (
                   <div className="grid gap-2 mb-4">
