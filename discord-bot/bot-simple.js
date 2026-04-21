@@ -21,25 +21,53 @@ const client = new Client({
   ],
 });
 
-// Simple slash command
+// Simple slash commands
 const pingCommand = {
   name: "ping",
   description: "Test bot responsiveness",
 };
 
+const vcListenCommand = {
+  name: "vclisten",
+  description: "Start listening to voice channel for live translation",
+  options: [
+    {
+      name: "language",
+      description: "Target language for translation",
+      type: 3, // STRING
+      required: true,
+      choices: [
+        { name: "English", value: "en" },
+        { name: "Spanish", value: "es" },
+        { name: "Portuguese", value: "pt" },
+        { name: "French", value: "fr" },
+        { name: "German", value: "de" },
+        { name: "Russian", value: "ru" },
+        { name: "Chinese", value: "zh" },
+        { name: "Japanese", value: "ja" },
+      ],
+    },
+  ],
+};
+
+const vcStopCommand = {
+  name: "vcstop",
+  description: "Stop voice listening and leave voice channel",
+};
+
 client.once("ready", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
 
-  // Register simple slash command
+  // Register slash commands
   const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
   try {
     await rest.put(
       Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-      { body: [pingCommand] },
+      { body: [pingCommand, vcListenCommand, vcStopCommand] },
     );
-    console.log("[bot] Simple slash command registered.");
+    console.log("[bot] Slash commands registered.");
   } catch (e) {
-    console.error("[bot] Failed to register slash command:", e.message);
+    console.error("[bot] Failed to register slash commands:", e.message);
   }
 });
 
@@ -48,6 +76,26 @@ client.on("interactionCreate", async (interaction) => {
   
   if (interaction.commandName === "ping") {
     await interaction.reply("🏓 Pong! Bot is responsive.");
+  }
+  
+  if (interaction.commandName === "vclisten") {
+    const voiceChannel = interaction.member?.voice?.channel;
+    if (!voiceChannel) {
+      return interaction.reply({ content: "❌ You must be in a voice channel to use this command.", ephemeral: true });
+    }
+    
+    const targetLang = interaction.options.getString("language");
+    await interaction.reply({ 
+      content: `🎤 Voice listening feature is not yet implemented in this simple version. Would translate to **${targetLang}** in **${voiceChannel.name}**.`, 
+      ephemeral: true 
+    });
+  }
+  
+  if (interaction.commandName === "vcstop") {
+    await interaction.reply({ 
+      content: "🔇 Voice stop feature is not yet implemented in this simple version.", 
+      ephemeral: true 
+    });
   }
 });
 
