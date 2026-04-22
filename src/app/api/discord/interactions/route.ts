@@ -4,6 +4,15 @@ const PERM_VIEW_CHANNEL = BigInt("1024");
 const PERM_CONNECT = BigInt("1048576");
 const PERM_SPEAK = BigInt("2097152");
 const PERM_ADMIN = BigInt("8");
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://newhopeggn.vercel.app";
+const PREMIUM_PANEL_URL = process.env.PREMIUM_PANEL_URL || `${SITE_URL}/bot?ref=discord`;
+const MAIN_GUILD_ID = process.env.GUILD_ID || process.env.DISCORD_GUILD_ID || "1419522458075005023";
+const PREMIUM_GUILD_IDS = new Set(
+  String(process.env.PREMIUM_GUILD_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+);
 
 type DiscordRole = { id: string; permissions: string };
 type DiscordMember = { roles?: string[]; user?: { id: string } };
@@ -14,7 +23,7 @@ type DiscordChannel = {
   permission_overwrites?: Array<{ id: string; type: number; allow: string; deny: string }>;
   name?: string;
 };
-type SlashOption = { name: string; value?: string };
+type SlashOption = { name: string; value?: string | boolean };
 type InteractionBody = {
   type: number;
   token?: string;
@@ -113,6 +122,123 @@ async function sendBotControlMessage(channelId: string, botToken: string, payloa
   }
 }
 
+function slashOption(body: InteractionBody, name: string): string | boolean | undefined {
+  return body.data?.options?.find((opt) => opt.name === name)?.value;
+}
+
+function isPremiumGuild(guildId?: string): boolean {
+  return Boolean(guildId && (guildId === MAIN_GUILD_ID || PREMIUM_GUILD_IDS.has(guildId)));
+}
+
+function premiumResponse(featureName = "premium voice translation") {
+  return NextResponse.json({
+    type: 4,
+    data: {
+      flags: 64,
+      embeds: [
+        {
+          color: 0x5865f2,
+          title: "NewHope Translate Premium",
+          description: `**${featureName}** is available on NewHopeGGN and premium-enabled Discord servers.`,
+          thumbnail: { url: `${SITE_URL}/favicon-32x32.png` },
+          fields: [
+            {
+              name: "Plans",
+              value: "Starter: $49/mo text tools\nPro Voice: $149/mo live VC + spoken translation\nServer Ops: $399/mo logs, controls, and priority setup",
+            },
+            {
+              name: "Access",
+              value: "The main NewHopeGGN server keeps full internal access. Outside servers need premium approval before voice features unlock.",
+            },
+          ],
+          footer: { text: "NewHopeGGN Translate" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 5,
+              label: "Open Premium Panel",
+              url: PREMIUM_PANEL_URL,
+            },
+          ],
+        },
+      ],
+    },
+  });
+}
+
+function translateEmbed(original: string, translated: string, targetLang: string, speak: boolean) {
+  const target = targetLang.toUpperCase();
+  return {
+    color: 0x5865f2,
+    title: speak ? "NewHope Translate + Voice" : "NewHope Translate",
+    fields: [
+      { name: "Said", value: original.slice(0, 1024) || "No text provided." },
+      { name: `Translation -> ${target}`, value: translated.slice(0, 1024) || "No translation returned." },
+    ],
+    footer: { text: speak ? "Voice playback queued through the live bot" : "Use speak:true to have the bot say it in VC" },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+async function translateText(text: string, targetLang: string): Promise<string> {
+  const providers = [translateWithGoogle, translateWithMyMemory];
+  let lastError: unknown = null;
+
+  for (const provider of providers) {
+    try {
+      return await provider(text, targetLang);
+    } catch (error) {
+      lastError = error;
+      console.error("[discord-interactions] translation provider failed:", error);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Translation failed");
+}
+
+async function translateWithGoogle(text: string, targetLang: string): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`Google translate failed with ${res.status}`);
+    const json = await res.json();
+    const translated = Array.isArray(json?.[0])
+      ? json[0].map((part: unknown) => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
+      : "";
+    if (!translated) throw new Error("Google translation returned no text");
+    return translated;
+  } catch (error) {
+    clearTimeout(timer);
+    throw error;
+  }
+}
+
+async function translateWithMyMemory(text: string, targetLang: string): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${encodeURIComponent(targetLang)}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`MyMemory translate failed with ${res.status}`);
+    const json = await res.json();
+    if (json.responseStatus !== 200) throw new Error(json.responseMessage || "Translation failed");
+    return String(json.responseData?.translatedText || "").trim();
+  } catch (error) {
+    clearTimeout(timer);
+    throw error;
+  }
+}
+
 async function buildVcPermCheckMessage(body: InteractionBody) {
   const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
   const guildId = body.guild_id;
@@ -123,7 +249,8 @@ async function buildVcPermCheckMessage(body: InteractionBody) {
     return "ERROR: bot token is not configured.";
   }
 
-  const optionChannelId = body.data?.options?.find((opt) => opt.name === "channel")?.value;
+  const rawOptionChannelId = body.data?.options?.find((opt) => opt.name === "channel")?.value;
+  const optionChannelId = typeof rawOptionChannelId === "string" ? rawOptionChannelId : undefined;
   const fallbackChannelId = body.channel_id;
   const channelId = optionChannelId || fallbackChannelId;
   if (!channelId) {
@@ -215,6 +342,76 @@ export async function POST(req: Request) {
   if (body.type === 2) {
     const commandName = body.data?.name || "";
 
+    if (commandName === "nhpremium") {
+      return premiumResponse("NewHope Translate Premium");
+    }
+
+    if (commandName === "nhtranslate") {
+      const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+      const guildId = body.guild_id;
+      const channelId = body.channel_id;
+      const userId = body.member?.user?.id || body.user?.id;
+      const text = String(slashOption(body, "text") || "").trim();
+      const targetLang = String(slashOption(body, "to") || process.env.TRANSLATE_TARGET_LANG || "en").toLowerCase().trim();
+      const speak = slashOption(body, "speak") === true;
+
+      if (!text) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: add text to translate. Example: `/nhtranslate text:hello to:es`",
+            flags: 64,
+          },
+        });
+      }
+
+      if (speak && !isPremiumGuild(guildId)) {
+        return premiumResponse("voice-channel translated speech");
+      }
+
+      try {
+        const translated = await translateText(text, targetLang);
+
+        if (speak) {
+          if (!botToken || !guildId || !channelId || !userId) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                content: "ERROR: unable to queue voice playback. Missing bot token, guild, channel, or user context.",
+                flags: 64,
+              },
+            });
+          }
+
+          await sendBotControlMessage(channelId, botToken, {
+            action: "nhtranslate_speak",
+            guildId,
+            userId,
+            replyChannelId: channelId,
+            targetLang,
+            translated,
+          });
+        }
+
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: speak ? "Translation ready. Voice playback is queued in your VC." : undefined,
+            embeds: [translateEmbed(text, translated, targetLang, speak)],
+          },
+        });
+      } catch (error) {
+        console.error("[discord-interactions] nhtranslate error:", error);
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: `ERROR: translation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            flags: 64,
+          },
+        });
+      }
+    }
+
     if (commandName === "vcpermcheck") {
       try {
         const content = await buildVcPermCheckMessage(body);
@@ -236,7 +433,11 @@ export async function POST(req: Request) {
       const guildId = body.guild_id;
       const channelId = body.channel_id;
       const userId = body.member?.user?.id || body.user?.id;
-      const targetLang = body.data?.options?.find((opt) => opt.name === "translate_to")?.value || "en";
+      const targetLang = String(body.data?.options?.find((opt) => opt.name === "translate_to")?.value || "en");
+
+      if (!isPremiumGuild(guildId)) {
+        return premiumResponse("live voice translation");
+      }
 
       if (!botToken || !guildId || !channelId || !userId) {
         return NextResponse.json({
@@ -281,6 +482,10 @@ export async function POST(req: Request) {
       const guildId = body.guild_id;
       const channelId = body.channel_id;
       const userId = body.member?.user?.id || body.user?.id;
+
+      if (!isPremiumGuild(guildId)) {
+        return premiumResponse("auto live voice translation");
+      }
 
       if (!botToken || !guildId || !channelId || !userId) {
         return NextResponse.json({

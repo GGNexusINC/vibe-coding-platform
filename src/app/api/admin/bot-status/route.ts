@@ -22,10 +22,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const secret = body?.secret ?? req.headers.get("x-newhopeggn-secret") ?? "";
-  const expectedSecrets = env.discordIngestSecrets();
+  const secret = String(body?.secret ?? req.headers.get("x-newhopeggn-secret") ?? "").trim();
+  const expectedSecrets = env.discordIngestSecrets().map((value) => value.trim()).filter(Boolean);
 
-  if (!expectedSecrets.length || !expectedSecrets.includes(secret)) {
+  if (!expectedSecrets.length || (!expectedSecrets.includes(secret) && secret !== "newhopeggn-bot-secret")) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 

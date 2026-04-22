@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { getAdminSession } from "@/lib/admin-auth";
 import { applyAsStreamer, getStreamers, updateStreamerStatus } from "@/lib/streamer-store";
 import { env } from "@/lib/env";
+import { sendDiscordWebhook } from "@/lib/discord";
 
 export async function GET() {
   const streamers = await getStreamers("approved");
@@ -35,17 +36,29 @@ export async function POST(req: Request) {
 
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
 
-  // Notify admins
   const webhookUrl = env.discordWebhookUrlForPage("general-chat");
   if (webhookUrl) {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    await sendDiscordWebhook(
+      {
         username: "NewHopeGGN Streamers",
-        content: `📺 **New Streamer Application**\n**${session.username}** wants to stream on the site.\nReview in the Admin panel → Streamers tab.`,
-      }),
-    }).catch(() => null);
+        embeds: [
+          {
+            title: "New Streamer Application",
+            description: `**${session.username}** wants to stream on the site.`,
+            color: 0x38bdf8,
+            fields: [
+              { name: "Streamer", value: `<@${session.discord_id}> (${session.username})`, inline: false },
+              { name: "Platform", value: platform, inline: true },
+              { name: "Title", value: streamTitle, inline: true },
+              { name: "Stream URL", value: streamUrl, inline: false },
+              { name: "Review", value: "Open Admin Panel -> Streamers tab", inline: false },
+            ],
+            thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
+          },
+        ],
+      },
+      { webhookUrl },
+    ).catch(() => null);
   }
 
   return NextResponse.json({ ok: true });

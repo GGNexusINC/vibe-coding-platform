@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { sendDiscordWebhook } from "@/lib/discord";
 import { buildRewardInventoryItem, getCurrentWipeCycle } from "@/lib/reward-inventory";
 import { scoreToWhackAMolePrize, type OnceHumanPrize } from "@/lib/once-human-items";
 
@@ -21,9 +22,9 @@ export async function POST(req: Request) {
   if (!session?.discord_id) {
     return NextResponse.json({ ok: false, error: "Sign in with Discord to play." }, { status: 401 });
   }
+
   const body = await req.json().catch(() => ({}));
   const score = typeof body?.score === "number" ? Math.max(0, Math.floor(body.score)) : 0;
-
   const sb = getSupabase();
 
   if (sb) {
@@ -37,9 +38,8 @@ export async function POST(req: Request) {
 
     if (existing?.spun_at) {
       const last = new Date(existing.spun_at).getTime();
-      const now = Date.now();
       const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-      const msLeft = oneWeekMs - (now - last);
+      const msLeft = oneWeekMs - (Date.now() - last);
       if (msLeft > 0) {
         const hours = Math.floor(msLeft / 3600000);
         const mins = Math.floor((msLeft % 3600000) / 60000);
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
           ok: false,
           cooldown: true,
           msLeft,
-          error: `You already spun this week! Come back in ${hours}h ${mins}m.`,
+          error: `You already spun this week. Come back in ${hours}h ${mins}m.`,
         }, { status: 429 });
       }
     }
@@ -93,10 +93,6 @@ export async function POST(req: Request) {
       let rewardError = rewardInsert.error;
 
       if (rewardError) {
-        console.warn("[minigame] Reward insert with expires_at failed, retrying without column:", {
-          error: rewardError,
-          rewardItem,
-        });
         const fallbackItem = {
           ...rewardItem,
           metadata: {
@@ -104,7 +100,7 @@ export async function POST(req: Request) {
             reward_claim_expires_at: rewardItem.metadata.reward_claim_expires_at,
           },
         } as Record<string, unknown>;
-        delete (fallbackItem as Record<string, unknown>).expires_at;
+        delete fallbackItem.expires_at;
 
         const fallbackInsert = await sb
           .from("user_inventory")
@@ -132,56 +128,49 @@ export async function POST(req: Request) {
     }
   }
 
-  // Always send to Discord minigame webhook
   const webhookUrl = env.discordWebhookUrlForPage("minigame");
-  console.log("[minigame] Discord webhook URL:", webhookUrl ? webhookUrl.slice(0, 60) + "..." : "NONE");
   if (webhookUrl) {
-    const rarityBar: Record<string, string> = {
-      legendary: "🟠🟠🟠🟠🟠",
-      epic: "🟣🟣🟣🟣⬛",
-      rare: "🔵🔵🔵⬛⬛",
-      uncommon: "🟢🟢⬛⬛⬛",
-      common: "⬜⬜⬛⬛⬛",
-      none: "⬛⬛⬛⬛⬛",
+    const rarityScore: Record<string, string> = {
+      legendary: "5 / 5",
+      epic: "4 / 5",
+      rare: "3 / 5",
+      uncommon: "2 / 5",
+      common: "1 / 5",
+      none: "0 / 5",
     };
-    const winMessage = prize.rarity === "none"
-      ? `❌ **${session.username}** played Whack-a-Mole but didn't score high enough.`
-      : `🎉 **${session.username} WON ${prize.name.toUpperCase()}!**`;
-    
-    const description = prize.rarity === "none"
-      ? `Score: **${score} hits** — No prize this week. Better luck next time!`
-      : `Congratulations! You earned **${prize.name}** (${prize.rarity.toUpperCase()} rarity)`;
+    const wonPrize = prize.rarity !== "none";
 
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        content: winMessage,
-        username: "NewHopeGGN 🐹 Whack-a-Mole",
-        embeds: [{
-          title: prize.rarity === "none" ? "No Prize This Week" : `🎁 Prize: ${prize.emoji} ${prize.name}`,
-          description,
-          color: prize.color,
-          fields: [
-            { name: "Claim Window", value: prize.rarity !== "none" ? "48 hours" : "No claim window", inline: true },
-            { name: "Choice", value: prize.rarity !== "none" ? "Use it to open a ticket or save it in inventory" : "No prize earned", inline: true },
-            { name: "Uses Per Wipe", value: "3 chances per wipe", inline: true },
-            { name: "👤 Player", value: session.username, inline: true },
-            { name: "🎯 Score", value: `**${score} hits**`, inline: true },
-            { name: "🏆 Prize Won", value: prize.rarity !== "none" ? `${prize.emoji} **${prize.name}**` : "No prize", inline: true },
-            { name: "⭐ Rarity", value: `${rarityBar[prize.rarity] ?? ""} ${prize.rarity.toUpperCase()}`, inline: false },
-            { name: "🆔 Discord ID", value: `\`${session.discord_id}\``, inline: false },
-          ],
-          image: prize.image ? { url: prize.image } : undefined,
-          thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
-          footer: { text: "NewHopeGGN Whack-a-Mole • Once per week • Rewards claim within 48 hours" },
-          timestamp: now,
-        }],
-      }),
-    }).then(async (r) => {
-      if (!r.ok) console.error("[minigame] Discord webhook failed:", r.status, await r.text().catch(() => ""));
-      else console.log("[minigame] Discord webhook sent OK:", r.status);
-    }).catch((e) => console.error("[minigame] Discord fetch error:", e));
+    await sendDiscordWebhook(
+      {
+        username: "NewHopeGGN Whack-a-Mole",
+        content: wonPrize
+          ? `**${session.username} won ${prize.name}.**`
+          : `**${session.username} played Whack-a-Mole but did not score high enough.**`,
+        embeds: [
+          {
+            title: wonPrize ? `Prize Awarded: ${prize.name}` : "No Prize This Week",
+            description: wonPrize
+              ? `A Whack-a-Mole reward has been created in inventory for **${session.username}**.`
+              : `Score: **${score} hits**. Better luck next time.`,
+            color: prize.color,
+            fields: [
+              { name: "Player", value: session.username, inline: true },
+              { name: "Score", value: `${score} hits`, inline: true },
+              { name: "Rarity", value: `${prize.rarity.toUpperCase()} (${rarityScore[prize.rarity] ?? "0 / 5"})`, inline: true },
+              { name: "Prize", value: wonPrize ? prize.name : "No prize", inline: false },
+              { name: "Claim Window", value: wonPrize ? "48 hours" : "No claim window", inline: true },
+              { name: "Claim Options", value: wonPrize ? "Use it to open a ticket or save it in inventory." : "No prize earned.", inline: true },
+              { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
+            ],
+            image: prize.image ? { url: prize.image } : undefined,
+            thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
+            footer: { text: "NewHopeGGN Whack-a-Mole - rewards claim within 48 hours" },
+            timestamp: now,
+          },
+        ],
+      },
+      { webhookUrl },
+    ).catch((e) => console.error("[minigame] Discord webhook failed:", e));
   }
 
   return NextResponse.json({ ok: true, prize, score, spunAt: now });

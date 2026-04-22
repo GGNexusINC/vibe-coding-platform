@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { sendDiscordWebhook } from "@/lib/discord";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,12 +11,8 @@ function getSupabase() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
-
-// POST - Submit beta tester request
 export async function POST(req: Request) {
   const user = await getSession();
-  
   if (!user) {
     return NextResponse.json({ ok: false, error: "Please sign in first" }, { status: 401 });
   }
@@ -23,55 +20,40 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const { reason, experience, playTime } = body;
-
     const sb = getSupabase();
 
-    // Check if already a beta tester
     const { data: existingTester } = await sb
-      .from('beta_testers')
-      .select('id')
-      .eq('discord_id', user.discord_id)
-      .eq('is_active', true)
+      .from("beta_testers")
+      .select("id")
+      .eq("discord_id", user.discord_id)
+      .eq("is_active", true)
       .single();
 
     if (existingTester) {
-      return NextResponse.json({ 
-        ok: false, 
-        error: "You are already a beta tester!" 
-      }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "You are already a beta tester." }, { status: 400 });
     }
 
-    // Check for existing request
     const { data: existingRequest } = await sb
-      .from('beta_tester_requests')
-      .select('id, status')
-      .eq('discord_id', user.discord_id)
-      .order('requested_at', { ascending: false })
+      .from("beta_tester_requests")
+      .select("id, status")
+      .eq("discord_id", user.discord_id)
+      .order("requested_at", { ascending: false })
       .limit(1)
       .single();
 
-    // Block if there's a pending request
-    if (existingRequest?.status === 'pending') {
-      return NextResponse.json({ 
-        ok: false, 
-        error: "You already have a pending request. Please wait for approval." 
-      }, { status: 400 });
+    if (existingRequest?.status === "pending") {
+      return NextResponse.json({ ok: false, error: "You already have a pending request. Please wait for approval." }, { status: 400 });
     }
 
-    // Block if already approved (they're already a beta tester)
-    if (existingRequest?.status === 'approved') {
-      return NextResponse.json({ 
-        ok: false, 
-        error: "You're already a beta tester! Check /beta portal." 
-      }, { status: 400 });
+    if (existingRequest?.status === "approved") {
+      return NextResponse.json({ ok: false, error: "You are already a beta tester. Check /beta portal." }, { status: 400 });
     }
 
-    // Allow re-applying if previous request was rejected - update it instead of creating new
-    if (existingRequest?.status === 'rejected') {
+    if (existingRequest?.status === "rejected") {
       const { error: updateError } = await sb
-        .from('beta_tester_requests')
+        .from("beta_tester_requests")
         .update({
-          status: 'pending',
+          status: "pending",
           reason: reason?.trim() || null,
           experience: experience?.trim() || null,
           play_time: playTime?.trim() || null,
@@ -80,30 +62,23 @@ export async function POST(req: Request) {
           reviewed_by: null,
           review_notes: null,
         })
-        .eq('id', existingRequest.id);
+        .eq("id", existingRequest.id);
 
       if (updateError) throw updateError;
 
-      // Get updated request for notification
       const { data: updatedRequest } = await sb
-        .from('beta_tester_requests')
-        .select('*')
-        .eq('id', existingRequest.id)
+        .from("beta_tester_requests")
+        .select("*")
+        .eq("id", existingRequest.id)
         .single();
 
-      if (updatedRequest) {
-        await notifyAdmins(updatedRequest, user);
-      }
+      if (updatedRequest) await notifyAdmins(updatedRequest, user);
 
-      return NextResponse.json({ 
-        ok: true, 
-        message: "Re-application submitted! Admins will review your application." 
-      });
+      return NextResponse.json({ ok: true, message: "Re-application submitted. Admins will review your application." });
     }
 
-    // Create the request
     const { data: request, error } = await sb
-      .from('beta_tester_requests')
+      .from("beta_tester_requests")
       .insert({
         discord_id: user.discord_id,
         username: user.username,
@@ -111,85 +86,75 @@ export async function POST(req: Request) {
         reason: reason?.trim() || null,
         experience: experience?.trim() || null,
         play_time: playTime?.trim() || null,
-        status: 'pending',
+        status: "pending",
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Send admin notification
     await notifyAdmins(request, user);
 
-    return NextResponse.json({ 
-      ok: true, 
-      message: "Request submitted! Admins will review your application." 
-    });
+    return NextResponse.json({ ok: true, message: "Request submitted. Admins will review your application." });
   } catch (e) {
     console.error("[beta/request] POST error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Failed to submit request" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-// GET - Check request status
 export async function GET() {
   const user = await getSession();
-  
   if (!user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const sb = getSupabase();
-
     const { data: request } = await sb
-      .from('beta_tester_requests')
-      .select('*')
-      .eq('discord_id', user.discord_id)
-      .order('requested_at', { ascending: false })
+      .from("beta_tester_requests")
+      .select("*")
+      .eq("discord_id", user.discord_id)
+      .order("requested_at", { ascending: false })
       .limit(1)
       .single();
 
-    return NextResponse.json({ 
-      ok: true, 
-      request: request || null 
-    });
-  } catch (e) {
+    return NextResponse.json({ ok: true, request: request || null });
+  } catch {
     return NextResponse.json({ ok: true, request: null });
   }
 }
 
 async function notifyAdmins(request: any, user: any) {
   const logsWebhookUrl = env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support");
-  
   if (!logsWebhookUrl) return;
 
   try {
-    await fetch(logsWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'Beta Tester Requests',
-        content: '@here New beta tester application received!',
-        embeds: [{
-          title: '📝 Beta Tester Request',
-          description: `**${user.username}** wants to join the beta program`,
-          color: 0xf59e0b,
-          fields: [
-            { name: 'User', value: `<@${user.discord_id}>`, inline: true },
-            { name: 'Username', value: user.username, inline: true },
-            ...(request.reason ? [{ name: 'Why join?', value: request.reason }] : []),
-            ...(request.experience ? [{ name: 'Experience', value: request.experience }] : []),
-            ...(request.play_time ? [{ name: 'Play Time', value: request.play_time }] : []),
-            { name: 'Approve', value: `[Go to Admin Panel](${process.env.NEXT_PUBLIC_SITE_URL}/admin?tab=beta) → Beta Tester Requests`, inline: false },
-          ],
-          timestamp: new Date().toISOString(),
-        }],
-      }),
-    });
+    await sendDiscordWebhook(
+      {
+        username: "NewHopeGGN Beta Requests",
+        content: "@here New beta tester application received.",
+        embeds: [
+          {
+            title: "Beta Tester Request",
+            description: `**${user.username}** wants to join the beta program.`,
+            color: 0xf59e0b,
+            fields: [
+              { name: "User", value: `<@${user.discord_id}>`, inline: true },
+              { name: "Username", value: user.username, inline: true },
+              ...(request.reason ? [{ name: "Why Join?", value: request.reason }] : []),
+              ...(request.experience ? [{ name: "Experience", value: request.experience }] : []),
+              ...(request.play_time ? [{ name: "Play Time", value: request.play_time }] : []),
+              { name: "Review", value: `[Open Admin Panel](${process.env.NEXT_PUBLIC_SITE_URL}/admin?tab=beta) -> Beta Tester Requests`, inline: false },
+            ],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { webhookUrl: logsWebhookUrl },
+    );
   } catch (e) {
     console.error("[beta/request] Admin notification failed:", e);
   }

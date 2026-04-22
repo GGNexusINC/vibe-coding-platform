@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WHACK_A_MOLE_PRIZES } from "@/lib/once-human-items";
 
 type ActivityEntry = {
   id: string;
@@ -773,6 +774,8 @@ export function AdminPanelClient() {
     item_slug: "",
     item_name: "",
     reason: "",
+    reward_source: "",
+    reward_score: "",
   });
   const [givePackageLoading, setGivePackageLoading] = useState(false);
   const [showGivePackageModal, setShowGivePackageModal] = useState(false);
@@ -1276,6 +1279,15 @@ export function AdminPanelClient() {
 
     setGivePackageLoading(true);
     
+    const rewardMetadata = givePackageForm.reward_source
+      ? {
+          reward_source: givePackageForm.reward_source,
+          reward_score: Number(givePackageForm.reward_score || 0),
+          reward_prize: givePackageForm.item_name || givePackageForm.item_slug,
+          reward_claim_note: "Admin-granted Whack-a-Mole extra. Claim within 48 hours.",
+        }
+      : {};
+
     const res = await fetch("/api/inventory/admin", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -1286,6 +1298,7 @@ export function AdminPanelClient() {
         item_slug: givePackageForm.item_slug,
         item_name: givePackageForm.item_name || givePackageForm.item_slug,
         reason: givePackageForm.reason,
+        metadata: rewardMetadata,
       }),
     });
     
@@ -1293,7 +1306,7 @@ export function AdminPanelClient() {
     setGivePackageLoading(false);
     
     if (data?.ok) {
-      alert(`Package "${data.item?.item_name}" given to user!`);
+      alert(`Item "${data.item?.item_name}" given to user!`);
       setShowGivePackageModal(false);
       setGivePackageForm({
         user_id: "",
@@ -1302,6 +1315,8 @@ export function AdminPanelClient() {
         item_slug: "",
         item_name: "",
         reason: "",
+        reward_source: "",
+        reward_score: "",
       });
       setUserSearchQuery("");
       setShowUserDropdown(false);
@@ -2054,7 +2069,7 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               MAIN CONTENT
           ══════════════════════════════════════════════ */}
-          <main className="flex-1 min-w-0 overflow-auto scroll-smooth">
+          <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto scroll-smooth">
             {/* Mobile header */}
             <div className="flex items-center justify-between border-b border-white/6 bg-slate-950/95 px-4 py-3 md:hidden sticky top-0 z-30 backdrop-blur">
               <div className="flex items-center gap-2">
@@ -2069,11 +2084,11 @@ export function AdminPanelClient() {
               </div>
             </div>
 
-            <div className="p-4 md:p-6 pb-28 md:pb-6">
+            <div className="min-w-0 max-w-full p-4 md:p-6 pb-28 md:pb-6">
 
           {/* ════ OVERVIEW ════ */}
           {activeTab === "dashboard" && (
-            <div className="grid gap-5">
+            <div className="grid min-w-0 gap-5">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Overview</h1>
@@ -2471,8 +2486,8 @@ export function AdminPanelClient() {
 
           {/* ════ BETA TESTER REQUESTS ════ */}
           {activeTab === "beta" && (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid min-w-0 max-w-full gap-4 overflow-hidden">
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">🧪 Beta Tester Requests</h1>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -2497,13 +2512,13 @@ export function AdminPanelClient() {
                   <p className="text-slate-400 text-sm">All beta tester applications have been processed.</p>
                 </div>
               ) : (
-                <div className="grid gap-3">
+              <div className="grid min-w-0 gap-3">
                   {betaRequests.map((request) => (
                     <div
                       key={request.id}
                       className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                         <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold text-white shrink-0">
                           {request.avatar_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -2513,9 +2528,9 @@ export function AdminPanelClient() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-white">{request.username}</span>
-                            <span className="text-xs text-slate-500">({request.discord_id})</span>
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words font-bold text-white">{request.username}</span>
+                            <span className="max-w-full break-all font-mono text-xs text-slate-500">({request.discord_id})</span>
                             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                               request.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
                               request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
@@ -2530,24 +2545,24 @@ export function AdminPanelClient() {
                           {request.reason && (
                             <div className="mb-2">
                               <span className="text-xs font-bold text-slate-500 uppercase">Why join:</span>
-                              <p className="text-sm text-slate-300 mt-0.5">{request.reason}</p>
+                               <p className="mt-0.5 break-words text-sm text-slate-300">{request.reason}</p>
                             </div>
                           )}
                           {request.experience && (
                             <div className="mb-2">
                               <span className="text-xs font-bold text-slate-500 uppercase">Experience:</span>
-                              <p className="text-sm text-slate-300 mt-0.5">{request.experience}</p>
+                               <p className="mt-0.5 break-words text-sm text-slate-300">{request.experience}</p>
                             </div>
                           )}
                           {request.play_time && (
                             <div className="mb-2">
                               <span className="text-xs font-bold text-slate-500 uppercase">Play time:</span>
-                              <p className="text-sm text-slate-300 mt-0.5">{request.play_time}</p>
+                               <p className="mt-0.5 break-words text-sm text-slate-300">{request.play_time}</p>
                             </div>
                           )}
 
                           {request.status === 'pending' && (
-                            <div className="flex gap-2 mt-3">
+                             <div className="mt-3 grid gap-2 sm:grid-cols-2">
                               <button
                                 onClick={() => handleBetaRequest(request.id, 'approve')}
                                 disabled={betaRequestActionLoading === request.id}
@@ -2566,8 +2581,8 @@ export function AdminPanelClient() {
                           )}
 
                           {request.status !== 'pending' && (
-                            <div className="flex items-center justify-between mt-3">
-                              <p className="text-xs text-slate-500">
+                             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                               <p className="break-words text-xs text-slate-500">
                                 {request.status === 'approved' ? 'Approved' : 'Declined'} by {request.reviewed_by || 'Admin'} on {new Date(request.reviewed_at).toLocaleDateString()}
                                 {request.review_notes && ` - "${request.review_notes}"`}
                               </p>
@@ -2703,20 +2718,20 @@ export function AdminPanelClient() {
 
           {/* ════ BROADCAST ════ */}
           {activeTab === "broadcast" && (
-            <div className="grid gap-5 max-w-lg">
+            <div className="grid min-w-0 max-w-full gap-5 lg:max-w-2xl">
               <div>
                 <h1 className="text-xl font-bold text-white tracking-tight">Discord Broadcast</h1>
                 <p className="mt-0.5 text-sm text-slate-500">Send a message to a Discord channel via webhook.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {broadcastPresets.map((p) => (
-                  <button key={p.label} type="button" onClick={() => applyPreset(p)}
-                    className="rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 hover:text-white transition">
+                <div className="flex max-w-full flex-wrap gap-2">
+                  {broadcastPresets.map((p) => (
+                    <button key={p.label} type="button" onClick={() => applyPreset(p)}
+                    className="max-w-full rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-left text-xs font-semibold text-slate-400 hover:bg-white/8 hover:text-white transition">
                     {p.label}
                   </button>
                 ))}
               </div>
-              <form className="grid gap-3" onSubmit={handleBroadcast}>
+                <form className="grid min-w-0 gap-3" onSubmit={handleBroadcast}>
                 <select className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none focus:border-cyan-400/30" value={target} onChange={(e) => setTarget(e.target.value)}>
                   {pageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   {customWebhooks.length > 0 && (
@@ -2729,9 +2744,9 @@ export function AdminPanelClient() {
                   value={audienceLabel} onChange={(e) => setAudienceLabel(e.target.value)} placeholder="Audience label (optional)" maxLength={80} />
                 <input className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                   value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title *" maxLength={80} required />
-                <div className="flex gap-2">
+                <div className="flex min-w-0 gap-2">
                   <input type="color" className="h-10 w-12 cursor-pointer rounded-xl border border-white/8 bg-slate-900/80 p-1" value={color} onChange={(e) => setColor(e.target.value)} />
-                  <input className="h-10 flex-1 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                  <input className="h-10 min-w-0 flex-1 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                     value={color} onChange={(e) => setColor(e.target.value)} placeholder="#22c55e" maxLength={7} />
                 </div>
                 <select 
@@ -2746,14 +2761,14 @@ export function AdminPanelClient() {
                   <option value="gold">👑 Gold (Premium)</option>
                   <option value="ansi">🎨 ANSI Colors</option>
                 </select>
-                <div className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/12 bg-slate-900/60 px-4 py-3 hover:border-cyan-400/25 transition"
+                <div className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/12 bg-slate-900/60 px-4 py-3 hover:border-cyan-400/25 transition"
                   onClick={() => fileInputRef.current?.click()}>
                   {imagePreview
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={imagePreview} alt="" className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10" />
                     : <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/4 text-slate-500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
                   }
-                  <div className="flex-1 text-sm text-slate-400">{imageFile ? imageFile.name : "Attach image (optional)"}</div>
+                  <div className="min-w-0 flex-1 truncate text-sm text-slate-400">{imageFile ? imageFile.name : "Attach image (optional)"}</div>
                   {imageFile && <button type="button" className="text-xs text-slate-600 hover:text-rose-400 transition" onClick={(ev) => { ev.stopPropagation(); setImageFile(null); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}>Remove</button>}
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
@@ -2783,7 +2798,7 @@ export function AdminPanelClient() {
               {/* ── Webhook Tutorial ── */}
               <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-b from-indigo-950/40 to-slate-950/60 overflow-hidden">
                 <div className="px-5 pt-5 pb-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-base">📺</span>
@@ -2792,13 +2807,13 @@ export function AdminPanelClient() {
                       </div>
                       <p className="mt-1 text-[11px] text-slate-500">Step-by-step guide to adding a Discord webhook for broadcast.</p>
                     </div>
-                    <div className="flex rounded-xl border border-white/8 bg-slate-900/60 p-0.5 gap-0.5">
+                    <div className="flex w-full rounded-xl border border-white/8 bg-slate-900/60 p-0.5 gap-0.5 sm:w-auto">
                       <button type="button" onClick={() => setTutorialVideoMode("voiceover")}
-                        className={`rounded-[10px] px-3 py-1.5 text-xs font-semibold transition ${tutorialVideoMode === "voiceover" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
+                        className={`flex-1 rounded-[10px] px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${tutorialVideoMode === "voiceover" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
                         🔊 With Voice
                       </button>
                       <button type="button" onClick={() => setTutorialVideoMode("silent")}
-                        className={`rounded-[10px] px-3 py-1.5 text-xs font-semibold transition ${tutorialVideoMode === "silent" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
+                        className={`flex-1 rounded-[10px] px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${tutorialVideoMode === "silent" ? "bg-indigo-500 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
                         🔇 Silent
                       </button>
                     </div>
@@ -3083,23 +3098,23 @@ export function AdminPanelClient() {
 
           {/* ════ ARENA EVENTS ════ */}
           {activeTab === "arena" && (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid min-w-0 max-w-full gap-4 overflow-hidden">
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Arena Events</h1>
                   <p className="mt-0.5 text-sm text-slate-500">Create tournaments and manage team voting.</p>
                 </div>
                 <button type="button" onClick={() => setSelectedArenaEvent(null)}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-amber-500/15 hover:opacity-90 transition">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/15 transition hover:opacity-90 sm:w-auto">
                   ⚔️ New Event
                 </button>
               </div>
 
               {/* Create New Event Form */}
               {!selectedArenaEvent && (
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4 sm:p-5">
                   <h2 className="text-lg font-bold text-white mb-4">Create Arena Event</h2>
-                  <div className="grid gap-4 max-w-lg">
+                  <div className="grid min-w-0 max-w-full gap-3">
                     <input
                       value={arenaNewEvent.name}
                       onChange={(e) => setArenaNewEvent({ ...arenaNewEvent, name: e.target.value })}
@@ -3155,7 +3170,7 @@ export function AdminPanelClient() {
               )}
 
               {/* Events List */}
-              <div className="grid gap-4">
+              <div className={`${selectedArenaEvent ? "hidden sm:grid" : "grid"} gap-4`}>
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Active Events</h2>
                 {arenaLoading ? (
                   <div className="text-sm text-slate-500">Loading...</div>
@@ -3172,9 +3187,9 @@ export function AdminPanelClient() {
                           : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold text-white">{event.name}</h3>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="break-words font-bold text-white">{event.name}</h3>
                           <p className="text-xs text-slate-400">{event.game_mode} • {event.arena_teams?.[0]?.count || 0}/{event.max_teams} teams</p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${
@@ -3192,14 +3207,14 @@ export function AdminPanelClient() {
 
               {/* Selected Event Management */}
               {selectedArenaEvent && (
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
+                <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-3 sm:p-5">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
                       {selectedArenaEvent.image_url && (
-                        <img src={selectedArenaEvent.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        <img src={selectedArenaEvent.image_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                       )}
-                      <div>
-                        <h2 className="text-lg font-bold text-white">{selectedArenaEvent.name}</h2>
+                      <div className="min-w-0">
+                        <h2 className="break-words text-lg font-bold text-white">{selectedArenaEvent.name}</h2>
                         <p className="text-xs text-slate-400">
                           Round {selectedArenaEvent.current_round || 0} • {selectedArenaEvent.arena_teams?.[0]?.count || 0} teams •
                           {selectedArenaEvent.registration_open ? (
@@ -3212,28 +3227,28 @@ export function AdminPanelClient() {
                     </div>
                     <button
                       onClick={() => setSelectedArenaEvent(null)}
-                      className="text-xs text-slate-400 hover:text-white"
+                      className="h-10 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold text-slate-300 hover:text-white sm:h-auto sm:border-0 sm:bg-transparent sm:px-0 sm:text-xs"
                     >
                       Close
                     </button>
                   </div>
 
                   {/* Event Image Upload */}
-                  <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div className="mb-4 rounded-xl border border-white/5 bg-slate-950/50 p-3 sm:mb-6 sm:p-4">
                     <h3 className="text-sm font-semibold text-cyan-400 mb-3">📸 Event Image</h3>
                     {selectedArenaEvent.image_url && (
-                      <div className="mb-3 flex items-center gap-3">
-                        <img src={selectedArenaEvent.image_url} alt="Event" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
-                        <span className="text-xs text-slate-400 truncate flex-1">{selectedArenaEvent.image_url}</span>
-                      </div>
-                    )}
-                    <div className="flex gap-2 mb-2">
+                        <div className="mb-3 flex min-w-0 items-center gap-3">
+                          <img src={selectedArenaEvent.image_url} alt="Event" className="h-16 w-16 shrink-0 rounded-xl border border-white/10 object-cover" />
+                          <span className="min-w-0 flex-1 truncate text-xs text-slate-400">{selectedArenaEvent.image_url}</span>
+                        </div>
+                      )}
+                    <div className="mb-2 grid gap-2 sm:grid-cols-[1fr_auto]">
                       <input
                         type="text"
                         value={selectedArenaEvent.image_url || ""}
                         onChange={(e) => setSelectedArenaEvent({ ...selectedArenaEvent, image_url: e.target.value })}
                         placeholder="Image URL (Discord CDN, Imgur, etc.)"
-                        className="flex-1 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                        className="h-10 min-w-0 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                       />
                       <button
                         onClick={async () => await handleUpdateEventImage(selectedArenaEvent.id, selectedArenaEvent.image_url)}
@@ -3243,7 +3258,7 @@ export function AdminPanelClient() {
                         Set URL
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
                       <span className="text-[10px] text-slate-600 uppercase tracking-widest">or</span>
                       <label className={`flex-1 ${imageUploading ? "" : "cursor-pointer"}`}>
                         <input
@@ -3270,12 +3285,12 @@ export function AdminPanelClient() {
                   </div>
 
                   {/* Event Controls */}
-                  <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div className="mb-4 rounded-xl border border-white/5 bg-slate-950/50 p-3 sm:mb-6 sm:p-4">
                     <h3 className="text-sm font-semibold text-amber-400 mb-3">⚡ Event Controls</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
                       <button
                         onClick={async () => await handleToggleRegistration(selectedArenaEvent.id, !selectedArenaEvent.registration_open)}
-                        className={`h-10 rounded-xl text-sm font-semibold transition ${
+                        className={`min-h-11 rounded-xl px-3 py-2 text-sm font-semibold transition ${
                           selectedArenaEvent.registration_open
                             ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
                             : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
@@ -3287,28 +3302,28 @@ export function AdminPanelClient() {
                       <button
                         onClick={async () => await handleStartEvent(selectedArenaEvent.id)}
                         disabled={!selectedArenaEvent.registration_open}
-                        className="h-10 rounded-xl bg-amber-500 text-amber-950 text-sm font-bold hover:bg-amber-400 disabled:opacity-40 transition"
+                        className="min-h-11 rounded-xl bg-amber-500 px-3 py-2 text-sm font-bold text-amber-950 transition hover:bg-amber-400 disabled:opacity-40"
                       >
                         🚀 START
                       </button>
                       
                       <button
                         onClick={async () => await handleAssignVCs(selectedArenaEvent.id)}
-                        className="h-10 rounded-xl bg-violet-500/20 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 transition"
+                        className="min-h-11 rounded-xl bg-violet-500/20 px-3 py-2 text-sm font-semibold text-violet-300 transition hover:bg-violet-500/30"
                       >
                         🔊 Assign VCs
                       </button>
                       
                       <button
                         onClick={async () => await handleNextRound(selectedArenaEvent.id)}
-                        className="h-10 rounded-xl bg-cyan-500/20 text-cyan-300 text-sm font-semibold hover:bg-cyan-500/30 transition"
+                        className="min-h-11 rounded-xl bg-cyan-500/20 px-3 py-2 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-500/30"
                       >
                         ➡️ Next Round
                       </button>
 
                       <button
                         onClick={async () => await handleCloseEvent(selectedArenaEvent.id)}
-                        className="h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-sm font-bold hover:bg-rose-500/30 transition"
+                        className="min-h-11 rounded-xl border border-rose-500/30 bg-rose-500/20 px-3 py-2 text-sm font-bold text-rose-300 transition hover:bg-rose-500/30"
                       >
                         ✖ Close Event
                       </button>
@@ -3317,14 +3332,14 @@ export function AdminPanelClient() {
 
                   {/* Assigned Voice Channels */}
                   {selectedArenaEvent.metadata?.vc_assignments && selectedArenaEvent.metadata.vc_assignments.length > 0 && (
-                    <div className="mb-6 p-4 rounded-xl bg-slate-950/50 border border-violet-500/20">
+                    <div className="mb-4 rounded-xl border border-violet-500/20 bg-slate-950/50 p-3 sm:mb-6 sm:p-4">
                       <h3 className="text-sm font-semibold text-violet-400 mb-3">🔊 Assigned Voice Channels</h3>
                       <div className="grid gap-2 max-h-40 overflow-y-auto">
                         {selectedArenaEvent.metadata.vc_assignments.map((assignment: any) => (
-                          <div key={assignment.team_id} className="flex items-center justify-between p-2 rounded-lg bg-slate-900/50">
-                            <div className="flex items-center gap-2">
+                          <div key={assignment.team_id} className="flex flex-col gap-2 rounded-lg bg-slate-900/50 p-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center gap-2">
                               <span className="text-xs font-bold text-violet-400">{assignment.vc_channel}</span>
-                              <span className="text-sm text-white">{assignment.team_name}</span>
+                              <span className="min-w-0 break-words text-sm text-white">{assignment.team_name}</span>
                             </div>
                             <span className="text-xs text-slate-500">👑 {assignment.leader_username}</span>
                           </div>
@@ -3334,25 +3349,25 @@ export function AdminPanelClient() {
                   )}
 
                   {/* Vote Options Management */}
-                  <div className="p-4 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div className="rounded-xl border border-white/5 bg-slate-950/50 p-3 sm:p-4">
                     <h3 className="text-sm font-semibold text-amber-400 mb-3">🗳️ Voting Options</h3>
-                    <div className="flex gap-2 mb-4">
+                    <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_4rem_auto]">
                       <input
                         value={arenaNewVoteOption.name}
                         onChange={(e) => setArenaNewVoteOption({ ...arenaNewVoteOption, name: e.target.value })}
                         placeholder="Option name (e.g., Bows Only)"
-                        className="flex-1 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                        className="h-10 min-w-0 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                       />
                       <input
                         value={arenaNewVoteOption.icon}
                         onChange={(e) => setArenaNewVoteOption({ ...arenaNewVoteOption, icon: e.target.value })}
                         placeholder="🎯"
-                        className="w-16 h-10 rounded-xl border border-white/8 bg-slate-900/80 px-2 text-center text-sm text-white outline-none focus:border-cyan-400/30 transition"
+                        className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-2 text-center text-sm text-white outline-none focus:border-cyan-400/30 transition sm:w-16"
                       />
                       <button
                         onClick={async () => await handleAddVoteOption(selectedArenaEvent.id)}
                         disabled={!arenaNewVoteOption.name.trim()}
-                        className="px-4 h-10 rounded-xl bg-amber-500/20 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 disabled:opacity-40"
+                        className="h-10 rounded-xl bg-amber-500/20 px-4 text-sm font-semibold text-amber-300 hover:bg-amber-500/30 disabled:opacity-40"
                       >
                         Add
                       </button>
@@ -3395,8 +3410,8 @@ export function AdminPanelClient() {
                   </div>
 
                   {/* 🔴 LIVE ADMIN MONITORING PANEL */}
-                  <div className="mt-6 p-4 rounded-xl bg-gradient-to-b from-rose-950/50 to-slate-950/80 border-2 border-rose-500/30">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="mt-4 min-w-0 overflow-hidden rounded-xl border-2 border-rose-500/30 bg-gradient-to-b from-rose-950/50 to-slate-950/80 p-3 sm:mt-6 sm:p-4">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-sm font-semibold text-rose-400 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                         🔴 LIVE Command Center
@@ -3411,8 +3426,8 @@ export function AdminPanelClient() {
                       <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Team Status</h4>
                       <div className="grid gap-2 max-h-48 overflow-y-auto">
                         {arenaTeams.map((team: any) => (
-                          <div key={team.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-white/5">
-                            <div className="flex items-center gap-2">
+                          <div key={team.id} className="flex flex-col gap-2 rounded-lg border border-white/5 bg-slate-900/60 p-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center gap-2">
                               {team.logo_url ? (
                                 <img src={team.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
                               ) : (
@@ -3420,8 +3435,8 @@ export function AdminPanelClient() {
                                   {team.name[0]}
                                 </div>
                               )}
-                              <div>
-                                <p className="text-sm font-semibold text-white">{team.name}</p>
+                              <div className="min-w-0">
+                                <p className="break-words text-sm font-semibold text-white">{team.name}</p>
                                 <p className="text-[10px] text-slate-500">
                                   {team.arena_team_members?.length || 0} members • 👑 {team.leader_username}
                                 </p>
@@ -3470,7 +3485,7 @@ export function AdminPanelClient() {
                               <div className="text-xs text-slate-500 mt-1">Team: {ffaWinner.team_name}</div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                               {participants.map((p: any, i: number) => (
                                 <div key={p.id || i} className="relative rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-950/40 via-slate-950/80 to-slate-900/60 p-3 flex flex-col items-center gap-2">
                                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-400/40 to-transparent" />
@@ -3560,14 +3575,14 @@ export function AdminPanelClient() {
                                 ) : (
                                   /* ── Active match ── */
                                   <div className="p-3">
-                                    <div className="grid grid-cols-[1fr_56px_1fr] gap-2 items-stretch">
+                                    <div className="grid grid-cols-1 gap-2 items-stretch sm:grid-cols-[1fr_56px_1fr]">
 
                                       {/* Team 1 */}
                                       <div className="flex flex-col items-center gap-1.5 rounded-xl bg-slate-900/70 border border-amber-500/15 p-3 hover:border-amber-500/30 transition">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/30 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-lg font-black text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
                                           {match.team1_name?.[0]?.toUpperCase()}
                                         </div>
-                                        <span className="text-xs font-bold text-white text-center leading-tight">{match.team1_name}</span>
+                                        <span className="break-words text-center text-xs font-bold leading-tight text-white">{match.team1_name}</span>
                                         {match.team1_vc && <span className="text-[10px] text-violet-400 font-mono bg-violet-500/10 px-1.5 py-0.5 rounded">{match.team1_vc}</span>}
                                         <button
                                           onClick={async () => await handleNotifyMatch(match, "team1")}
@@ -3586,7 +3601,7 @@ export function AdminPanelClient() {
                                         </div>
                                         <button
                                           onClick={async () => await handleStartMatch(match)}
-                                          className="w-full py-1.5 rounded-lg bg-gradient-to-b from-emerald-500/25 to-emerald-600/15 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold hover:from-emerald-500/40 hover:border-emerald-400/50 transition shadow-[0_0_8px_rgba(16,185,129,0.15)] whitespace-nowrap"
+                                          className="w-full rounded-lg border border-emerald-500/30 bg-gradient-to-b from-emerald-500/25 to-emerald-600/15 py-1.5 text-[9px] font-bold text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.15)] transition hover:border-emerald-400/50 hover:from-emerald-500/40 sm:whitespace-nowrap"
                                         >▶ START</button>
                                       </div>
 
@@ -3595,7 +3610,7 @@ export function AdminPanelClient() {
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/30 to-pink-500/20 border border-rose-500/30 flex items-center justify-center text-lg font-black text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.2)]">
                                           {match.team2_name?.[0]?.toUpperCase()}
                                         </div>
-                                        <span className="text-xs font-bold text-white text-center leading-tight">{match.team2_name}</span>
+                                        <span className="break-words text-center text-xs font-bold leading-tight text-white">{match.team2_name}</span>
                                         {match.team2_vc && <span className="text-[10px] text-violet-400 font-mono bg-violet-500/10 px-1.5 py-0.5 rounded">{match.team2_vc}</span>}
                                         <button
                                           onClick={async () => await handleNotifyMatch(match, "team2")}
@@ -3622,10 +3637,10 @@ export function AdminPanelClient() {
                             return byeTeams.length > 0 ? (
                               <div className="mt-3 space-y-1">
                                 {byeTeams.map((t: any) => (
-                                  <div key={t.team_id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                                  <div key={t.team_id} className="flex flex-col gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-3">
                                     <span className="text-base">🏅</span>
                                     <span className="text-sm font-semibold text-amber-200">{t.team_name}</span>
-                                    <span className="text-xs text-slate-500 ml-auto">Bye — auto-advances</span>
+                                    <span className="text-xs text-slate-500 sm:ml-auto">Bye — auto-advances</span>
                                   </div>
                                 ))}
                               </div>
@@ -3676,7 +3691,7 @@ export function AdminPanelClient() {
                             </div>
                             <button
                               onClick={async () => await handleNextRound(selectedArenaEvent.id)}
-                              className="shrink-0 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/40 to-cyan-500/30 border border-emerald-400/50 text-emerald-200 text-sm font-black hover:from-emerald-500/60 hover:to-cyan-500/50 transition shadow-[0_0_15px_rgba(16,185,129,0.25)] whitespace-nowrap"
+                              className="w-full rounded-xl border border-emerald-400/50 bg-gradient-to-r from-emerald-500/40 to-cyan-500/30 px-5 py-2.5 text-center text-sm font-black text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.25)] transition hover:from-emerald-500/60 hover:to-cyan-500/50 sm:w-auto sm:shrink-0 sm:whitespace-nowrap"
                             >
                               ➡️ Advance to Round {(selectedArenaEvent.current_round || 1) + 1}
                             </button>
@@ -4117,7 +4132,7 @@ export function AdminPanelClient() {
               {showGivePackageModal && (
                 <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-black/70 overflow-y-auto">
                   <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 sm:p-6 shadow-2xl my-auto">
-                    <h3 className="text-xl font-bold text-white mb-4">Give Package to User</h3>
+                    <h3 className="text-xl font-bold text-white mb-4">Give Item, Pack, or Prize</h3>
                     
                     <form onSubmit={handleGivePackage} className="space-y-4">
                       <div>
@@ -4204,7 +4219,7 @@ export function AdminPanelClient() {
                         >
                           <option value="pack">Pack</option>
                           <option value="insurance">Insurance</option>
-                          <option value="prize">Prize/Reward</option>
+                          <option value="reward">Prize/Reward</option>
                           <option value="construction">Construction</option>
                           <option value="defense">Defense</option>
                           <option value="tactical">Tactical</option>
@@ -4215,35 +4230,30 @@ export function AdminPanelClient() {
                       {/* Preset Items */}
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Item</label>
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
                           {/* Whack-a-Mole Prizes */}
                           <div className="col-span-2 text-xs font-bold text-amber-400 uppercase mt-1">🎯 Whack-a-Mole Prizes</div>
-                          {[
-                            { name: "Legendary Gear Crate", slug: "legendary-gear-crate" },
-                            { name: "Rare Resources Bundle", slug: "rare-resources-bundle" },
-                            { name: "Premium Ammo Box", slug: "premium-ammo-box" },
-                            { name: "Elite Medical Kit", slug: "elite-medical-kit" },
-                            { name: "Superior Building Materials", slug: "superior-building-materials" },
-                            { name: "Advanced Tools Set", slug: "advanced-tools-set" },
-                            { name: "Rare Seeds Pack", slug: "rare-seeds-pack" },
-                            { name: "Weapon Mods Bundle", slug: "weapon-mods-bundle" },
-                          ].map((item) => (
+                          {WHACK_A_MOLE_PRIZES.filter((item) => item.rarity !== "none").map((item) => (
                             <button
-                              key={item.slug}
+                              key={item.name}
                               type="button"
-                              onClick={() => setGivePackageForm(prev => ({ 
-                                ...prev, 
-                                item_name: item.name, 
-                                item_slug: item.slug,
-                                item_type: "prize"
+                              onClick={() => setGivePackageForm(prev => ({
+                                ...prev,
+                                item_name: `Whack-a-Mole Reward: ${item.name}`,
+                                item_slug: `whackamole-extra-${item.minScore}-${item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+                                item_type: "reward",
+                                reward_source: "whackamole",
+                                reward_score: String(item.minScore),
+                                reason: prev.reason || `Admin Whack-a-Mole extra (${item.scoreLabel})`,
                               }))}
                               className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
-                                givePackageForm.item_slug === item.slug
+                                givePackageForm.item_name === `Whack-a-Mole Reward: ${item.name}`
                                   ? "bg-amber-500/20 border border-amber-500/30 text-amber-300"
                                   : "bg-slate-800 border border-white/5 text-slate-300 hover:bg-slate-700"
                               }`}
                             >
-                              {item.name}
+                              <span className="block font-bold">{item.name}</span>
+                              <span className="mt-0.5 block text-[10px] text-slate-500">{item.scoreLabel} hits</span>
                             </button>
                           ))}
 
@@ -4265,7 +4275,9 @@ export function AdminPanelClient() {
                                 ...prev, 
                                 item_name: item.name, 
                                 item_slug: item.slug,
-                                item_type: "pack"
+                                item_type: "pack",
+                                reward_source: "",
+                                reward_score: "",
                               }))}
                               className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
                                 givePackageForm.item_slug === item.slug
@@ -4285,7 +4297,9 @@ export function AdminPanelClient() {
                               ...prev, 
                               item_name: "Insurance Claim", 
                               item_slug: "insurance-claim",
-                              item_type: "insurance"
+                              item_type: "insurance",
+                              reward_source: "",
+                              reward_score: "",
                             }))}
                             className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
                               givePackageForm.item_slug === "insurance-claim"
@@ -4309,7 +4323,7 @@ export function AdminPanelClient() {
                           onChange={(e) => {
                             const name = e.target.value;
                             const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-                            setGivePackageForm(prev => ({ ...prev, item_name: name, item_slug: slug || "package" }));
+                            setGivePackageForm(prev => ({ ...prev, item_name: name, item_slug: slug || "package", reward_source: "", reward_score: "" }));
                           }}
                           className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
                         />
@@ -4324,7 +4338,7 @@ export function AdminPanelClient() {
                         <label className="block text-sm font-medium text-slate-300 mb-1">Reason</label>
                         <input
                           type="text"
-                          placeholder="Why are you giving this package?"
+                          placeholder="Why are you giving this item?"
                           value={givePackageForm.reason}
                           onChange={(e) => setGivePackageForm(prev => ({ ...prev, reason: e.target.value }))}
                           className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
@@ -4344,7 +4358,7 @@ export function AdminPanelClient() {
                           disabled={givePackageLoading}
                           className="flex-1 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
                         >
-                          {givePackageLoading ? "Giving..." : "Give Package"}
+                          {givePackageLoading ? "Giving..." : "Give Item"}
                         </button>
                       </div>
                     </form>

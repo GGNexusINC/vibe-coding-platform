@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { getFallbackRaid, isMissingRaidTableError, updateFallbackRaid } from "@/lib/raid-store";
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
 
@@ -36,6 +37,53 @@ export async function POST(
       .select('status, team_size')
       .eq('id', raidId)
       .single();
+
+    if (raidError && isMissingRaidTableError(raidError)) {
+      const fallbackRaid = await getFallbackRaid(sb, raidId);
+      if (!fallbackRaid) {
+        return NextResponse.json({ ok: false, error: "Raid not found" }, { status: 404 });
+      }
+
+      if (['completed', 'cancelled', 'expired'].includes(fallbackRaid.status)) {
+        return NextResponse.json({ ok: false, error: "Raid is no longer active" }, { status: 400 });
+      }
+
+      const activeCount = fallbackRaid.raid_participants.filter((participant) =>
+        ['joined', 'confirmed'].includes(participant.status)
+      ).length;
+
+      const existing = fallbackRaid.raid_participants.find((participant) => participant.discord_id === user.discord_id);
+      if (existing && ['joined', 'confirmed'].includes(existing.status)) {
+        return NextResponse.json({ ok: false, error: "You already joined this raid" }, { status: 400 });
+      }
+
+      if (!existing && activeCount >= fallbackRaid.team_size) {
+        return NextResponse.json({ ok: false, error: "Raid team is full" }, { status: 400 });
+      }
+
+      await updateFallbackRaid(sb, raidId, (currentRaid) => {
+        const now = new Date().toISOString();
+        const participants = currentRaid.raid_participants.slice();
+        const index = participants.findIndex((participant) => participant.discord_id === user.discord_id);
+        if (index >= 0) {
+          participants[index] = { ...participants[index], role, status: 'joined', joined_at: now };
+        } else {
+          participants.push({
+            id: crypto.randomUUID(),
+            raid_id: raidId,
+            discord_id: user.discord_id,
+            username: user.username,
+            avatar_url: user.avatar_url ?? null,
+            role,
+            status: 'joined',
+            joined_at: now,
+          });
+        }
+        return { ...currentRaid, raid_participants: participants };
+      });
+
+      return NextResponse.json({ ok: true, message: "Joined raid successfully" });
+    }
 
     if (raidError || !raid) {
       return NextResponse.json({ ok: false, error: "Raid not found" }, { status: 404 });

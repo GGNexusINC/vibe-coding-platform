@@ -25,25 +25,41 @@ export async function GET() {
       .from('beta_testers')
       .select('id, permissions, notes, joined_at, is_active')
       .eq('discord_id', user.discord_id)
-      .single();
+      .eq('is_active', true)
+      .order('joined_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // If no record found or not active
-    if (error || !betaTester) {
-      console.log(`[beta/check] User ${user.discord_id} not found in beta_testers`);
+    if (error) {
+      console.warn(`[beta/check] beta_testers lookup failed for ${user.discord_id}:`, error.message);
+    }
+
+    // Some older approvals may exist in requests before the beta_testers row was synced.
+    if (!betaTester) {
+      const { data: approvedRequest } = await sb
+        .from('beta_tester_requests')
+        .select('id, reviewed_at')
+        .eq('discord_id', user.discord_id)
+        .eq('status', 'approved')
+        .order('reviewed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (approvedRequest) {
+        return NextResponse.json({
+          ok: true,
+          isBetaTester: true,
+          permissions: [],
+          notes: "Approved beta tester",
+          joinedAt: approvedRequest.reviewed_at,
+        });
+      }
+
+      console.log(`[beta/check] User ${user.discord_id} not found in active beta_testers`);
       return NextResponse.json({ 
         ok: true, 
         isBetaTester: false,
         message: "You are not a beta tester"
-      });
-    }
-
-    // Check if active
-    if (!betaTester.is_active) {
-      console.log(`[beta/check] User ${user.discord_id} found but is_active=false`);
-      return NextResponse.json({ 
-        ok: true, 
-        isBetaTester: false,
-        message: "Your beta access is inactive"
       });
     }
 

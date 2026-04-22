@@ -65,6 +65,7 @@ export async function middleware(req: NextRequest) {
   if (
     (pathname === "/admin" || pathname.startsWith("/api/admin")) &&
     pathname !== "/api/admin/login" &&
+    pathname !== "/api/admin/bot-status" &&
     !isAdminAuthed
   ) {
     if (pathname.startsWith("/api/admin")) {

@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import {
+  DEFAULT_RAID_ROLES,
+  createFallbackRaid,
+  isMissingRaidTableError,
+  listFallbackRaids,
+} from "@/lib/raid-store";
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
 
@@ -32,15 +38,31 @@ export async function GET() {
       .in('status', ['pending', 'active'])
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingRaidTableError(error)) {
+        const fallbackRaids = await listFallbackRaids(sb);
+        return NextResponse.json({ ok: true, raids: fallbackRaids, roles: DEFAULT_RAID_ROLES });
+      }
+      throw error;
+    }
 
     // Get available roles
-    const { data: roles } = await sb
+    const { data: roles, error: rolesError } = await sb
       .from('raid_roles')
       .select('*')
       .order('display_order', { ascending: true });
 
-    return NextResponse.json({ ok: true, raids: raids || [], roles: roles || [] });
+    const fallbackRaids = await listFallbackRaids(sb).catch((fallbackError) => {
+      console.warn("[raids] fallback list unavailable:", fallbackError);
+      return [];
+    });
+    const realRaids = raids || [];
+    const mergedRaids = [
+      ...fallbackRaids,
+      ...realRaids.filter((raid: { id: string }) => !fallbackRaids.some((fallbackRaid) => fallbackRaid.id === raid.id)),
+    ];
+
+    return NextResponse.json({ ok: true, raids: mergedRaids, roles: rolesError ? DEFAULT_RAID_ROLES : roles || DEFAULT_RAID_ROLES });
   } catch (e) {
     console.error("[raids] GET error:", e);
     return NextResponse.json(
@@ -65,6 +87,7 @@ export async function POST(req: Request) {
       enemyCount,
       description,
       teamSize = 4,
+      myRole = 'leader',
       startTime,
       expiresInMinutes = 120,
     } = body;
@@ -97,19 +120,53 @@ export async function POST(req: Request) {
       .select()
       .single();
 
+    if (raidError && isMissingRaidTableError(raidError)) {
+      const fallbackRaid = await createFallbackRaid(sb, {
+        user,
+        targetLocation,
+        raidType,
+        enemyCount: enemyCount ? parseInt(enemyCount) : null,
+        description,
+        teamSize: parseInt(teamSize) || 4,
+        startTime,
+        expiresInMinutes,
+        role: myRole || 'leader',
+      });
+      await notifyRaidCreated(fallbackRaid, user);
+      return NextResponse.json({ ok: true, raid: fallbackRaid });
+    }
+
     if (raidError || !raid) {
       throw raidError || new Error("Failed to create raid");
     }
 
     // Add creator as leader
-    await sb.from('raid_participants').insert({
+    const { error: participantError } = await sb.from('raid_participants').insert({
       raid_id: raid.id,
       discord_id: user.discord_id,
       username: user.username,
       avatar_url: user.avatar_url,
-      role: 'leader',
+      role: myRole || 'leader',
       status: 'confirmed',
     });
+
+    if (participantError && isMissingRaidTableError(participantError)) {
+      const fallbackRaid = await createFallbackRaid(sb, {
+        user,
+        targetLocation,
+        raidType,
+        enemyCount: enemyCount ? parseInt(enemyCount) : null,
+        description,
+        teamSize: parseInt(teamSize) || 4,
+        startTime,
+        expiresInMinutes,
+        role: myRole || 'leader',
+      });
+      await notifyRaidCreated(fallbackRaid, user);
+      return NextResponse.json({ ok: true, raid: fallbackRaid });
+    }
+
+    if (participantError) throw participantError;
 
     // Log activity
     await sb.from('raid_activity_log').insert({

@@ -23,11 +23,12 @@ try {
 } catch (error) {
   console.log("[bot] DAVE support library not loaded:", error.message);
 }
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, EmbedBuilder, AuditLogEvent, REST, Routes, SlashCommandBuilder } = require("discord.js");
-const { joinVoiceChannel, getVoiceConnection, EndBehaviorType, VoiceConnectionStatus, entersState } = require("@discordjs/voice");
+const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, EmbedBuilder, AuditLogEvent, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { joinVoiceChannel, getVoiceConnection, EndBehaviorType, VoiceConnectionStatus, entersState, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require("@discordjs/voice");
 const { createClient: createDeepgramClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const prism = require("prism-media");
 const sodium = require("libsodium-wrappers");
+const { Readable } = require("stream");
 // libsodium-wrappers initializes lazily when needed
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -43,6 +44,14 @@ const VC_TARGET_LANG       = process.env.VC_TARGET_LANG || "en";
 const VOICE_CONTROL_PREFIX = "[NH-CONTROL]";
 const TRANSLATION_PROVIDER = (process.env.TRANSLATION_PROVIDER || "google").toLowerCase();
 const VC_AUTO_LANG = "auto";
+const PREMIUM_PANEL_URL = process.env.PREMIUM_PANEL_URL || `${SITE_URL}/bot?ref=discord`;
+const PREMIUM_GUILD_IDS = new Set(
+  String(process.env.PREMIUM_GUILD_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+);
+const MAIN_GUILD_ID = GUILD_ID;
 const TRANSLATION_COOLDOWN_MS = 3500;
 const TRANSLATION_429_BACKOFF_MS = 15_000;
 const translatedTranscriptCache = new Map();
@@ -81,9 +90,9 @@ const BOT_AVATAR = "https://newhopeggn.vercel.app/favicon-32x32.png";
 const BOT_NAME   = "NewHopeGGN Logs";
 
 /** Fetch the log channel, returns null if not configured or not found */
-function getLogChannel() {
+async function getLogChannel() {
   if (!LOG_CHANNEL_ID) return null;
-  return client.channels.cache.get(LOG_CHANNEL_ID) ?? null;
+  return client.channels.cache.get(LOG_CHANNEL_ID) ?? await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
 }
 
 /**
@@ -91,7 +100,7 @@ function getLogChannel() {
  * @param {object} opts - { color, title, description, fields, thumbnail, footer }
  */
 async function sendLog(opts) {
-  const ch = getLogChannel();
+  const ch = await getLogChannel();
   if (!ch) return;
   try {
     const embed = new EmbedBuilder()
@@ -131,6 +140,37 @@ function userTag(user) {
 
 function avatarOf(user) {
   return user?.displayAvatarURL?.({ size: 64 }) ?? BOT_AVATAR;
+}
+
+function guildIconOf(guild) {
+  return guild?.iconURL?.({ size: 128 }) ?? BOT_AVATAR;
+}
+
+function isPremiumGuild(guildId) {
+  return Boolean(guildId && (guildId === MAIN_GUILD_ID || PREMIUM_GUILD_IDS.has(guildId)));
+}
+
+function premiumUpgradePayload(featureName = "premium voice translation") {
+  const embed = new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle("NewHope Translate Premium")
+    .setDescription(`**${featureName}** is available on NewHopeGGN and premium-enabled Discord servers.`)
+    .addFields(
+      { name: "Included", value: "Voice-channel TTS, live VC translation, admin controls, usage logs, and priority setup." },
+      { name: "Panel", value: `[Open NewHope Translate Premium](${PREMIUM_PANEL_URL})` },
+    )
+    .setThumbnail(BOT_AVATAR)
+    .setFooter({ text: "NewHopeGGN Translate", iconURL: BOT_AVATAR })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("Open Premium Panel")
+      .setStyle(ButtonStyle.Link)
+      .setURL(PREMIUM_PANEL_URL),
+  );
+
+  return { embeds: [embed], components: [row], ephemeral: true };
 }
 
 // ── Slash command definitions ─────────────────────────────────────────────
@@ -176,9 +216,14 @@ const vcPermCheckCommand = new SlashCommandBuilder()
   )
   .toJSON();
 
+const premiumCommand = new SlashCommandBuilder()
+  .setName("nhpremium")
+  .setDescription("Open the NewHope Translate premium panel and pricing")
+  .toJSON();
+
 const translateCommand = new SlashCommandBuilder()
   .setName("nhtranslate")
-  .setDescription("Translate text to another language (auto-detects source)")
+  .setDescription("Translate text and optionally speak it in voice chat")
   .addStringOption(opt =>
     opt.setName("text")
        .setDescription("The text you want to translate")
@@ -207,16 +252,33 @@ const translateCommand = new SlashCommandBuilder()
          { name: "🇮🇳 Hindi",      value: "hi" },
        )
   )
+  .addBooleanOption(opt =>
+    opt.setName("speak")
+       .setDescription("Premium: speak the translated result in your current voice channel")
+       .setRequired(false)
+  )
   .toJSON();
 
 async function registerSlashCommands() {
   try {
     const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
+    const commandList = [translateCommand, premiumCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand];
+
+    console.log("[bot] Registering global slash commands...");
+    await rest.put(
+      Routes.applicationCommands(client.user.id),
+      { body: commandList },
+    );
+
+    // Clear guild-specific commands to avoid duplicates in the main guild.
+    // If we leave them in both, the guild sees duplicates.
+    console.log(`[bot] Clearing guild slash commands for ${GUILD_ID}...`);
     await rest.put(
       Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-      { body: [translateCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand] },
+      { body: [] },
     );
-    console.log("[bot] Slash commands registered.");
+
+    console.log("[bot] Slash commands synchronized.");
   } catch (e) {
     console.error("[bot] Failed to register slash commands:", e.message);
   }
@@ -224,6 +286,7 @@ async function registerSlashCommands() {
 
 // ── Voice listen helpers ───────────────────────────────────────
 const activeListeners = new Map(); // guildId -> { connection, cleanups[], metadata }
+const activeTtsPlayers = new Map(); // guildId -> AudioPlayer
 let statusHeartbeatTimer = null;
 let lastStatusError = null;
 
@@ -809,6 +872,100 @@ async function translateWithMyMemory(text, targetLang) {
   }
 }
 
+async function synthesizeSpeechOpus(text) {
+  if (!DEEPGRAM_API_KEY) {
+    throw new Error("DEEPGRAM_API_KEY is required for voice speak.");
+  }
+
+  const safeText = String(text || "").trim().slice(0, 420);
+  if (!safeText) throw new Error("No text to speak.");
+
+  const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+  const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&encoding=opus&container=ogg`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${DEEPGRAM_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text: safeText }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Deepgram TTS failed (${res.status}): ${body.slice(0, 180)}`);
+  }
+
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function speakForMemberInVoiceChannel(guild, userId, text) {
+  const member = guild.members.cache.get(userId) ?? await guild.members.fetch(userId);
+  const voiceChannel = member?.voice?.channel;
+  if (!voiceChannel) {
+    throw new Error("Join a voice channel first so I know where to speak.");
+  }
+
+  const botMember = guild.members.me ?? await guild.members.fetch(client.user.id);
+  const perms = voiceChannel.permissionsFor(botMember);
+  const requiredPerms = [
+    PermissionsBitField.Flags.ViewChannel,
+    PermissionsBitField.Flags.Connect,
+    PermissionsBitField.Flags.Speak,
+  ];
+  const missingPerms = perms ? perms.missing(requiredPerms) : requiredPerms;
+  if (!perms || missingPerms.length > 0) {
+    throw new Error(`I need View Channel, Connect, and Speak in ${voiceChannel.name}.`);
+  }
+
+  let connection = getVoiceConnection(guild.id);
+  if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
+    connection = joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: false,
+    });
+  } else if (typeof connection.rejoin === "function") {
+    connection.rejoin({ selfDeaf: false, selfMute: false });
+  }
+
+  await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
+
+  const audio = await synthesizeSpeechOpus(text);
+  const player = createAudioPlayer();
+  const oldPlayer = activeTtsPlayers.get(guild.id);
+  try { oldPlayer?.stop(true); } catch {}
+  activeTtsPlayers.set(guild.id, player);
+
+  const resource = createAudioResource(Readable.from(audio), { inputType: StreamType.OggOpus });
+  connection.subscribe(player);
+  player.play(resource);
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      try { player.stop(true); } catch {}
+      reject(new Error("Voice speak timed out."));
+    }, 45_000);
+
+    player.once(AudioPlayerStatus.Idle, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    player.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+  });
+
+  return voiceChannel;
+}
+
+async function speakInVoiceChannel(interaction, text) {
+  return speakForMemberInVoiceChannel(interaction.guild, interaction.user.id, text);
+}
+
 client.once("ready", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
   console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
@@ -940,6 +1097,19 @@ async function relayMessage(msg) {
         return;
       }
 
+      if (payload?.action === "nhtranslate_speak" && payload.guildId && payload.userId && payload.translated) {
+        if (!isPremiumGuild(payload.guildId)) {
+          await replyChannel.send("NewHope Translate Premium is required for voice-channel translated speech.");
+          await msg.delete().catch(() => {});
+          return;
+        }
+
+        const voiceChannel = await speakForMemberInVoiceChannel(msg.guild, payload.userId, payload.translated);
+        await replyChannel.send(`Spoken translated audio in **${voiceChannel.name}** for <@${payload.userId}>.`);
+        await msg.delete().catch(() => {});
+        return;
+      }
+
       if (payload?.action === "vcstop" && payload.guildId) {
         stopVoiceSession(msg.guild.id);
         await replyChannel.send("🔇 Stopped listening and left the voice channel.");
@@ -1021,8 +1191,17 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.deferReply({ ephemeral: false });
     }
 
+    if (interaction.commandName === "nhpremium") {
+      return interaction.reply(premiumUpgradePayload("NewHope Translate Premium"));
+    }
+
     // ── /vclisten ──
   if (interaction.commandName === "vclisten" || interaction.commandName === "vcauto") {
+    if (!isPremiumGuild(interaction.guildId)) {
+      const payload = premiumUpgradePayload("live voice translation");
+      return interaction.editReply({ embeds: payload.embeds, components: payload.components });
+    }
+
     const member = interaction.member;
     const voiceChannel = member?.voice?.channel;
     if (!voiceChannel) {
@@ -1066,7 +1245,7 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
         guildId,
         adapterCreator: interaction.guild.voiceAdapterCreator,
         selfDeaf: false,
-        selfMute: true,
+        selfMute: false,
       });
 
       const voiceSession = await startVoiceListening(connection, interaction.guild, targetLang, voiceChannel);
@@ -1154,6 +1333,7 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
 
   const text = interaction.options.getString("text", true);
   const targetLang = (interaction.options.getString("to") ?? TRANSLATE_TARGET).toLowerCase().trim();
+  const shouldSpeak = interaction.options.getBoolean("speak") ?? false;
 
     try {
       const { translated } = await translateText(text, targetLang);
@@ -1177,6 +1357,21 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
+
+    if (shouldSpeak) {
+      if (!isPremiumGuild(interaction.guildId)) {
+        const payload = premiumUpgradePayload("voice-channel translated speech");
+        return interaction.followUp({ embeds: payload.embeds, components: payload.components, ephemeral: true });
+      }
+
+      try {
+        await speakInVoiceChannel(interaction, translated);
+        await interaction.followUp({ content: `Spoken in your voice channel: **${targetName}**`, ephemeral: true });
+      } catch (speakError) {
+        console.error("[bot] voice speak error:", speakError?.message ?? speakError);
+        await interaction.followUp({ content: `I translated it, but could not speak in VC: ${speakError?.message ?? "Unknown error"}`, ephemeral: true });
+      }
+    }
 
     // Also post to Staff Voice webhook if configured
     if (STAFF_VOICE_WEBHOOK) {
@@ -1304,6 +1499,46 @@ client.on("messageDeleteBulk", async (messages, channel) => {
 });
 
 // ── Ban ────────────────────────────────────────────────────────────────────
+client.on("guildCreate", async (guild) => {
+  const owner = await guild.fetchOwner().catch(() => null);
+  const premium = isPremiumGuild(guild.id);
+
+  void sendLog({
+    color: premium ? 0x22c55e : 0x5865f2,
+    title: "NewHope Translate Added to Server",
+    description: premium
+      ? "A premium-enabled Discord server added the bot."
+      : "A new Discord server added the bot. Voice premium features remain locked until this guild is allowlisted.",
+    thumbnail: guildIconOf(guild),
+    fields: [
+      { name: "Server", value: guild.name || "Unknown", inline: true },
+      { name: "Guild ID", value: guild.id, inline: true },
+      { name: "Premium Access", value: premium ? "Enabled" : "Locked", inline: true },
+      { name: "Owner", value: owner?.user ? userTag(owner.user) : "Unknown", inline: true },
+      { name: "Members", value: `${guild.memberCount ?? "Unknown"}`, inline: true },
+      { name: "Created", value: guild.createdAt ? guild.createdAt.toUTCString() : "Unknown", inline: false },
+      { name: "Next Step", value: `Use \`PREMIUM_GUILD_IDS=${guild.id}\` to unlock paid voice features for this server.` },
+    ],
+    footer: "NewHopeGGN Bot Install Log",
+  });
+});
+
+client.on("guildDelete", (guild) => {
+  void sendLog({
+    color: 0xef4444,
+    title: "NewHope Translate Removed from Server",
+    description: "The bot was removed from a Discord server or lost access to it.",
+    thumbnail: guildIconOf(guild),
+    fields: [
+      { name: "Server", value: guild.name || "Unknown", inline: true },
+      { name: "Guild ID", value: guild.id, inline: true },
+      { name: "Premium Access", value: isPremiumGuild(guild.id) ? "Was enabled" : "Was locked", inline: true },
+      { name: "Members", value: `${guild.memberCount ?? "Unknown"}`, inline: true },
+    ],
+    footer: "NewHopeGGN Bot Install Log",
+  });
+});
+
 client.on("guildBanAdd", async (ban) => {
   const mod = await getAuditMod(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id);
 

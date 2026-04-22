@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { enterLottery, getLotteryEntries } from "@/lib/lottery-store";
 import { getAdminByDiscordId } from "@/lib/admin-roster";
 import { env } from "@/lib/env";
+import { sendDiscordWebhook } from "@/lib/discord";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -10,7 +11,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Sign in with Discord to enter." }, { status: 401 });
   }
 
-  // Block approved staff from entering
   const adminEntry = await getAdminByDiscordId(session.discord_id);
   if (adminEntry?.status === "approved") {
     return NextResponse.json({ ok: false, error: "Staff members are not eligible to enter the lottery." }, { status: 403 });
@@ -36,30 +36,30 @@ export async function POST(req: Request) {
   const entries = await getLotteryEntries();
   const total = entries.length;
 
-  // Notify Discord when someone enters
   const webhookUrl = env.discordWebhookUrlForPage("script-hook");
   if (webhookUrl) {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        username: "NewHopeGGN 🎰 Lottery",
-        embeds: [{
-          title: "🎫 New Lottery Entry!",
-          description: `**${session.username}** just entered the lottery!`,
-          color: 0xfacc15,
-          fields: [
-            { name: "Player", value: session.username, inline: true },
-            { name: "Prize", value: prize, inline: true },
-            { name: "Total Entries", value: `${total}`, inline: true },
-            { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
-          ],
-          thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
-          footer: { text: "NewHopeGGN Lottery" },
-          timestamp: new Date().toISOString(),
-        }],
-      }),
-    }).catch(() => null);
+    await sendDiscordWebhook(
+      {
+        username: "NewHopeGGN Lottery",
+        embeds: [
+          {
+            title: "New Lottery Entry",
+            description: `**${session.username}** just entered the lottery.`,
+            color: 0xfacc15,
+            fields: [
+              { name: "Player", value: session.username, inline: true },
+              { name: "Prize", value: prize, inline: true },
+              { name: "Total Entries", value: `${total}`, inline: true },
+              { name: "Discord ID", value: `\`${session.discord_id}\``, inline: false },
+            ],
+            thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
+            footer: { text: "NewHopeGGN Lottery" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { webhookUrl },
+    ).catch(() => null);
   }
 
   return NextResponse.json({ ok: true, totalEntries: total });

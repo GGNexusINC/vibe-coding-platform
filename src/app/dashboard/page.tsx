@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from "react";
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -30,10 +32,12 @@ export default async function DashboardPage({
   const msg = typeof msgParam === "string" ? msgParam : undefined;
 
   return (
-    <DashboardClient 
-      user={user} 
-      msg={msg} 
-    />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-orange-200/50">Loading Dashboard...</div>}>
+      <DashboardClient 
+        user={user} 
+        msg={msg} 
+      />
+    </Suspense>
   );
 }
 

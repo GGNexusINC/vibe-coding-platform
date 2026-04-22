@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
+import { getFallbackRaid, isMissingRaidTableError, updateFallbackRaid } from "@/lib/raid-store";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,12 +33,50 @@ export async function POST(
     const sb = getSupabase();
 
     // Check if user is in the raid
-    const { data: requester } = await sb
+    const { data: requester, error: requesterError } = await sb
       .from('raid_participants')
       .select('role')
       .eq('raid_id', raidId)
       .eq('discord_id', user.discord_id)
       .single();
+
+    if (requesterError && isMissingRaidTableError(requesterError)) {
+      const fallbackRaid = await getFallbackRaid(sb, raidId);
+      if (!fallbackRaid) {
+        return NextResponse.json({ ok: false, error: "Raid not found" }, { status: 404 });
+      }
+
+      const fallbackRequester = fallbackRaid.raid_participants.find((item) => item.discord_id === user.discord_id);
+      const fallbackTargetId = targetDiscordId || user.discord_id;
+      const fallbackIsLeader = fallbackRequester?.role === 'leader';
+
+      if (fallbackTargetId !== user.discord_id && !fallbackIsLeader) {
+        return NextResponse.json(
+          { ok: false, error: "Only raid leader can assign roles to others" },
+          { status: 403 }
+        );
+      }
+
+      const fallbackTarget = fallbackRaid.raid_participants.find((item) => item.discord_id === fallbackTargetId);
+      if (!fallbackTarget) {
+        return NextResponse.json(
+          { ok: false, error: "Target user is not in this raid" },
+          { status: 404 }
+        );
+      }
+
+      await updateFallbackRaid(sb, raidId, (currentRaid) => ({
+        ...currentRaid,
+        raid_participants: currentRaid.raid_participants.map((item) =>
+          item.discord_id === fallbackTargetId ? { ...item, role } : item
+        ),
+      }));
+
+      return NextResponse.json({
+        ok: true,
+        message: `Role updated to ${role}`,
+      });
+    }
 
     const isLeader = requester?.role === 'leader';
     const targetId = targetDiscordId || user.discord_id;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
+import { getFallbackRaid, isMissingRaidTableError, updateFallbackRaid } from "@/lib/raid-store";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,12 +26,36 @@ export async function POST(
     const sb = getSupabase();
 
     // Get participant record
-    const { data: participant } = await sb
+    const { data: participant, error: participantError } = await sb
       .from('raid_participants')
       .select('id, role')
       .eq('raid_id', raidId)
       .eq('discord_id', user.discord_id)
       .single();
+
+    if (participantError && isMissingRaidTableError(participantError)) {
+      const fallbackRaid = await getFallbackRaid(sb, raidId);
+      const fallbackParticipant = fallbackRaid?.raid_participants.find((item) => item.discord_id === user.discord_id);
+      if (!fallbackParticipant) {
+        return NextResponse.json({ ok: false, error: "You are not in this raid" }, { status: 400 });
+      }
+
+      if (fallbackParticipant.role === 'leader') {
+        return NextResponse.json(
+          { ok: false, error: "Raid leader cannot leave. Cancel the raid instead." },
+          { status: 400 }
+        );
+      }
+
+      await updateFallbackRaid(sb, raidId, (currentRaid) => ({
+        ...currentRaid,
+        raid_participants: currentRaid.raid_participants.map((item) =>
+          item.discord_id === user.discord_id ? { ...item, status: 'left' } : item
+        ),
+      }));
+
+      return NextResponse.json({ ok: true, message: "Left raid successfully" });
+    }
 
     if (!participant) {
       return NextResponse.json({ ok: false, error: "You are not in this raid" }, { status: 400 });

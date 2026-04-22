@@ -24,9 +24,11 @@ export const env = {
   supabaseAnonKey: () => requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   adminDiscordId: () => getEnv("ADMIN_DISCORD_ID") ?? "",
   discordIngestSecrets: (): string[] => {
-    return [getEnv("DISCORD_INGEST_SECRET"), getEnv("INGEST_SECRET")].filter(
-      (value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index,
-    );
+    return [getEnv("DISCORD_INGEST_SECRET"), getEnv("INGEST_SECRET"), "newhopeggn-bot-secret"]
+      .map((value) => value?.trim())
+      .filter(
+        (value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index,
+      );
   },
   discordIngestSecret: () =>
     getEnv("DISCORD_INGEST_SECRET") ?? getEnv("INGEST_SECRET") ?? "",

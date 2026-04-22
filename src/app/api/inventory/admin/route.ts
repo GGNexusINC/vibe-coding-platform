@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createClient } from "@supabase/supabase-js";
 import { sendDiscordWebhook } from "@/lib/discord";
-import { cleanupExpiredRewardItems } from "@/lib/reward-inventory";
+import { cleanupExpiredRewardItems, REWARD_CLAIM_WINDOW_MS } from "@/lib/reward-inventory";
+import { getOnceHumanItemArt } from "@/lib/once-human-items";
 
 function getSupabase() {
   return createClient(
@@ -208,30 +209,85 @@ export async function PUT(req: Request) {
   const adminName = adminSession.username || adminSession.discord_id;
   const itemDisplayName = item_name || item_slug;
   const currentWipe = wipe_cycle || getCurrentWipeCycle();
+  const isReward = item_type === "reward" || Boolean(metadata?.reward_source);
+  const now = new Date().toISOString();
+  const rewardExpiresAt = isReward
+    ? expires_at || new Date(new Date(now).getTime() + REWARD_CLAIM_WINDOW_MS).toISOString()
+    : expires_at || null;
+  const art = getOnceHumanItemArt(
+    typeof metadata?.reward_prize === "string" ? metadata.reward_prize : itemDisplayName,
+  );
+  const itemMetadata = {
+    ...metadata,
+    ...(isReward
+      ? {
+          reward_source: metadata?.reward_source || "admin",
+          reward_prize: metadata?.reward_prize || itemDisplayName.replace(/^Whack-a-Mole Reward:\s*/i, ""),
+          reward_won_at: metadata?.reward_won_at || now,
+          reward_claim_expires_at: metadata?.reward_claim_expires_at || rewardExpiresAt,
+          reward_claim_window_hours: metadata?.reward_claim_window_hours || 48,
+          reward_claim_note: metadata?.reward_claim_note || "Admin-granted reward. Claim within 48 hours.",
+          item_image_url: metadata?.item_image_url || art?.image,
+          item_art_source_name: metadata?.item_art_source_name || art?.sourceName,
+          item_art_source_url: metadata?.item_art_source_url || art?.sourceUrl,
+          item_art_verified: metadata?.item_art_verified ?? Boolean(art?.image),
+        }
+      : {}),
+    given_by: adminSession.discord_id,
+    given_by_name: adminName,
+    reason: reason || (isReward ? "Admin reward given" : "Admin given"),
+    given_at: now,
+  };
 
   // Create the inventory item
+  const insertPayload = {
+    user_id,
+    item_type,
+    item_slug,
+    item_name: itemDisplayName,
+    wipe_cycle: currentWipe,
+    status: "available",
+    expires_at: rewardExpiresAt,
+    metadata: itemMetadata,
+  };
+
   const { data: item, error } = await supabase
     .from("user_inventory")
-    .insert({
-      user_id,
-      item_type,
-      item_slug,
-      item_name: itemDisplayName,
-      wipe_cycle: currentWipe,
-      status: "available",
-      expires_at: expires_at || null,
-      metadata: {
-        ...metadata,
-        given_by: adminSession.discord_id,
-        given_by_name: adminName,
-        reason: reason || "Admin given",
-        given_at: new Date().toISOString(),
-      }
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
   if (error) {
+    if (String(error.message || "").includes("expires_at")) {
+      const fallbackPayload = { ...insertPayload } as Record<string, unknown>;
+      delete fallbackPayload.expires_at;
+      const fallback = await supabase
+        .from("user_inventory")
+        .insert(fallbackPayload)
+        .select()
+        .single();
+
+      if (fallback.error) {
+        return NextResponse.json({ ok: false, error: fallback.error.message }, { status: 500 });
+      }
+
+      const discordNotified = await logToDiscord(
+        "admin_given",
+        itemDisplayName,
+        item_type,
+        user_id,
+        adminName,
+        { reason: reason || (isReward ? "Admin reward given" : "Admin given"), wipe_cycle: currentWipe }
+      );
+
+      return NextResponse.json({
+        ok: true,
+        item: fallback.data,
+        message: `Package "${itemDisplayName}" given to user ${user_id}`,
+        discord_notified: discordNotified,
+      });
+    }
+
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
@@ -242,7 +298,7 @@ export async function PUT(req: Request) {
     item_type,
     user_id,
     adminName,
-    { reason: reason || "Admin given", wipe_cycle: currentWipe }
+    { reason: reason || (isReward ? "Admin reward given" : "Admin given"), wipe_cycle: currentWipe }
   );
 
   return NextResponse.json({ 

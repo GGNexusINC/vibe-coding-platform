@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { drawLotteryWinner, saveLotteryDraw, clearLotteryEntries, getLotteryDraws } from "@/lib/lottery-store";
 import { env } from "@/lib/env";
+import { sendDiscordWebhook } from "@/lib/discord";
 import { buildRewardInventoryItem, getCurrentWipeCycle } from "@/lib/reward-inventory";
 import { createClient } from "@supabase/supabase-js";
 
@@ -53,7 +54,6 @@ export async function POST(req: Request) {
       .select("id, item_name, item_type, status, expires_at, metadata")
       .single();
     if (rewardInsert.error) {
-      console.warn("[lottery] Reward insert with expires_at failed, retrying without column:", rewardInsert.error);
       const fallbackItem = { ...rewardItem };
       delete (fallbackItem as Record<string, unknown>).expires_at;
       const fallbackInsert = await sb
@@ -71,34 +71,34 @@ export async function POST(req: Request) {
     }
   }
 
-  // Send to Discord
   const webhookUrl = env.discordWebhookUrlForPage("general-chat");
   if (webhookUrl) {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    await sendDiscordWebhook(
+      {
         username: "NewHopeGGN Lottery",
-        content: `🎉 **LOTTERY WINNER DRAWN!**`,
-        embeds: [{
-          title: "🏆 We have a winner!",
-          description: `Congratulations to **${winner.username}**!\n\nThey have won: **${winner.prize}**`,
-          color: 0xfacc15,
-          fields: [
-            { name: "Claim Window", value: "48 hours", inline: true },
-            { name: "Choice", value: "Use it to open a ticket or save it in inventory", inline: true },
-            { name: "Draw Rule", value: "One winner per draw • randomly selected by system", inline: true },
-            { name: "Winner", value: winner.username, inline: true },
-            { name: "Discord ID", value: `\`${winner.discordId}\``, inline: true },
-            { name: "Prize", value: winner.prize, inline: false },
-            { name: "Drawn At", value: `<t:${Math.floor(new Date(now).getTime() / 1000)}:F>`, inline: false },
-          ],
-          thumbnail: winner.avatarUrl ? { url: winner.avatarUrl } : undefined,
-          footer: { text: "NewHopeGGN Lottery System • Rewards claim within 48 hours" },
-          timestamp: now,
-        }],
-      }),
-    }).catch(() => null);
+        content: "**Lottery winner drawn.**",
+        embeds: [
+          {
+            title: "Lottery Winner",
+            description: `Congratulations to **${winner.username}**.\n\nPrize: **${winner.prize}**`,
+            color: 0xfacc15,
+            fields: [
+              { name: "Claim Window", value: "48 hours", inline: true },
+              { name: "Choice", value: "Use it to open a ticket or save it in inventory", inline: true },
+              { name: "Draw Rule", value: "One winner per draw - randomly selected by system", inline: true },
+              { name: "Winner", value: winner.username, inline: true },
+              { name: "Discord ID", value: `\`${winner.discordId}\``, inline: true },
+              { name: "Prize", value: winner.prize, inline: false },
+              { name: "Drawn At", value: `<t:${Math.floor(new Date(now).getTime() / 1000)}:F>`, inline: false },
+            ],
+            thumbnail: winner.avatarUrl ? { url: winner.avatarUrl } : undefined,
+            footer: { text: "NewHopeGGN Lottery System - rewards claim within 48 hours" },
+            timestamp: now,
+          },
+        ],
+      },
+      { webhookUrl },
+    ).catch(() => null);
   }
 
   if (clearAfter) await clearLotteryEntries();

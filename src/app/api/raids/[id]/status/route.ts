@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { getFallbackRaid, isMissingRaidTableError, updateFallbackRaid } from "@/lib/raid-store";
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
 
@@ -43,6 +44,27 @@ export async function POST(
       .select('created_by, target_location, status')
       .eq('id', raidId)
       .single();
+
+    if (raidError && isMissingRaidTableError(raidError)) {
+      const fallbackRaid = await getFallbackRaid(sb, raidId);
+      if (!fallbackRaid) {
+        return NextResponse.json({ ok: false, error: "Raid not found" }, { status: 404 });
+      }
+
+      if (fallbackRaid.created_by !== user.discord_id) {
+        return NextResponse.json(
+          { ok: false, error: "Only raid leader can change status" },
+          { status: 403 }
+        );
+      }
+
+      await updateFallbackRaid(sb, raidId, (currentRaid) => ({ ...currentRaid, status: newStatus }));
+
+      return NextResponse.json({
+        ok: true,
+        message: `Raid ${newStatus}`,
+      });
+    }
 
     if (raidError || !raid) {
       return NextResponse.json({ ok: false, error: "Raid not found" }, { status: 404 });

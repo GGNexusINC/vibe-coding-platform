@@ -143,7 +143,7 @@ export function BetaPortalClient() {
       {/* Header */}
       <div className="border-b border-slate-800 bg-slate-900/50">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
                 <span className="text-2xl">🧪</span>
@@ -155,7 +155,7 @@ export function BetaPortalClient() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase">
                 Beta Access
               </span>
@@ -200,6 +200,11 @@ function BetaSignupSection({ existingRequest, user }: { existingRequest: BetaReq
         setMessage('Application submitted! Check your DMs for updates.');
         setForm({ reason: '', experience: '', playTime: '' });
       } else {
+        if (String(data.error || '').toLowerCase().includes('already')) {
+          setMessage('You are already approved for beta access. Refreshing your portal...');
+          window.setTimeout(() => window.location.reload(), 900);
+          return;
+        }
         setMessage(data.error || 'Failed to submit');
       }
     } catch (e) {
@@ -221,6 +226,26 @@ function BetaSignupSection({ existingRequest, user }: { existingRequest: BetaReq
         <p className="text-amber-400 text-sm">
           Admins are reviewing your request. You'll receive a DM when approved.
         </p>
+      </div>
+    );
+  }
+
+  // Show approved status instead of falling through to the signup form.
+  if (existingRequest?.status === 'approved') {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-950/30 to-slate-950/60 p-8 text-center">
+        <div className="text-4xl mb-4">✓</div>
+        <h2 className="text-2xl font-bold text-white mb-2">You Are Already a Beta Tester</h2>
+        <p className="text-slate-400 mb-5">
+          Your beta application was approved. The signup form is hidden because you already have access.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 hover:bg-emerald-400/15"
+        >
+          Refresh Beta Portal
+        </button>
       </div>
     );
   }
