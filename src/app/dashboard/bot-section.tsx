@@ -24,6 +24,7 @@ type BotStatus = {
 export function BotSection() {
   const [status, setStatus] = useState<BotStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("general");
 
   // Bot Settings State
   const [targetLang, setTargetLang] = useState("en");
@@ -47,7 +48,6 @@ export function BotSection() {
   const handleSaveSettings = () => {
     setSaving(true);
     setSaveStatus("");
-    // In a real app, this would call an API to save guild settings in Supabase
     setTimeout(() => {
       setSaving(false);
       setSaveStatus("✓ Settings updated successfully");
@@ -55,200 +55,277 @@ export function BotSection() {
     }, 800);
   };
 
-  const features = [
-    { title: "Live VC Translation", desc: "Real-time speech translation in voice channels.", icon: "🎙️", color: "text-purple-400" },
-    { title: "Text Translation", desc: "Instant translation for messages and slash commands.", icon: "📝", color: "text-blue-400" },
-    { title: "Admin Logs", desc: "Track all moderation actions with rich embeds.", icon: "📋", color: "text-amber-400" },
-    { title: "Voice TTS", desc: "Speak translated text directly into voice chat.", icon: "🔊", color: "text-emerald-400" },
+  const categories = [
+    { id: "general", label: "General", icon: "⚙️" },
+    { id: "translation", label: "Translation", icon: "🌐" },
+    { id: "voice", label: "Voice/VC", icon: "🎙️" },
+    { id: "moderation", label: "Moderation", icon: "🛡️" },
+    { id: "logging", label: "Logging", icon: "📋" },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* ── Status Header ── */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="relative group overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40 p-5 backdrop-blur-sm transition hover:border-[#5865F2]/40">
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[#5865F2]/5 blur-2xl group-hover:bg-[#5865F2]/10 transition" />
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Service Status</div>
-          <div className="mt-3 flex items-center gap-3">
-            <div className={`h-3 w-3 rounded-full animate-pulse ${
-              status?.status === 'online' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 
-              status?.status === 'degraded' ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]' : 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)]'
-            }`} />
-            <div className="text-xl font-black text-white">{status?.status === 'online' ? 'Connected' : status?.status === 'degraded' ? 'Degraded' : 'Offline'}</div>
-          </div>
-          <div className="mt-1 text-xs text-slate-500">{status?.botTag || "NewHope Translate"}</div>
+    <div className="flex flex-col lg:flex-row gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* ── Left Sidebar (MEE6 Style) ── */}
+      <aside className="w-full lg:w-64 shrink-0 space-y-2">
+        <div className="px-4 mb-4">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Bot Plugins</h3>
         </div>
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeCategory === cat.id
+                ? "bg-[#5865F2] text-white shadow-lg shadow-[#5865F2]/20 translate-x-1"
+                : "text-slate-400 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <span className="text-lg">{cat.icon}</span>
+            {cat.label}
+          </button>
+        ))}
 
-        <div className="relative group overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40 p-5 backdrop-blur-sm transition hover:border-cyan-400/40">
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-cyan-400/5 blur-2xl group-hover:bg-cyan-400/10 transition" />
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Connections</div>
-          <div className="mt-3 flex items-end gap-2">
-            <div className="text-3xl font-black text-white">{status?.voice.activeListeners || 0}</div>
-            <div className="mb-1 text-xs font-bold text-cyan-400">Active Listeners</div>
-          </div>
-          <div className="mt-1 text-xs text-slate-500">{status?.discord.voiceConnections || 0} Voice Channels</div>
-        </div>
-
-        <div className="relative group overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40 p-5 backdrop-blur-sm transition hover:border-amber-400/40">
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-amber-400/5 blur-2xl group-hover:bg-amber-400/10 transition" />
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Language Engine</div>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="text-xl font-black text-white">{status?.deepgram.configured ? "Deepgram AI" : "Google Cloud"}</div>
-            <div className="rounded-full bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 text-[9px] font-black text-amber-300">PREMIUM</div>
-          </div>
-          <div className="mt-1 text-xs text-slate-500">Low-latency Nova-2 Engine</div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        {/* ── Main Settings Panel ── */}
-        <div className="rounded-3xl border border-white/5 bg-slate-950/60 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#5865F2]/40 to-transparent" />
-          
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-black text-white">Bot Configuration</h2>
-              <p className="text-sm text-slate-400">Customize how the bot behaves in your server.</p>
+        <div className="mt-8 pt-8 border-t border-white/5 px-4">
+          <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-4 shadow-xl">
+            <div className="text-[10px] font-black uppercase text-white/70">Subscription</div>
+            <div className="mt-1 flex items-center justify-between text-white font-black">
+              <span>Premium Pro</span>
+              <span className="text-xs">Active</span>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-[#5865F2]/30 bg-[#5865F2]/10 px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Guild #141952</span>
+            <Link 
+              href="/bot" 
+              className="mt-4 block w-full py-2 text-center text-[10px] font-black bg-black/20 hover:bg-black/30 rounded-lg text-white transition"
+            >
+              MANAGE PLAN
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Panel ── */}
+      <div className="flex-1 space-y-6">
+        {/* Stats Summary Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Status</div>
+            <div className="mt-1 flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${status?.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className="text-sm font-black text-white capitalize">{status?.status || "offline"}</span>
             </div>
           </div>
+          <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Guilds</div>
+            <div className="mt-1 text-sm font-black text-white">{status?.discord?.guilds || 0} Connected</div>
+          </div>
+          <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">VC Active</div>
+            <div className="mt-1 text-sm font-black text-white">{status?.discord?.voiceConnections || 0} Sessions</div>
+          </div>
+          <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Listeners</div>
+            <div className="mt-1 text-sm font-black text-white">{status?.voice?.activeListeners || 0} Members</div>
+          </div>
+        </div>
 
-          <div className="space-y-6">
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Target Language</label>
-                <select 
-                  value={targetLang}
-                  onChange={(e) => setTargetLang(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white outline-none focus:border-[#5865F2]/50 transition appearance-none"
-                >
-                  <option value="en">🇺🇸 English</option>
-                  <option value="es">🇪🇸 Spanish</option>
-                  <option value="pt">🇵🇹 Portuguese</option>
-                  <option value="fr">🇫🇷 French</option>
-                  <option value="de">🇩🇪 German</option>
-                </select>
-                <p className="text-[10px] text-slate-500 mt-1 italic">Default language for /vclisten results.</p>
+        {/* Dynamic Category Content */}
+        <div className="bg-slate-950/60 border border-white/10 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <span className="text-8xl">{categories.find(c => c.id === activeCategory)?.icon}</span>
+          </div>
+
+          {activeCategory === "general" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <h2 className="text-2xl font-black text-white">General Settings</h2>
+                <p className="text-slate-400 text-sm">Identity and global bot behavior for your server.</p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Premium Status</label>
-                <div className="flex h-[46px] items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4">
-                  <span className="text-sm font-bold text-emerald-400">UNLIMITED VOICE</span>
-                  <span className="rounded-md bg-emerald-500 px-2 py-0.5 text-[9px] font-black text-white">ACTIVE</span>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-slate-500">Bot Name Preference</label>
+                  <input type="text" placeholder="NewHope Translate" className="w-full bg-slate-900 ring-1 ring-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-[#5865F2]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-slate-500">Command Prefix</label>
+                  <input type="text" disabled value="/" className="w-full bg-slate-900/50 ring-1 ring-white/5 rounded-xl px-4 py-3 text-slate-500 text-sm cursor-not-allowed" title="Slash commands are enabled by default" />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Staff-Voice Webhook</label>
-              <div className="relative">
+              <div className="p-4 rounded-xl bg-amber-400/5 border border-amber-400/10">
+                <div className="text-xs font-bold text-amber-400 flex items-center gap-2 mb-1">
+                  <span>💡</span> PRO TIP
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  You can synchronize your bot settings across multiple servers if you are the owner of all of them. Use the global sync panel in your account settings.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeCategory === "translation" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <h2 className="text-2xl font-black text-white">Translation Engine</h2>
+                <p className="text-slate-400 text-sm">Configure how messages and slash commands are translated.</p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-slate-500">Default Target Language</label>
+                  <select 
+                    value={targetLang}
+                    onChange={(e) => setTargetLang(e.target.value)}
+                    className="w-full bg-slate-900 ring-1 ring-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-[#5865F2] appearance-none"
+                  >
+                    <option value="en">🇺🇸 English</option>
+                    <option value="es">🇪🇸 Spanish</option>
+                    <option value="pt">🇵🇹 Portuguese</option>
+                    <option value="fr">🇫🇷 French</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-slate-500">Output Mode</label>
+                  <div className="flex gap-2">
+                    <button className="flex-1 py-3 bg-[#5865F2] text-white rounded-xl text-xs font-black">EMBEDS</button>
+                    <button className="flex-1 py-3 bg-slate-900 text-slate-500 rounded-xl text-xs font-black hover:text-white transition">RAW TEXT</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-slate-500">Auto-Translate Webhook</label>
                 <input 
                   type="password"
-                  placeholder="https://discord.com/api/webhooks/..."
                   value={voiceWebhook}
                   onChange={(e) => setVoiceWebhook(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white outline-none focus:border-[#5865F2]/50 transition pr-10"
+                  placeholder="https://discord.com/api/webhooks/..." 
+                  className="w-full bg-slate-900 ring-1 ring-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-[#5865F2]" 
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600">🔒</div>
+                <p className="text-[10px] text-slate-500 mt-1 italic">Optional. Used for mirroring translated text specifically.</p>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1 italic">Voice translations will be posted to this webhook channel.</p>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Admin Audit Logs Channel</label>
-              <input 
-                type="text"
-                placeholder="Channel ID (e.g. 123456789012345678)"
-                value={logWebhook}
-                onChange={(e) => setLogWebhook(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white outline-none focus:border-[#5865F2]/50 transition"
-              />
-            </div>
-
-            <div className="pt-4 flex items-center justify-between">
-              <div className="text-xs text-slate-400">
-                {saveStatus && <span className="text-emerald-400 font-bold">{saveStatus}</span>}
+          {activeCategory === "voice" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <h2 className="text-2xl font-black text-white">Voice & VC Control</h2>
+                <p className="text-slate-400 text-sm">Real-time speech translation and TTS settings.</p>
               </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="bg-slate-900/80 p-5 rounded-2xl border border-indigo-500/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-bold">Speech-to-Text</span>
+                    <span className="px-2 py-0.5 bg-indigo-500 rounded text-[9px] font-black text-white">AI POWERED</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                    Higher accuracy transcription using Deepgram Nova-2. Includes noise reduction and speaker diarization.
+                  </p>
+                  <div className="h-1.5 w-full bg-indigo-950 rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-indigo-500" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/80 p-5 rounded-2xl border border-emerald-500/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-bold">Voice Synthesis</span>
+                    <span className="px-2 py-0.5 bg-emerald-500 rounded text-[9px] font-black text-white">PREMIUM</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                    Natural sounding Text-to-Speech voices for multiple languages. Translates and speaks instantly.
+                  </p>
+                  <div className="h-1.5 w-full bg-emerald-950 rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-emerald-500" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Sessions UI (Improved) */}
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4 text-xs font-black uppercase text-slate-500">
+                  <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  Live Activity Monitoring
+                </div>
+                {status?.voice?.connections?.length ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {status.voice.connections.map((c) => (
+                      <div key={c.guildId} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                        <div className="text-xs font-bold text-white">{c.voiceChannelName || "Voice Channel"}</div>
+                        <div className="text-[10px] font-black px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded-lg">{c.targetLang?.toUpperCase() || "EN"}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 border-2 border-dashed border-white/5 rounded-3xl text-center">
+                    <div className="text-4xl mb-3">🤐</div>
+                    <div className="text-sm font-bold text-slate-500">No active voice sessions found</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeCategory === "moderation" && (
+            <div className="py-20 text-center animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="text-5xl mb-4">🛡️</div>
+              <h2 className="text-xl font-black text-white">Auto-Moderation coming soon</h2>
+              <p className="text-slate-500 text-sm max-w-sm mx-auto mt-2">We are currently developing advanced AI-based chat moderation for NewHopeGGN.</p>
+            </div>
+          )}
+
+          {activeCategory === "logging" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <h2 className="text-2xl font-black text-white">Admin Audit Logs</h2>
+                <p className="text-slate-400 text-sm">Track moderation and server events in your private log channel.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-slate-500">Audit Logs Webhook ID / Channel ID</label>
+                <input 
+                  type="text" 
+                  value={logWebhook}
+                  onChange={(e) => setLogWebhook(e.target.value)}
+                  placeholder="1495921032996065371" 
+                  className="w-full bg-slate-900 ring-1 ring-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-[#5865F2]" 
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  "Log Deleted Messages", "Log Edited Messages", "Log Bans/Kicks", 
+                  "Log Voice Join/Leave", "Log Role Changes", "Log Nickname Changes"
+                ].map(item => (
+                  <div key={item} className="flex items-center justify-between p-4 rounded-xl bg-slate-900/50 border border-white/5">
+                    <span className="text-xs font-bold text-slate-300">{item}</span>
+                    <div className="h-6 w-11 rounded-full bg-indigo-500 p-1 flex justify-end">
+                      <div className="h-4 w-4 rounded-full bg-white shadow-sm" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Action Footer */}
+          <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between">
+            <div className="text-xs">
+              {saveStatus && <span className="text-emerald-400 font-bold">{saveStatus}</span>}
+            </div>
+            <div className="flex gap-4">
+              <button className="px-6 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition">Discard</button>
               <button 
                 onClick={handleSaveSettings}
                 disabled={saving}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#5865F2] px-8 text-sm font-black text-white transition hover:scale-[1.02] hover:bg-[#4752c4] shadow-[0_8px_24px_rgba(88,101,242,0.25)]"
+                className="px-8 py-3 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-black transition-all shadow-xl shadow-[#5865F2]/20 active:scale-95"
               >
-                {saving ? "Saving Changes..." : "Save Custom Settings"}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
-
-        {/* ── Features List Sidebar ── */}
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-5">
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-indigo-400 mb-4">Core Features</h3>
-            <div className="space-y-4">
-              {features.map((f) => (
-                <div key={f.title} className="flex gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-xl">
-                    {f.icon}
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-white">{f.title}</div>
-                    <p className="text-[11px] leading-relaxed text-slate-500 mt-0.5">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5">
-            <div className="flex items-center gap-2 text-indigo-300 font-black text-sm uppercase tracking-wider">
-              <span>💎</span> Premium Edge
-            </div>
-            <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-              Your server is currently on the <span className="text-indigo-300 font-bold">Pro Voice</span> plan. 
-              This gives you access to Deepgram AI transcription and multi-language support.
-            </p>
-            <Link 
-              href="/bot" 
-              className="mt-4 block text-center rounded-xl bg-indigo-500/10 border border-indigo-500/30 py-2.5 text-xs font-black text-indigo-200 transition hover:bg-indigo-500/20"
-            >
-              View All Plans
-            </Link>
-          </div>
-        </div>
       </div>
-
-      {/* ── Active Sessions ── */}
-      {status?.voice.connections.length ? (
-        <section className="rounded-3xl border border-white/5 bg-slate-950/60 p-6 shadow-2xl backdrop-blur-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-100">Live Voice Sessions</h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {status.voice.connections.map((c) => (
-              <div key={c.guildId} className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 flex items-center justify-between group transition hover:bg-white/[0.05]">
-                <div>
-                  <div className="text-xs font-bold text-white">{c.voiceChannelName || "Voice Channel"}</div>
-                  <div className="mt-1 text-[10px] text-slate-500">Guild ID: {c.guildId.slice(0, 8)}...</div>
-                </div>
-                <div className="rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-2 py-1 text-[10px] font-black text-cyan-400">
-                  {c.targetLang?.toUpperCase() || "EN"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : (
-        <div className="rounded-3xl border border-white/5 bg-slate-950/20 p-8 text-center border-dashed">
-          <div className="text-3xl mb-2">🧊</div>
-          <div className="text-sm font-bold text-slate-400">No active voice sessions</div>
-          <p className="text-xs text-slate-600 mt-1">Run /vclisten in your Discord to see live activity here.</p>
-        </div>
-      )}
     </div>
   );
 }
