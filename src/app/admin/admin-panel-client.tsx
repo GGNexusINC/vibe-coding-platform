@@ -1870,7 +1870,6 @@ export function AdminPanelClient() {
     { id: "lottery"   as const, label: "Lottery",    icon: "◆" },
     { id: "arena"     as const, label: "Arena",      icon: "⚔️" },
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
-    { id: "beta"      as const, label: "Beta",       icon: "🧪", badge: pendingBetaRequests },
     { id: "wipe"      as const, label: "Wipe",       icon: "⏳" },
   ] as const;
 
@@ -1881,7 +1880,11 @@ export function AdminPanelClient() {
     { id: "files"     as const, label: "Files",      icon: "📁" },
   ] as const;
 
-  const tabs = [...mainTabs, ...featureTabs, ...supportTabs] as const;
+  const systemTabs = [
+    { id: "beta"      as const, label: "Beta Testers", icon: "🧪", badge: pendingBetaRequests },
+  ] as const;
+
+  const tabs = [...mainTabs, ...featureTabs, ...supportTabs, ...systemTabs] as const;
 
   type TabId = (typeof tabs)[number]["id"];
 
@@ -2002,6 +2005,24 @@ export function AdminPanelClient() {
                 <div className="px-3 mb-1.5 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Support & Logs</div>
                 <div className="space-y-0.5">
                   {supportTabs.map((tab) => (
+                    <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
+                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                        activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                      }`}>
+                      {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />}
+                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                      <span className="flex-1 text-left">{tab.label}</span>
+                      {"badge" in tab && tab.badge > 0 && <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* System */}
+              <div>
+                <div className="px-3 mb-1.5 text-[10px] font-bold text-slate-600 uppercase tracking-wider">System</div>
+                <div className="space-y-0.5">
+                  {systemTabs.map((tab) => (
                     <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
                         activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
@@ -2445,6 +2466,117 @@ export function AdminPanelClient() {
                 </div>
                 <ActivityFeed entries={filteredRecent} />
               </div>
+            </div>
+          )}
+
+          {/* ════ BETA TESTER REQUESTS ════ */}
+          {activeTab === "beta" && (
+            <div className="grid gap-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">🧪 Beta Tester Requests</h1>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {betaRequests.filter(r => r.status === 'pending').length} pending request{betaRequests.filter(r => r.status === 'pending').length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={loadBetaRequests}
+                  disabled={betaRequestsLoading}
+                  className="rounded-lg border border-white/8 bg-white/4 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/8 transition disabled:opacity-50"
+                >
+                  {betaRequestsLoading ? "⟳" : "↻"} Refresh
+                </button>
+              </div>
+
+              {betaRequestsLoading ? (
+                <div className="text-center py-12 text-slate-500">Loading requests...</div>
+              ) : betaRequests.length === 0 ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-12 text-center">
+                  <div className="text-4xl mb-3">📭</div>
+                  <h3 className="text-lg font-bold text-white mb-2">No Pending Requests</h3>
+                  <p className="text-slate-400 text-sm">All beta tester applications have been processed.</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {betaRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold text-white shrink-0">
+                          {request.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={request.avatar_url} alt="" className="w-full h-full rounded-full" />
+                          ) : (
+                            request.username[0]?.toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-white">{request.username}</span>
+                            <span className="text-xs text-slate-500">({request.discord_id})</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                              request.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                              request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                              'bg-red-500/20 text-red-400'
+                            }`}>
+                              {request.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mb-2">
+                            Requested {new Date(request.requested_at).toLocaleDateString()}
+                          </p>
+                          {request.reason && (
+                            <div className="mb-2">
+                              <span className="text-xs font-bold text-slate-500 uppercase">Why join:</span>
+                              <p className="text-sm text-slate-300 mt-0.5">{request.reason}</p>
+                            </div>
+                          )}
+                          {request.experience && (
+                            <div className="mb-2">
+                              <span className="text-xs font-bold text-slate-500 uppercase">Experience:</span>
+                              <p className="text-sm text-slate-300 mt-0.5">{request.experience}</p>
+                            </div>
+                          )}
+                          {request.play_time && (
+                            <div className="mb-2">
+                              <span className="text-xs font-bold text-slate-500 uppercase">Play time:</span>
+                              <p className="text-sm text-slate-300 mt-0.5">{request.play_time}</p>
+                            </div>
+                          )}
+
+                          {request.status === 'pending' && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => handleBetaRequest(request.id, 'approve')}
+                                disabled={betaRequestActionLoading === request.id}
+                                className="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold py-2 hover:opacity-90 transition disabled:opacity-50"
+                              >
+                                {betaRequestActionLoading === request.id ? 'Processing...' : '✓ Approve'}
+                              </button>
+                              <button
+                                onClick={() => handleBetaRequest(request.id, 'reject')}
+                                disabled={betaRequestActionLoading === request.id}
+                                className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-bold py-2 hover:bg-red-500/20 transition disabled:opacity-50"
+                              >
+                                ✕ Decline
+                              </button>
+                            </div>
+                          )}
+
+                          {request.status !== 'pending' && request.reviewed_by && (
+                            <p className="text-xs text-slate-500 mt-3">
+                              {request.status === 'approved' ? 'Approved' : 'Declined'} by {request.reviewed_by} on {new Date(request.reviewed_at).toLocaleDateString()}
+                              {request.review_notes && ` - "${request.review_notes}"`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -4874,117 +5006,6 @@ export function AdminPanelClient() {
               </form>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ════ BETA TESTER REQUESTS ════ */}
-      {activeTab === "beta" && (
-        <div className="grid gap-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">🧪 Beta Tester Requests</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {betaRequests.filter(r => r.status === 'pending').length} pending request{betaRequests.filter(r => r.status === 'pending').length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <button
-              onClick={loadBetaRequests}
-              disabled={betaRequestsLoading}
-              className="rounded-lg border border-white/8 bg-white/4 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/8 transition disabled:opacity-50"
-            >
-              {betaRequestsLoading ? "⟳" : "↻"} Refresh
-            </button>
-          </div>
-
-          {betaRequestsLoading ? (
-            <div className="text-center py-12 text-slate-500">Loading requests...</div>
-          ) : betaRequests.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-12 text-center">
-              <div className="text-4xl mb-3">📭</div>
-              <h3 className="text-lg font-bold text-white mb-2">No Pending Requests</h3>
-              <p className="text-slate-400 text-sm">All beta tester applications have been processed.</p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {betaRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold text-white shrink-0">
-                      {request.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={request.avatar_url} alt="" className="w-full h-full rounded-full" />
-                      ) : (
-                        request.username[0]?.toUpperCase()
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-white">{request.username}</span>
-                        <span className="text-xs text-slate-500">({request.discord_id})</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                          request.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-                          request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {request.status.toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mb-2">
-                        Requested {new Date(request.requested_at).toLocaleDateString()}
-                      </p>
-                      {request.reason && (
-                        <div className="mb-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase">Why join:</span>
-                          <p className="text-sm text-slate-300 mt-0.5">{request.reason}</p>
-                        </div>
-                      )}
-                      {request.experience && (
-                        <div className="mb-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase">Experience:</span>
-                          <p className="text-sm text-slate-300 mt-0.5">{request.experience}</p>
-                        </div>
-                      )}
-                      {request.play_time && (
-                        <div className="mb-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase">Play time:</span>
-                          <p className="text-sm text-slate-300 mt-0.5">{request.play_time}</p>
-                        </div>
-                      )}
-
-                      {request.status === 'pending' && (
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => handleBetaRequest(request.id, 'approve')}
-                            disabled={betaRequestActionLoading === request.id}
-                            className="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold py-2 hover:opacity-90 transition disabled:opacity-50"
-                          >
-                            {betaRequestActionLoading === request.id ? 'Processing...' : '✓ Approve'}
-                          </button>
-                          <button
-                            onClick={() => handleBetaRequest(request.id, 'reject')}
-                            disabled={betaRequestActionLoading === request.id}
-                            className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-bold py-2 hover:bg-red-500/20 transition disabled:opacity-50"
-                          >
-                            ✕ Decline
-                          </button>
-                        </div>
-                      )}
-
-                      {request.status !== 'pending' && request.reviewed_by && (
-                        <p className="text-xs text-slate-500 mt-3">
-                          {request.status === 'approved' ? 'Approved' : 'Declined'} by {request.reviewed_by} on {new Date(request.reviewed_at).toLocaleDateString()}
-                          {request.review_notes && ` - "${request.review_notes}"`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

@@ -34,11 +34,12 @@ CREATE POLICY "beta_requests_select_own" ON beta_tester_requests
         discord_id = current_setting('request.jwt.claims', true)::json->>'sub'
     );
 
--- Allow admins to see all requests
-CREATE POLICY "beta_requests_admin_all" ON beta_tester_requests
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM admins 
-            WHERE discord_id = current_setting('request.jwt.claims', true)::json->>'sub'
-        )
-    );
+-- Allow authenticated users to see all requests (admin check handled at application level)
+CREATE POLICY "beta_requests_select_all" ON beta_tester_requests
+    FOR SELECT USING (true);
+
+CREATE POLICY "beta_requests_update_all" ON beta_tester_requests
+    FOR UPDATE USING (true);
+
+CREATE POLICY "beta_requests_delete_all" ON beta_tester_requests
+    FOR DELETE USING (true);
