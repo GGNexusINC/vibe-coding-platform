@@ -98,12 +98,6 @@ export default function RootLayout({
 
               <div className="flex items-center gap-2">
                 <Link
-                  href="/dashboard"
-                  className="hidden h-10 items-center justify-center rounded-full border border-orange-400/20 bg-orange-400/5 px-4 text-sm font-semibold text-orange-100 transition hover:-translate-y-0.5 hover:bg-orange-400/10 sm:inline-flex"
-                >
-                  Dashboard
-                </Link>
-                <Link
                   href="/store"
                   className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.03] sm:inline-flex"
                 >
