@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity-log";
 import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
+import { sendDiscordWebhook } from "@/lib/discord";
 import { env } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
-  const now = new Date().toISOString();
-  const forwardedFor = req.headers.get("x-forwarded-for") ?? "unknown";
-  const userAgent = req.headers.get("user-agent") ?? "unknown";
   const body = await req.json().catch(() => ({}));
   const subject = String(body?.subject ?? "").trim();
   const message = String(body?.message ?? "").trim();
@@ -42,17 +40,11 @@ export async function POST(req: Request) {
       details: `Ticket submitted: ${subject}`,
     });
 
-    // Try to create private Discord channel for this ticket
     let ticketChannelId: string | undefined;
     let ticketCreated = false;
 
-    const botToken = env.discordBotToken();
-    console.log("[ticket] Bot token present:", botToken ? "YES" : "NO");
-
-    if (botToken) {
-      console.log("[ticket] Creating ticket channel for:", user?.username ?? "guest");
+    if (env.discordBotToken()) {
       const channel = await createTicketChannel(user?.username ?? "guest", subject);
-      console.log("[ticket] Channel created:", channel ? "YES" : "NO", channel?.id);
       if (channel) {
         ticketChannelId = channel.id;
         ticketCreated = await sendTicketMessage(
@@ -63,91 +55,79 @@ export async function POST(req: Request) {
             avatar_url: user?.avatar_url ?? undefined,
           },
           subject,
-          message
+          message,
         );
-        console.log("[ticket] Message sent:", ticketCreated);
       }
     }
 
-    // Generate ticket ID for chat (even if DB fails)
     const ticketId = randomUUID();
-    
-    // Save ticket to database
     const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      sbKey,
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, sbKey, {
+      auth: { persistSession: false },
+    });
 
-    const { error: dbError } = await supabase
-      .from("tickets")
-      .insert({
-        id: ticketId,
-        guest_username: (user as any)?.username ?? "Guest",
-        subject,
-        message,
-        discord_channel_id: ticketChannelId ?? null,
-        status: "open",
-      });
+    const { error: dbError } = await supabase.from("tickets").insert({
+      id: ticketId,
+      guest_username: user?.username ?? "Guest",
+      guest_email: user?.discord_id ? `discord:${user.discord_id}` : null,
+      subject,
+      message,
+      discord_channel_id: ticketChannelId ?? null,
+      status: "open",
+    });
 
     if (dbError) {
       console.error("[ticket] Failed to save ticket:", JSON.stringify(dbError));
-    } else {
-      console.log("[ticket] Saved to DB:", ticketId);
     }
 
-    // Also send to logs webhook as backup
-    const webhookUrl = env.discordWebhookUrlForPage("support");
-    if (webhookUrl) {
+    const supportWebhookUrl = env.discordWebhookUrlForPage("support");
+    if (supportWebhookUrl) {
       await sendTicketToWebhook(
-        webhookUrl,
+        supportWebhookUrl,
         {
-          username: (user as any)?.username ?? "Guest",
-          discord_id: (user as any)?.discord_id,
-          avatar_url: (user as any)?.avatar_url ?? undefined,
+          username: user?.username ?? "Guest",
+          discord_id: user?.discord_id,
+          avatar_url: user?.avatar_url ?? undefined,
         },
         subject,
         message,
-        ticketChannelId
+        ticketChannelId,
       );
     }
 
-    // Fire embed to ticket logs channel
-    const TICKET_LOGS_WEBHOOK = "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki";
     const ts = Math.floor(Date.now() / 1000);
-    const discordId = (user as any)?.discord_id;
-    const username = (user as any)?.username ?? "Guest";
-    fetch(TICKET_LOGS_WEBHOOK, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    await sendDiscordWebhook(
+      {
         username: "NewHopeGGN Support",
         embeds: [{
-          title: "🎫 New Support Ticket",
+          title: "New Support Ticket",
           color: 0x06b6d4,
-          description: `**${subject}**\n\`\`\`${message.slice(0, 500)}${message.length > 500 ? "…" : ""}\`\`\``,
+          description: `**${subject}**\n\`\`\`${message.slice(0, 500)}${message.length > 500 ? "..." : ""}\`\`\``,
           fields: [
-            { name: "User", value: discordId ? `<@${discordId}> (${username})` : username, inline: true },
+            {
+              name: "User",
+              value: user?.discord_id ? `<@${user.discord_id}> (${user.username})` : (user?.username ?? "Guest"),
+              inline: true,
+            },
             { name: "Submitted", value: `<t:${ts}:R>`, inline: true },
             ...(ticketChannelId ? [{ name: "Channel", value: `<#${ticketChannelId}>`, inline: true }] : []),
           ],
           footer: { text: `Ticket ID: ${ticketId}` },
           timestamp: new Date().toISOString(),
         }],
-      }),
-    }).catch(() => {});
+      },
+      { webhookUrl: env.discordWebhookUrlForPage("tickets") || supportWebhookUrl },
+    ).catch(() => {});
 
-    return NextResponse.json({ 
-      ok: true, 
+    return NextResponse.json({
+      ok: true,
       ticketId,
       ticketCreated,
       channelId: ticketChannelId,
-      message: ticketCreated 
-        ? "Ticket created! A private channel has been created. Use the chat below to talk with staff." 
-        : "Ticket submitted. Staff will review it shortly."
+      message: ticketCreated
+        ? "Ticket created! A private channel has been created. Use the chat below to talk with staff."
+        : "Ticket submitted. Staff will review it shortly.",
     });
-
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown error";
     console.error("[ticket] Error:", e);
@@ -157,4 +137,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

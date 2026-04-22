@@ -79,7 +79,7 @@ function writeActivityEntriesToFile(entries: ActivityLogEntry[]) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(entries, null, 2), "utf8");
 }
 
-export async function readActivityEntries(): Promise<ActivityLogEntry[]> {
+export async function readActivityEntries(limit = 300): Promise<ActivityLogEntry[]> {
   const supabase = getSupabaseAdminClient();
 
   if (supabase) {
@@ -87,7 +87,7 @@ export async function readActivityEntries(): Promise<ActivityLogEntry[]> {
       .from(TABLE_NAME)
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(300);
+      .limit(Math.max(1, Math.min(limit, 300)));
 
     if (!error && data) {
       return data.map((row) => mapRowToEntry(row));

@@ -2,26 +2,16 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { buildRewardInventoryItem, getCurrentWipeCycle } from "@/lib/reward-inventory";
+import { scoreToWhackAMolePrize, type OnceHumanPrize } from "@/lib/once-human-items";
 
-type Prize = { name: string; rarity: string; emoji: string; color: number; image: string };
-
-// Once Human actual weapons with images from Steam CDN
-function scoreToPrize(score: number): Prize {
-  if (score >= 60) return { name: "AWS.338 - Bullseye", rarity: "legendary", emoji: "🎯", color: 0xef4444, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
-  if (score >= 48) return { name: "HAMR - Brahminy", rarity: "legendary", emoji: "🦅", color: 0xf97316, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
-  if (score >= 36) return { name: "SN700 - Gulped Lore", rarity: "epic", emoji: "🐍", color: 0x8b5cf6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
-  if (score >= 28) return { name: "M416 - Scorched Earth", rarity: "rare", emoji: "🔥", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
-  if (score >= 20) return { name: "SOCR - Outsider", rarity: "rare", emoji: "⚔️", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
-  if (score >= 14) return { name: "ACS12 - Corrosion", rarity: "uncommon", emoji: "☣️", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
-  if (score >= 10)  return { name: "KV-SBR - Little Jaws", rarity: "uncommon", emoji: "🦈", color: 0x22c55e, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
-  if (score >= 6)  return { name: "DE.50", rarity: "rare", emoji: "🔫", color: 0x3b82f6, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
-  if (score >= 2)  return { name: "20 Bandage Pack", rarity: "common", emoji: "🩹", color: 0x94a3b8, image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_9.jpg" };
-  return { name: "Better Luck Next Time", rarity: "none", emoji: "☣️", color: 0x475569, image: "" };
+function scoreToPrize(score: number): OnceHumanPrize {
+  return scoreToWhackAMolePrize(score);
 }
 
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
@@ -76,6 +66,70 @@ export async function POST(req: Request) {
       score,
       spun_at: now,
     });
+
+    if (prize.rarity !== "none") {
+      const rewardItem = buildRewardInventoryItem({
+        userId: session.discord_id,
+        itemSlug: `whackamole-${prize.rarity}-${score}-${Date.now()}`.toLowerCase(),
+        itemName: `Whack-a-Mole Reward: ${prize.name}`,
+        source: "whackamole",
+        prizeLabel: prize.name,
+        score,
+        rewardAt: now,
+        wipeCycle: getCurrentWipeCycle(new Date(now)),
+        note: "Whack-a-Mole reward",
+      });
+      rewardItem.metadata.item_image_url = prize.image;
+      rewardItem.metadata.item_art_source_name = prize.sourceName ?? "Wikily Once Human item database";
+      rewardItem.metadata.item_art_source_url = prize.sourceUrl;
+      rewardItem.metadata.item_art_verified = Boolean(prize.image);
+
+      const rewardInsert = await sb
+        .from("user_inventory")
+        .insert(rewardItem)
+        .select("id, item_name, item_type, status, expires_at, metadata")
+        .single();
+      let rewardRow: any = rewardInsert.data;
+      let rewardError = rewardInsert.error;
+
+      if (rewardError) {
+        console.warn("[minigame] Reward insert with expires_at failed, retrying without column:", {
+          error: rewardError,
+          rewardItem,
+        });
+        const fallbackItem = {
+          ...rewardItem,
+          metadata: {
+            ...rewardItem.metadata,
+            reward_claim_expires_at: rewardItem.metadata.reward_claim_expires_at,
+          },
+        } as Record<string, unknown>;
+        delete (fallbackItem as Record<string, unknown>).expires_at;
+
+        const fallbackInsert = await sb
+          .from("user_inventory")
+          .insert(fallbackItem)
+          .select("id, item_name, item_type, status, metadata")
+          .single();
+        rewardRow = fallbackInsert.data;
+        rewardError = fallbackInsert.error;
+      }
+
+      if (rewardError) {
+        console.error("[minigame] Failed to create reward inventory item:", {
+          error: rewardError,
+          rewardItem,
+        });
+      } else {
+        console.log("[minigame] Reward inventory item created:", {
+          id: rewardRow?.id,
+          item_name: rewardRow?.item_name,
+          item_type: rewardRow?.item_type,
+          status: rewardRow?.status,
+          expires_at: rewardRow?.expires_at ?? rewardRow?.metadata?.reward_claim_expires_at,
+        });
+      }
+    }
   }
 
   // Always send to Discord minigame webhook
@@ -109,14 +163,18 @@ export async function POST(req: Request) {
           description,
           color: prize.color,
           fields: [
+            { name: "Claim Window", value: prize.rarity !== "none" ? "48 hours" : "No claim window", inline: true },
+            { name: "Choice", value: prize.rarity !== "none" ? "Use it to open a ticket or save it in inventory" : "No prize earned", inline: true },
+            { name: "Uses Per Wipe", value: "3 chances per wipe", inline: true },
             { name: "👤 Player", value: session.username, inline: true },
             { name: "🎯 Score", value: `**${score} hits**`, inline: true },
             { name: "🏆 Prize Won", value: prize.rarity !== "none" ? `${prize.emoji} **${prize.name}**` : "No prize", inline: true },
             { name: "⭐ Rarity", value: `${rarityBar[prize.rarity] ?? ""} ${prize.rarity.toUpperCase()}`, inline: false },
             { name: "🆔 Discord ID", value: `\`${session.discord_id}\``, inline: false },
           ],
+          image: prize.image ? { url: prize.image } : undefined,
           thumbnail: session.avatar_url ? { url: session.avatar_url } : undefined,
-          footer: { text: "NewHopeGGN Whack-a-Mole • Once per week" },
+          footer: { text: "NewHopeGGN Whack-a-Mole • Once per week • Rewards claim within 48 hours" },
           timestamp: now,
         }],
       }),

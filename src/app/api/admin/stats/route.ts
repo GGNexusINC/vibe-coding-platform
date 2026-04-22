@@ -3,6 +3,7 @@ import { getAdminSession, getActiveWindowMinutes } from "@/lib/admin-auth";
 import { getActivitySummary, getRecentActivities } from "@/lib/activity-log";
 import { getRoster } from "@/lib/admin-roster";
 import { getPresenceMap } from "@/lib/presence";
+import { readBotOpsEvents, readBotSystemStatus } from "@/lib/system-status";
 import { createClient } from "@supabase/supabase-js";
 import { KNOWN_ADMINS } from "@/lib/env";
 
@@ -22,6 +23,38 @@ async function getGuildMembers() {
     .order("is_bot", { ascending: true })
     .order("display_name", { ascending: true });
   return data ?? [];
+}
+
+async function getSupabaseHealth() {
+  const sb = getSupabaseClient();
+  if (!sb) {
+    return {
+      status: "offline" as const,
+      label: "Supabase",
+      detail: "Database env is missing.",
+      score: 8,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const { error } = await sb.from("site_settings").select("key").limit(1);
+  if (error) {
+    return {
+      status: "degraded" as const,
+      label: "Supabase",
+      detail: error.message,
+      score: 42,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  return {
+    status: "online" as const,
+    label: "Supabase",
+    detail: "Database queries are responding.",
+    score: 96,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 // Get true active day counts per user from user_active_days (permanent, never pruned)
@@ -111,7 +144,7 @@ export async function GET() {
     );
   }
 
-  const [summary, recent, roster, presenceMap, guildMembers, activeDaysMap, activeMinutesMap] = await Promise.all([
+  const [summary, recent, roster, presenceMap, guildMembers, activeDaysMap, activeMinutesMap, botStatus, botEvents, supabaseHealth] = await Promise.all([
     getActivitySummary(),
     getRecentActivities(30),
     getRoster(),
@@ -119,6 +152,9 @@ export async function GET() {
     getGuildMembers(),
     getActiveDaysMap(),
     getActiveMinutesMap(),
+    readBotSystemStatus(),
+    readBotOpsEvents(),
+    getSupabaseHealth(),
   ]);
 
   // Build set of approved admin IDs for gold badge tagging
@@ -186,6 +222,7 @@ export async function GET() {
   const isOwner = KNOWN_ADMINS.some(
     (a) => a.discordId === admin.discord_id && a.role === "owner"
   );
+  const activeListeners = botStatus?.snapshot?.voice.activeListeners ?? 0;
 
   return NextResponse.json({
     ok: true,
@@ -197,5 +234,57 @@ export async function GET() {
       members: mergedMembers,
     },
     recent,
+    botStatus,
+    botEvents,
+    systemConnections: [
+      {
+        id: "fly-discord-bot",
+        label: "Fly Discord Bot",
+        status: botStatus?.snapshot?.ready ? "online" : botStatus?.snapshot ? "degraded" : "offline",
+        detail: botStatus?.snapshot
+          ? `${botStatus.snapshot.discord.guilds} guild${botStatus.snapshot.discord.guilds === 1 ? "" : "s"} · ${activeListeners} listener${activeListeners === 1 ? "" : "s"}`
+          : "No heartbeat received yet.",
+        score: botStatus?.snapshot
+          ? (botStatus.snapshot.status === "online" ? 100 : botStatus.snapshot.status === "degraded" ? 58 : 42)
+          : 8,
+        updatedAt: botStatus?.updatedAt ?? null,
+      },
+      {
+        id: "voice-relay",
+        label: "Voice Relay",
+        status: activeListeners > 0 ? "online" : botStatus?.snapshot ? "degraded" : "offline",
+        detail: botStatus?.snapshot
+          ? `${activeListeners} active listener${activeListeners === 1 ? "" : "s"}`
+          : "No live voice session yet.",
+        score: activeListeners > 0 ? 94 : botStatus?.snapshot ? 36 : 8,
+        updatedAt: botStatus?.updatedAt ?? null,
+      },
+      {
+        id: "deepgram",
+        label: "Deepgram",
+        status: botStatus?.snapshot?.deepgram.configured ? (botStatus.snapshot.deepgram.activeSessions > 0 ? "online" : "degraded") : "offline",
+        detail: botStatus?.snapshot
+          ? `${botStatus.snapshot.deepgram.activeSessions} active session${botStatus.snapshot.deepgram.activeSessions === 1 ? "" : "s"}`
+          : "No transcription stream.",
+        score: botStatus?.snapshot?.deepgram.configured ? 90 : 10,
+        updatedAt: botStatus?.updatedAt ?? null,
+      },
+      {
+        id: "supabase",
+        label: "Supabase",
+        status: supabaseHealth.status,
+        detail: supabaseHealth.detail,
+        score: supabaseHealth.score,
+        updatedAt: supabaseHealth.updatedAt,
+      },
+      {
+        id: "admin-api",
+        label: "Admin API",
+        status: "online",
+        detail: "This dashboard payload loaded successfully.",
+        score: 100,
+        updatedAt: new Date().toISOString(),
+      },
+    ],
   });
 }

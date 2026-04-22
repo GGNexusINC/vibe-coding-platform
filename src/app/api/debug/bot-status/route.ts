@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/admin-auth";
 import { env } from "@/lib/env";
 
 export async function GET() {
+  const admin = await getAdminSession();
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
   const botToken = env.discordBotToken();
   const guildId = env.discordGuildId();
   

@@ -29,10 +29,17 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
   const [closed, setClosed] = useState(false);
   const knownIds = useRef<Set<string>>(new Set());
   const isFirst = useRef(true);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const wasAtBottomRef = useRef(true);
 
   // Fetch messages with sound notifications
   const fetchMessages = useCallback(async () => {
     try {
+      const el = scrollerRef.current;
+      if (el) {
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        wasAtBottomRef.current = distanceFromBottom < 80;
+      }
       const res = await fetch(`/api/support/ticket/${ticketId}/messages?channelId=${channelId}`);
       const data = await res.json();
       if (data.ok) {
@@ -57,11 +64,16 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
   }, [ticketId, channelId, userId]);
 
   // Poll for new messages every 5 seconds
-  useEffect(() => {
+  useEffect(() => { 
     fetchMessages();
     const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [fetchMessages]);
+  useEffect(() => {
+    if (!wasAtBottomRef.current) return;
+    const el = scrollerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages]);
 
   // Send message
   const sendMessage = async (e: React.FormEvent) => {
@@ -160,7 +172,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
       </div>
 
       {/* Messages */}
-      <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
+      <div ref={scrollerRef} className="space-y-3 max-h-80 overflow-y-auto mb-4">
         {messages.length === 0 ? (
           <div className="text-gray-500 text-center py-8">
             No messages yet. Start the conversation!

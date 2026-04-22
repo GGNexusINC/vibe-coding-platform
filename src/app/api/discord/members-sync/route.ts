@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
-const INGEST_SECRET = process.env.DISCORD_INGEST_SECRET ?? "newhopeggn-bot-secret";
+import { env } from "@/lib/env";
 
 function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,7 +22,7 @@ type MemberPayload = {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false, error: "Bad body" }, { status: 400 });
-  if (body.secret !== INGEST_SECRET) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  if (!env.discordIngestSecrets().includes(body.secret)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const members: MemberPayload[] = body.members;
   if (!Array.isArray(members) || members.length === 0) {
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
 // GET — returns all non-bot members for use in admin stats
 export async function GET(req: Request) {
   const auth = req.headers.get("x-admin-secret");
-  if (auth !== INGEST_SECRET) {
+  if (!env.discordIngestSecrets().includes(auth ?? "")) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   const sb = getClient();

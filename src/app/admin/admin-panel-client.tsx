@@ -18,9 +18,43 @@ type ActivityEntry = {
     browser?: string;
     device?: string;
     userAgent?: string;
+    platform?: string;
+    architecture?: string;
+    bitness?: string;
+    mobile?: string;
+    model?: string;
+    cpu?: string;
+    gpu?: string;
+    language?: string;
+    languages?: string;
+    country?: string;
+    region?: string;
+    city?: string;
+    host?: string;
+    origin?: string;
+    referer?: string;
+    ipChain?: string;
     isAdmin?: boolean;
     timestamp?: string;
   };
+};
+
+type BotOpsEvent = {
+  id: string;
+  kind: "status" | "voice" | "restart" | "error" | "info";
+  title: string;
+  detail: string;
+  createdAt: string;
+  meta?: Record<string, unknown>;
+};
+
+type SystemConnection = {
+  id: string;
+  label: string;
+  status: "online" | "degraded" | "offline";
+  detail: string;
+  score: number;
+  updatedAt?: string | null;
 };
 
 type MemberSummary = {
@@ -51,6 +85,45 @@ type StatsResponse = {
     members: MemberSummary[];
   };
   recent: ActivityEntry[];
+  botStatus?: {
+    updatedAt: string;
+    snapshot: {
+      service: "discord-bot";
+      status: "starting" | "online" | "degraded" | "offline";
+      botId: string | null;
+      botTag: string | null;
+      ready: boolean;
+      uptimeMs: number;
+      heartbeatAt: string;
+      discord: {
+        guilds: number;
+        voiceConnections: number;
+      };
+      deepgram: {
+        configured: boolean;
+        activeSessions: number;
+      };
+      voice: {
+        activeListeners: number;
+        connections: {
+          guildId: string;
+          guildName: string | null;
+          voiceChannelId: string | null;
+          voiceChannelName: string | null;
+          connectionState: string;
+          listenerCount: number;
+          deepgramState: "open" | "closed" | "unknown";
+          requesterId: string | null;
+          targetLang: string | null;
+          startedAt: string | null;
+        }[];
+      };
+      notes?: string[];
+      lastError?: string | null;
+    };
+  } | null;
+  botEvents?: BotOpsEvent[];
+  systemConnections?: SystemConnection[];
   error?: string;
 };
 
@@ -180,6 +253,103 @@ function getEventColor(type: string) {
   }
 }
 
+function statusScore(status?: string) {
+  switch (status) {
+    case "online":
+      return 100;
+    case "degraded":
+      return 58;
+    case "starting":
+      return 42;
+    case "offline":
+      return 12;
+    default:
+      return 20;
+  }
+}
+
+function getOpsEventIcon(kind: BotOpsEvent["kind"]) {
+  switch (kind) {
+    case "status":
+      return "●";
+    case "voice":
+      return "▶";
+    case "restart":
+      return "↻";
+    case "error":
+      return "!";
+    default:
+      return "•";
+  }
+}
+
+function getOpsEventTone(kind: BotOpsEvent["kind"]) {
+  switch (kind) {
+    case "status":
+      return "emerald";
+    case "voice":
+      return "cyan";
+    case "restart":
+      return "amber";
+    case "error":
+      return "rose";
+    default:
+      return "slate";
+  }
+}
+
+function getOpsEventLabel(kind: BotOpsEvent["kind"]) {
+  switch (kind) {
+    case "status":
+      return "Heartbeat";
+    case "voice":
+      return "Voice";
+    case "restart":
+      return "Restart";
+    case "error":
+      return "Error";
+    default:
+      return "Info";
+  }
+}
+
+function formatUptime(ms?: number) {
+  if (!ms || ms <= 0) return "0m";
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
+function formatAgo(ts?: string | null) {
+  if (!ts) return "n/a";
+  const diff = Date.now() - new Date(ts).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return "just now";
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function statusLabel(status?: string) {
+  switch (status) {
+    case "online":
+      return "Online";
+    case "degraded":
+      return "Degraded";
+    case "starting":
+      return "Starting";
+    case "offline":
+      return "Disconnected";
+    default:
+      return "Unknown";
+  }
+}
+
 function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -298,6 +468,33 @@ function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
                       </div>
                     </div>
 
+                    {(meta.platform || meta.cpu || meta.gpu || meta.mobile || meta.model) && (
+                      <div className="col-span-2 rounded-lg border border-white/5 bg-slate-950/30 p-3">
+                        <span className="text-slate-500 uppercase tracking-wider font-semibold">System Details</span>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                          <span>Platform: <b className="text-slate-300">{meta.platform || "Unknown"}</b></span>
+                          <span>CPU: <b className="text-slate-300">{meta.cpu || meta.architecture || "Unknown"}</b></span>
+                          <span>GPU: <b className="text-slate-300">{meta.gpu || "Unknown"}</b></span>
+                          <span>Mobile: <b className="text-slate-300">{meta.mobile || "Unknown"}</b></span>
+                          <span>Model: <b className="text-slate-300">{meta.model || "Unknown"}</b></span>
+                          <span>Locale: <b className="text-slate-300">{meta.language || "Unknown"}</b></span>
+                          <span>Location: <b className="text-slate-300">{[meta.region, meta.country].filter(Boolean).join(", ") || "Unknown"}</b></span>
+                          <span>Host: <b className="text-slate-300">{meta.host || "Unknown"}</b></span>
+                        </div>
+                      </div>
+                    )}
+
+                    {(meta.origin || meta.referer || meta.ipChain) && (
+                      <div className="col-span-2 rounded-lg border border-white/5 bg-slate-950/30 p-3">
+                        <span className="text-slate-500 uppercase tracking-wider font-semibold">Network Trace</span>
+                        <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                          <div>Origin: <span className="font-mono text-slate-400 break-all">{meta.origin || "Unknown"}</span></div>
+                          <div>Referer: <span className="font-mono text-slate-400 break-all">{meta.referer || "Unknown"}</span></div>
+                          <div>IP Chain: <span className="font-mono text-slate-400 break-all">{meta.ipChain || "Unknown"}</span></div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Full Timestamp */}
                     <div className="col-span-2 pt-2 border-t border-white/5">
                       <span className="text-slate-500 uppercase tracking-wider font-semibold">Full Timestamp</span>
@@ -365,15 +562,25 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
   const [msgs, setMsgs] = useState<{id:string;author_username:string;author_avatar?:string;content:string;created_at:string}[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const wasAtBottomRef = useRef(true);
 
   async function loadMsgs() {
+    const el = scrollerRef.current;
+    if (el) {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      wasAtBottomRef.current = distanceFromBottom < 80;
+    }
     const d = await fetch(`/api/support/ticket/${ticketId}/messages?channelId=${channelId}`).then(r=>r.json()).catch(()=>({}));
     if (d.ok) setMsgs(d.messages ?? []);
   }
 
   useEffect(() => { void loadMsgs(); const t = setInterval(loadMsgs, 5000); return () => clearInterval(t); }, [channelId]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  useEffect(() => {
+    if (!wasAtBottomRef.current) return;
+    const el = scrollerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [msgs]);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -390,10 +597,10 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
     <div className="mt-3 rounded-xl border border-cyan-400/20 bg-slate-950/80 overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-cyan-500/5">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-        <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-widest">Live Chat</span>
-        <span className="ml-auto text-[10px] text-slate-600">auto-refreshes every 5s</span>
+        <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-widest">Ticket History</span>
+        <span className="ml-auto text-[10px] text-slate-600">saves back-and-forth · auto-refreshes every 5s</span>
       </div>
-      <div className="h-48 overflow-y-auto px-3 py-2 space-y-2 scrollbar-none">
+      <div ref={scrollerRef} className="h-48 overflow-y-auto px-3 py-2 space-y-2 scrollbar-none">
         {msgs.length === 0 && <div className="text-xs text-slate-600 text-center py-4">No messages yet</div>}
         {msgs.map(m => (
           <div key={m.id} className="flex items-start gap-2">
@@ -408,7 +615,6 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
             </div>
           </div>
         ))}
-        <div ref={bottomRef} />
       </div>
       <form onSubmit={send} className="flex items-center gap-2 px-3 py-2 border-t border-white/5">
         <input
@@ -434,6 +640,8 @@ export function AdminPanelClient() {
   const [statsError, setStatsError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState("");
+  const [botRestarting, setBotRestarting] = useState(false);
+  const [botRestartStatus, setBotRestartStatus] = useState("");
 
   const [target, setTarget] = useState("general-chat");
   const [audienceLabel, setAudienceLabel] = useState("");
@@ -446,6 +654,7 @@ export function AdminPanelClient() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [broadcastStatus, setBroadcastStatus] = useState("");
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [formatStyle, setFormatStyle] = useState<"normal" | "holographic" | "neon" | "gold" | "ansi">("normal");
   const [customWebhooks, setCustomWebhooks] = useState<{id:string;label:string;url:string}[]>([]);
   const [newWebhookLabel, setNewWebhookLabel] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
@@ -460,6 +669,9 @@ export function AdminPanelClient() {
   const [liveTicketId, setLiveTicketId] = useState<string|null>(null);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketStatusMsg, setTicketStatusMsg] = useState("");
+  const [operationsConsoleHidden, setOperationsConsoleHidden] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("adminOpsConsoleHidden") === "1"
+  );
   const [navScrolled, setNavScrolled] = useState(false);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const [wipeAt, setWipeAt] = useState("");
@@ -602,6 +814,65 @@ export function AdminPanelClient() {
     ? JSON.stringify(selectedMember.profile, null, 2)
     : "";
 
+  const botSnapshot = stats?.botStatus?.snapshot ?? null;
+  const botEvents = stats?.botEvents ?? [];
+  const botHeartbeatAge = stats?.botStatus?.updatedAt ?? lastSyncAt;
+  const webApiHealthy = Boolean(stats && !statsError);
+  const serviceCards = [
+    {
+      label: "Fly Discord Bot",
+      value: botSnapshot?.botTag ?? botSnapshot?.botId ?? "Disconnected",
+      detail: botSnapshot
+        ? `${statusLabel(botSnapshot.status)} · ${formatUptime(botSnapshot.uptimeMs)} uptime`
+        : "No heartbeat received yet",
+      score: botSnapshot ? statusScore(botSnapshot.status) : 8,
+      tone: botSnapshot?.status === "online"
+        ? "emerald"
+        : botSnapshot?.status === "degraded"
+          ? "amber"
+          : botSnapshot?.status === "starting"
+            ? "cyan"
+            : "rose",
+    },
+    {
+      label: "Voice Relay",
+      value: botSnapshot ? `${botSnapshot.voice.activeListeners} active` : "Offline",
+      detail: botSnapshot
+        ? `${botSnapshot.discord.voiceConnections} voice connection${botSnapshot.discord.voiceConnections === 1 ? "" : "s"} · ${botSnapshot.voice.connections.length} channel${botSnapshot.voice.connections.length === 1 ? "" : "s"}`
+        : "Waiting for a live voice session",
+      score: botSnapshot?.voice.activeListeners ? 96 : botSnapshot ? 44 : 8,
+      tone: botSnapshot?.voice.activeListeners ? "cyan" : botSnapshot ? "amber" : "rose",
+    },
+    {
+      label: "Deepgram",
+      value: botSnapshot?.deepgram.configured ? "Live" : "Not configured",
+      detail: botSnapshot
+        ? `${botSnapshot.deepgram.activeSessions} session${botSnapshot.deepgram.activeSessions === 1 ? "" : "s"} · updated ${formatAgo(botHeartbeatAge)}`
+        : "Transcription stream unavailable",
+      score: botSnapshot?.deepgram.configured ? 100 : 10,
+      tone: botSnapshot?.deepgram.configured ? "violet" : "rose",
+    },
+    {
+      label: "Web API",
+      value: webApiHealthy ? "Healthy" : "Offline",
+      detail: webApiHealthy
+        ? `Stats refreshed ${formatAgo(lastSyncAt || botHeartbeatAge)}`
+        : "Admin stats endpoint is not responding",
+      score: webApiHealthy ? 88 : 12,
+      tone: webApiHealthy ? "emerald" : "rose",
+    },
+    {
+      label: "Data Sync",
+      value: stats ? `${stats.summary.totalMembersTracked.toLocaleString()} members` : "No data",
+      detail: stats
+        ? `${stats.summary.totalEvents.toLocaleString()} activity events · ${stats.recent.length.toLocaleString()} recent logs`
+        : "Waiting for database-backed stats",
+      score: stats ? 82 : 12,
+      tone: stats ? "cyan" : "rose",
+    },
+  ];
+  const serviceConnections = stats?.systemConnections ?? [];
+
   const loadStats = useCallback(async () => {
     setRefreshing(true);
     setStatsError("");
@@ -632,6 +903,30 @@ export function AdminPanelClient() {
     setRefreshing(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleEmergencyRestart = useCallback(async () => {
+    setBotRestarting(true);
+    setBotRestartStatus("");
+
+    const res = await fetch("/api/admin/bot-restart", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target: "discord-bot" }),
+    });
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data?.ok) {
+      setBotRestartStatus(data?.error || "Emergency restart failed.");
+      setBotRestarting(false);
+      return;
+    }
+
+    setBotRestartStatus(
+      `Restart signal sent to ${data.appName}. ${data.alertSent ? "Discord logs updated." : "Discord log channel not configured."}`,
+    );
+    setBotRestarting(false);
+    void loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -743,13 +1038,14 @@ export function AdminPanelClient() {
       fd.append("message", message);
       fd.append("color", color);
       fd.append("imageUrl", imageUrl);
+      fd.append("formatStyle", formatStyle);
       fd.append("imageFile", imageFile);
       fetchInit = { method: "POST", body: fd };
     } else {
       fetchInit = {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl }),
+        body: JSON.stringify({ target, audienceLabel, title, message, color, imageUrl, formatStyle }),
       };
     }
     const res = await fetch("/api/admin/broadcast", fetchInit);
@@ -1717,6 +2013,304 @@ export function AdminPanelClient() {
                 ))}
               </div>
 
+              <div id="bot-status" className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr] scroll-mt-24">
+                <div className="rounded-3xl border border-white/6 bg-gradient-to-b from-slate-900/90 to-slate-950/95 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+                  <div className="flex items-center justify-between gap-4 border-b border-white/6 px-5 py-4">
+                    <div>
+                      <div className="text-sm font-semibold text-white">Operations Console</div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {botSnapshot ? `Heartbeat ${formatAgo(botHeartbeatAge)} ago` : "No heartbeat yet"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                          botSnapshot?.status === "online"
+                            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                            : botSnapshot?.status === "degraded"
+                              ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                              : botSnapshot?.status === "starting"
+                                ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+                                : "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                        }`}
+                      >
+                        {statusLabel(botSnapshot?.status)}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleEmergencyRestart()}
+                        disabled={botRestarting}
+                        className="rounded-full border border-rose-400/25 bg-rose-400/10 px-3 py-1 text-[11px] font-semibold text-rose-200 hover:bg-rose-400/15 disabled:opacity-50"
+                      >
+                        {botRestarting ? "Restarting..." : "Emergency Restart"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !operationsConsoleHidden;
+                          setOperationsConsoleHidden(next);
+                          localStorage.setItem("adminOpsConsoleHidden", next ? "1" : "0");
+                        }}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/10"
+                      >
+                        {operationsConsoleHidden ? "Show Console" : "Hide Console"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {!operationsConsoleHidden ? (
+                    <>
+                  <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+                    {serviceConnections.map((system) => {
+                      const tone =
+                        system.status === "online"
+                          ? "emerald"
+                          : system.status === "degraded"
+                            ? "amber"
+                            : "rose";
+                      return (
+                        <div key={system.id} className="rounded-2xl border border-white/6 bg-white/[0.02] p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500">{system.label}</div>
+                              <div className="mt-2 text-lg font-black tracking-tight text-white">{system.detail}</div>
+                              <div className="mt-1 text-[11px] text-slate-500">
+                                {system.updatedAt ? `Updated ${formatAgo(system.updatedAt)}` : "Live connection"}
+                              </div>
+                            </div>
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-[10px] font-black uppercase tracking-widest ${
+                                tone === "emerald"
+                                  ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                  : tone === "amber"
+                                    ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                    : "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                              }`}
+                            >
+                              {Math.round(system.score)}%
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <span
+                              className={`rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.22em] ${
+                                tone === "emerald"
+                                  ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                  : tone === "amber"
+                                    ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                    : "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                              }`}
+                            >
+                              {system.status}
+                            </span>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  tone === "emerald"
+                                    ? "bg-gradient-to-r from-emerald-400 to-lime-300"
+                                    : tone === "amber"
+                                      ? "bg-gradient-to-r from-amber-400 to-orange-300"
+                                      : "bg-gradient-to-r from-rose-400 to-orange-300"
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(6, system.score))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {botSnapshot?.lastError ? (
+                    <div className="border-t border-white/6 bg-rose-500/5 px-5 py-4">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-rose-300">
+                        Last Heartbeat Error
+                      </div>
+                      <div className="mt-2 rounded-2xl border border-rose-400/20 bg-rose-950/30 px-4 py-3 text-sm text-rose-100">
+                        {botSnapshot.lastError}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="border-t border-white/6 px-5 py-4">
+                    <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">
+                      Voice Connections
+                    </div>
+                    <div className="max-h-[280px] divide-y divide-white/6 overflow-y-auto rounded-2xl border border-white/5 bg-white/[0.015]">
+                      {botSnapshot?.voice.connections.length ? (
+                        botSnapshot.voice.connections.map((connection) => {
+                          const liveTone =
+                            connection.connectionState === "ready"
+                              ? "emerald"
+                              : connection.connectionState === "connecting" || connection.connectionState === "signalling"
+                                ? "amber"
+                                : "rose";
+                          return (
+                            <div key={`${connection.guildId}-${connection.voiceChannelId ?? "voice"}`} className="px-4 py-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-semibold text-white">
+                                    {connection.guildName ?? "Unknown Guild"}
+                                  </div>
+                                  <div className="mt-0.5 truncate text-xs text-slate-500">
+                                    {connection.voiceChannelName ?? "Voice channel unavailable"}
+                                  </div>
+                                </div>
+                                <div
+                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                    liveTone === "emerald"
+                                      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                      : liveTone === "amber"
+                                        ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                        : "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                                  }`}
+                                >
+                                  {statusLabel(connection.connectionState)}
+                                </div>
+                              </div>
+
+                              <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-slate-500 md:grid-cols-4">
+                                <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2">
+                                  <div className="text-[9px] uppercase tracking-[0.22em] text-slate-600">Listeners</div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-100">{connection.listenerCount}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2">
+                                  <div className="text-[9px] uppercase tracking-[0.22em] text-slate-600">Deepgram</div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-100">{connection.deepgramState}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2">
+                                  <div className="text-[9px] uppercase tracking-[0.22em] text-slate-600">Language</div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-100">{connection.targetLang ?? "en"}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2">
+                                  <div className="text-[9px] uppercase tracking-[0.22em] text-slate-600">Started</div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-100">{formatAgo(connection.startedAt)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-5 py-8 text-center">
+                          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-2xl text-slate-500">
+                            x
+                          </div>
+                          <div className="mt-4 text-sm font-semibold text-slate-200">No live voice sessions</div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            The bot will appear here as soon as a voice listener starts.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {botRestartStatus && (
+                    <div className="border-t border-white/6 px-5 py-3 text-xs text-slate-400">
+                      {botRestartStatus}
+                    </div>
+                  )}
+                    </>
+                  ) : (
+                    <div className="border-t border-white/6 px-5 py-4">
+                      <div className="rounded-2xl border border-white/6 bg-white/[0.025] px-4 py-3 text-sm text-slate-400">
+                        Operations Console is hidden. Use <span className="font-semibold text-slate-200">Show Console</span> when you need diagnostics, voice sessions, or connection meters.
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-3xl border border-white/6 bg-gradient-to-b from-slate-900/90 to-slate-950/95 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+                  <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
+                    <div>
+                      <div className="text-sm font-semibold text-white">Live Bot Logs</div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        Heartbeats, voice state changes, and emergency controls
+                      </div>
+                    </div>
+                    <div className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
+                      {botEvents.length ? `${botEvents.length} events` : "Idle"}
+                    </div>
+                  </div>
+
+                  <div className="max-h-[560px] divide-y divide-white/6 overflow-y-auto">
+                    {botEvents.length > 0 ? (
+                      botEvents.slice(0, 12).map((event) => {
+                        const tone = getOpsEventTone(event.kind);
+                        const serviceMeta = event.meta && typeof event.meta.service === "string" ? event.meta.service : "";
+                        const statusMeta = event.meta && typeof event.meta.status === "string" ? event.meta.status : "";
+                        return (
+                          <div key={event.id} className="px-5 py-4">
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-[11px] font-black uppercase ${
+                                  tone === "emerald"
+                                    ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                    : tone === "cyan"
+                                      ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+                                      : tone === "amber"
+                                        ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                        : tone === "rose"
+                                          ? "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                                          : "border-white/10 bg-white/5 text-slate-300"
+                                }`}
+                              >
+                                {getOpsEventIcon(event.kind)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="truncate text-sm font-semibold text-white">{event.title}</div>
+                                    <div className="mt-0.5 text-xs text-slate-500">{event.detail}</div>
+                                  </div>
+                                  <div className="shrink-0 text-[10px] text-slate-600">
+                                    {formatAgo(event.createdAt)}
+                                  </div>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <span
+                                    className={`rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.22em] ${
+                                      tone === "emerald"
+                                        ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                        : tone === "cyan"
+                                          ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+                                          : tone === "amber"
+                                            ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                            : tone === "rose"
+                                              ? "border-rose-400/20 bg-rose-400/10 text-rose-300"
+                                              : "border-white/10 bg-white/5 text-slate-300"
+                                    }`}
+                                  >
+                                    {getOpsEventLabel(event.kind)}
+                                  </span>
+                                  {serviceMeta ? (
+                                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-300">
+                                      {serviceMeta}
+                                    </span>
+                                  ) : null}
+                                  {statusMeta ? (
+                                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-300">
+                                      {statusMeta}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-5 py-10 text-center">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-2xl text-slate-500">
+                          i
+                        </div>
+                        <div className="mt-4 text-sm font-semibold text-slate-200">No bot events yet</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Heartbeats, voice actions, and restart events will appear here automatically.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* Wipe Timer Status — live ticking */}
               {wipeAt && (() => {
                 const ms = new Date(wipeAt).getTime() - now;
@@ -1923,6 +2517,18 @@ export function AdminPanelClient() {
                   <input className="h-10 flex-1 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                     value={color} onChange={(e) => setColor(e.target.value)} placeholder="#22c55e" maxLength={7} />
                 </div>
+                <select 
+                  className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none focus:border-cyan-400/30"
+                  value={formatStyle} 
+                  onChange={(e) => setFormatStyle(e.target.value as any)}
+                  title="Text formatting style (Nitro features)"
+                >
+                  <option value="normal">✨ Normal Formatting</option>
+                  <option value="holographic">🌈 Holographic (Gradient)</option>
+                  <option value="neon">🔥 Neon (Bright Colors)</option>
+                  <option value="gold">👑 Gold (Premium)</option>
+                  <option value="ansi">🎨 ANSI Colors</option>
+                </select>
                 <div className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/12 bg-slate-900/60 px-4 py-3 hover:border-cyan-400/25 transition"
                   onClick={() => fileInputRef.current?.click()}>
                   {imagePreview
@@ -1937,13 +2543,13 @@ export function AdminPanelClient() {
                 <input className="h-10 rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
                   value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(""); } }}
                   placeholder="Or paste image URL" maxLength={500} disabled={!!imageFile} />
-                <textarea className="min-h-28 rounded-xl border border-white/8 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition resize-none"
+                <textarea className="min-h-28 whitespace-pre-wrap rounded-xl border border-white/8 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition resize-none"
                   value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message *" maxLength={1500} required />
                 <div className="overflow-hidden rounded-xl border border-white/6 bg-[#0d1117]">
                   <div className="h-[3px] w-full" style={{ backgroundColor: color || "#22c55e" }} />
                   <div className="px-4 py-3">
                     <div className="text-sm font-semibold text-white">{title || "Preview title"}</div>
-                    <div className="mt-0.5 text-sm text-slate-400">{message || "Preview…"}</div>
+                    <div className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate-400">{message || "Preview…"}</div>
                   </div>
                 </div>
                 <button type="submit" disabled={broadcastLoading}
@@ -3884,48 +4490,63 @@ export function AdminPanelClient() {
                   No files uploaded yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {adminFiles.map((f) => {
                     const isImage = f.file_type.startsWith("image/");
                     const isPdf = f.file_type === "application/pdf";
                     const icon = isImage ? "🖼️" : isPdf ? "📄" : "📎";
                     const sizeKb = (f.file_size / 1024).toFixed(0);
                     return (
-                      <div key={f.id} className="group rounded-2xl border border-white/8 bg-white/4 overflow-hidden hover:border-white/15 transition">
+                      <div key={f.id} className="group relative rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-hidden hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:-translate-y-1 transition-all duration-300">
+                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         {isImage ? (
-                          <a href={f.public_url} target="_blank" rel="noopener noreferrer">
-                            <img src={f.public_url} alt={f.file_name} className="w-full h-36 object-cover bg-slate-900" />
-                          </a>
+                          <div className="relative h-40 overflow-hidden bg-black/40">
+                            <a href={f.public_url} target="_blank" rel="noopener noreferrer" className="block relative z-10 h-full w-full">
+                              <img src={f.public_url} alt={f.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
+                            </a>
+                          </div>
                         ) : (
-                          <div className="flex h-36 items-center justify-center bg-slate-900/60 text-5xl">
-                            {icon}
+                          <div className="flex h-40 items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 text-6xl shadow-inner relative z-10 overflow-hidden">
+                            <div className="group-hover:scale-110 transition-transform duration-500 drop-shadow-lg">
+                              {icon}
+                            </div>
                           </div>
                         )}
-                        <div className="p-3">
-                          <div className="text-sm font-semibold text-white truncate">{f.file_name}</div>
-                          {f.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{f.description}</div>}
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <div className="text-[10px] text-slate-600">
-                              {f.uploaded_by} • {sizeKb} KB • <span className="capitalize">{f.folder}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
+                        <div className="p-4 relative z-10 bg-slate-950/80 border-t border-white/5">
+                          <div className="text-sm font-bold text-white truncate group-hover:text-cyan-300 transition-colors" title={f.file_name}>{f.file_name}</div>
+                          {f.description && <div className="text-xs font-medium text-slate-400 mt-1 truncate" title={f.description}>{f.description}</div>}
+                          <div className="mt-2.5 mb-1 flex items-center gap-2 overflow-hidden whitespace-nowrap">
+                            <span className="shrink-0 rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-slate-300 uppercase">{f.folder}</span>
+                            <span className="shrink-0 text-[10px] text-slate-500 bg-black/20 px-1.5 py-0.5 rounded">{sizeKb} KB</span>
+                            <span className="truncate text-[10px] text-slate-500">by {f.uploaded_by}</span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2 pt-3 border-t border-white/5">
+                            <div className="flex items-center gap-1.5">
                               <a
                                 href={f.public_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="rounded-lg border border-white/8 bg-white/5 px-2 py-1 text-[10px] font-bold text-cyan-400 hover:bg-white/10 transition"
+                                className="rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1.5 text-[10px] font-bold text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition"
                               >
-                                ↓ Open
+                                👀 Open
                               </a>
-                              <button
-                                type="button"
-                                onClick={() => handleFileDelete(f.id)}
-                                disabled={filesDeletingId === f.id}
-                                className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-40"
+                              <a
+                                href={`${f.public_url}?download=${encodeURIComponent(f.file_name)}`}
+                                download
+                                className="rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 text-[10px] font-bold text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 transition"
                               >
-                                {filesDeletingId === f.id ? "…" : "×"}
-                              </button>
+                                💾 Download
+                              </a>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleFileDelete(f.id)}
+                              disabled={filesDeletingId === f.id}
+                              className="rounded-lg border border-rose-500/20 bg-rose-500/10 h-7 w-7 flex items-center justify-center text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition disabled:opacity-40 shrink-0"
+                              title="Delete File"
+                            >
+                              {filesDeletingId === f.id ? "…" : "🗑️"}
+                            </button>
                           </div>
                         </div>
                       </div>

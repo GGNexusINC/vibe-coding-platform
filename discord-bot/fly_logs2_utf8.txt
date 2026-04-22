@@ -1,0 +1,100 @@
+﻿[2m2026-04-21T03:03:08Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Machine started in 1.077s
+[2m2026-04-21T03:03:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting...
+[2m2026-04-21T03:03:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026/04/21 03:03:08 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:507:98cd:de33:2]:22
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Slash commands registered.
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting member sync...
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetching members batch 1, after: 0
+[2m2026-04-21T03:03:10Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:03:10Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:03:10Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetched 105 members in batch 1
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Synced 105 guild members (batch 1)
+[2m2026-04-21T03:03:10Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Completed member sync. Synced 105 members in total.
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Logged in as NEWHOPEGGN#0961
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Relaying to: https://newhopeggn.vercel.app/api/discord/ingest
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m](node:635) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m](Use `node --trace-deprecation ...` to show where the warning was created)
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Slash commands registered.
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Starting member sync...
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Fetching members batch 1, after: 0
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Fetched 105 members in batch 1
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Synced 105 guild members (batch 1)
+[2m2026-04-21T03:03:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Completed member sync. Synced 105 members in total.
+[2m2026-04-21T03:03:39Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Login timeout - Discord client is hanging during login
+[2m2026-04-21T03:03:41Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-21T03:03:41Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-21T03:03:41Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][   32.914140] reboot: Restarting system
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Logged in as NEWHOPEGGN#0961
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Relaying to: https://newhopeggn.vercel.app/api/discord/ingest
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m](node:634) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m](Use `node --trace-deprecation ...` to show where the warning was created)
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Slash commands registered.
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting member sync...
+[2m2026-04-21T03:03:44Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetching members batch 1, after: 0
+[2m2026-04-21T03:03:45Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetched 105 members in batch 1
+[2m2026-04-21T03:03:45Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Synced 105 guild members (batch 1)
+[2m2026-04-21T03:03:45Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Completed member sync. Synced 105 members in total.
+[2m2026-04-21T03:03:48Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:03:48.851475359 [01KPPZE17W7A59WTK0RTM9J2K4:main] Running Firecracker v1.14.2
+[2m2026-04-21T03:03:48Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:03:48.851679937 [01KPPZE17W7A59WTK0RTM9J2K4:main] Listening on API socket ("/fc.sock").
+[2m2026-04-21T03:03:49Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 350f2667)...
+[2m2026-04-21T03:03:49Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node bot.js` as root
+[2m2026-04-21T03:03:49Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-21T03:03:49Z[0m runner[18530d9cd07158] [32miad[0m [[34minfo[0m]Machine started in 1.237s
+[2m2026-04-21T03:03:50Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Starting...
+[2m2026-04-21T03:03:50Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026/04/21 03:03:50 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:41c:a905:9369:2]:22
+[2m2026-04-21T03:03:51Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:03:51Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:03:51Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:04:14Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Login timeout - Discord client is hanging during login
+[2m2026-04-21T03:04:14Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-21T03:04:14Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-21T03:04:14Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][   32.767345] reboot: Restarting system
+[2m2026-04-21T03:04:21Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-21T03:04:21Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-21T03:04:21Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][   32.971894] reboot: Restarting system
+[2m2026-04-21T03:04:22Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026-04-21T03:04:22.862224216 [01KPPZE17587N61G0T54RGPV9F:main] Running Firecracker v1.14.2
+[2m2026-04-21T03:04:22Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026-04-21T03:04:22.862366646 [01KPPZE17587N61G0T54RGPV9F:main] Listening on API socket ("/fc.sock").
+[2m2026-04-21T03:04:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 350f2667)...
+[2m2026-04-21T03:04:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node bot.js` as root
+[2m2026-04-21T03:04:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-21T03:04:23Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Machine started in 1.022s
+[2m2026-04-21T03:04:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting...
+[2m2026-04-21T03:04:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026/04/21 03:04:23 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:507:98cd:de33:2]:22
+[2m2026-04-21T03:04:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:04:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:04:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:04:46Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:04:46.275083527 [01KPPZE17W7A59WTK0RTM9J2K4:main] Running Firecracker v1.14.2
+[2m2026-04-21T03:04:46Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:04:46.275278765 [01KPPZE17W7A59WTK0RTM9J2K4:main] Listening on API socket ("/fc.sock").
+[2m2026-04-21T03:04:47Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 350f2667)...
+[2m2026-04-21T03:04:47Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node bot.js` as root
+[2m2026-04-21T03:04:47Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-21T03:04:47Z[0m runner[18530d9cd07158] [32miad[0m [[34minfo[0m]Machine started in 1.225s
+[2m2026-04-21T03:04:47Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Starting...
+[2m2026-04-21T03:04:47Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026/04/21 03:04:47 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:41c:a905:9369:2]:22
+[2m2026-04-21T03:04:48Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:04:48Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:04:48Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:04:54Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Login timeout - Discord client is hanging during login
+[2m2026-04-21T03:04:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-21T03:04:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-21T03:04:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][   32.785815] reboot: Restarting system
+[2m2026-04-21T03:05:05Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026-04-21T03:05:05.702592958 [01KPPZE17587N61G0T54RGPV9F:main] Running Firecracker v1.14.2
+[2m2026-04-21T03:05:05Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026-04-21T03:05:05.702767459 [01KPPZE17587N61G0T54RGPV9F:main] Listening on API socket ("/fc.sock").
+[2m2026-04-21T03:05:07Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:05:07Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:05:07Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:05:37Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Login timeout - Discord client is hanging during login
+[2m2026-04-21T03:06:09Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:06:09.165693522 [01KPPZE17W7A59WTK0RTM9J2K4:main] Running Firecracker v1.14.2
+[2m2026-04-21T03:06:09Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026-04-21T03:06:09.165894310 [01KPPZE17W7A59WTK0RTM9J2K4:main] Listening on API socket ("/fc.sock").
+[2m2026-04-21T03:06:10Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m]2026/04/21 03:06:10 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:41c:a905:9369:2]:22
+[2m2026-04-21T03:06:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-21T03:06:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-21T03:06:11Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-21T03:06:12Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Logged in as NEWHOPEGGN#0961
+[2m2026-04-21T03:06:12Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m][bot] Relaying to: https://newhopeggn.vercel.app/api/discord/ingest
+[2m2026-04-21T03:06:12Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m](node:635) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+[2m2026-04-21T03:06:12Z[0m app[18530d9cd07158] [32miad[0m [[34minfo[0m](Use `node --trace-deprecation ...` to show where the warning was created)
+[2m2026-04-21T03:48:46Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Pulling container image registry.fly.io/newhopeggn-discord-bot@sha256:695bbcacd8fe1182119a10cefc879f827ec99e6155297e05998a13dc073fcf83
+[2m2026-04-21T03:48:46Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Successfully prepared image registry.fly.io/newhopeggn-discord-bot@sha256:695bbcacd8fe1182119a10cefc879f827ec99e6155297e05998a13dc073fcf83 (484.001478ms)
+[2m2026-04-21T03:48:47Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Configuring firecracker
+[2m2026-04-21T03:48:47Z[0m runner[18530d9cd07158] [32miad[0m [[34minfo[0m]Configuring firecracker

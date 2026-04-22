@@ -1,0 +1,161 @@
+﻿{
+    "AppURL": "https://2a09:8280:1::104:51a7:0",
+    "Deployed": true,
+    "Hostname": "newhopeggn-discord-bot.fly.dev",
+    "ID": "newhopeggn-discord-bot",
+    "Machines": [
+        {
+            "id": "e829392cdd6518",
+            "name": "long-morning-1672",
+            "state": "stopped",
+            "region": "iad",
+            "image_ref": {
+                "registry": "registry.fly.io",
+                "repository": "newhopeggn-discord-bot",
+                "tag": "deployment-01KPQ2EJA026KBDH7E6DX9CF4B",
+                "digest": "sha256:695bbcacd8fe1182119a10cefc879f827ec99e6155297e05998a13dc073fcf83"
+            },
+            "instance_id": "01KPQ2F8HXGKRPVJ5QCZ34Y3H2",
+            "private_ip": "fdaa:6b:10b8:a7b:507:98cd:de33:2",
+            "created_at": "2026-04-21T01:06:33Z",
+            "updated_at": "2026-04-21T03:48:47Z",
+            "config": {
+                "env": {
+                    "FLY_PROCESS_GROUP": "app",
+                    "INGEST_SECRET": "newhopeggn-bot-secret",
+                    "PRIMARY_REGION": "iad",
+                    "SITE_URL": "https://newhopeggn.vercel.app"
+                },
+                "init": {
+                    "cmd": [
+                        "node",
+                        "bot.js"
+                    ]
+                },
+                "guest": {
+                    "cpu_kind": "shared",
+                    "cpus": 1,
+                    "memory_mb": 256
+                },
+                "metadata": {
+                    "fly_builder_id": "32872d66fde0e8",
+                    "fly_flyctl_version": "0.4.36",
+                    "fly_platform_version": "v2",
+                    "fly_process_group": "app",
+                    "fly_release_id": "rel_v6gwzp5wqq0829ok",
+                    "fly_release_version": "40"
+                },
+                "image": "registry.fly.io/newhopeggn-discord-bot:deployment-01KPQ2EJA026KBDH7E6DX9CF4B",
+                "restart": {
+                    "policy": "on-failure",
+                    "max_retries": 10
+                }
+            },
+            "events": [
+                {
+                    "type": "update",
+                    "status": "stopped",
+                    "source": "flyd",
+                    "timestamp": 1776743327559
+                },
+                {
+                    "type": "launch",
+                    "status": "created",
+                    "source": "user",
+                    "timestamp": 1776743326398
+                },
+                {
+                    "type": "launch",
+                    "status": "pending",
+                    "source": "flyd",
+                    "timestamp": 1776743326269
+                }
+            ],
+            "host_status": "ok"
+        },
+        {
+            "id": "18530d9cd07158",
+            "name": "nameless-brook-4042",
+            "state": "stopped",
+            "region": "iad",
+            "image_ref": {
+                "registry": "registry.fly.io",
+                "repository": "newhopeggn-discord-bot",
+                "tag": "deployment-01KPQ2EJA026KBDH7E6DX9CF4B",
+                "digest": "sha256:695bbcacd8fe1182119a10cefc879f827ec99e6155297e05998a13dc073fcf83"
+            },
+            "instance_id": "01KPQ2F8GY9RYVZ0CSKRATMZ00",
+            "private_ip": "fdaa:6b:10b8:a7b:41c:a905:9369:2",
+            "created_at": "2026-04-21T01:06:44Z",
+            "updated_at": "2026-04-21T03:48:47Z",
+            "config": {
+                "env": {
+                    "FLY_PROCESS_GROUP": "app",
+                    "INGEST_SECRET": "newhopeggn-bot-secret",
+                    "PRIMARY_REGION": "iad",
+                    "SITE_URL": "https://newhopeggn.vercel.app"
+                },
+                "init": {
+                    "cmd": [
+                        "node",
+                        "bot.js"
+                    ]
+                },
+                "guest": {
+                    "cpu_kind": "shared",
+                    "cpus": 1,
+                    "memory_mb": 256
+                },
+                "metadata": {
+                    "fly_builder_id": "32872d66fde0e8",
+                    "fly_flyctl_version": "0.4.36",
+                    "fly_platform_version": "v2",
+                    "fly_process_group": "app",
+                    "fly_release_id": "rel_v6gwzp5wqq0829ok",
+                    "fly_release_version": "40"
+                },
+                "image": "registry.fly.io/newhopeggn-discord-bot:deployment-01KPQ2EJA026KBDH7E6DX9CF4B",
+                "restart": {
+                    "policy": "on-failure",
+                    "max_retries": 10
+                },
+                "standbys": [
+                    "e829392cdd6518"
+                ]
+            },
+            "events": [
+                {
+                    "type": "update",
+                    "status": "stopped",
+                    "source": "flyd",
+                    "timestamp": 1776743327783
+                },
+                {
+                    "type": "launch",
+                    "status": "created",
+                    "source": "user",
+                    "timestamp": 1776743326355
+                },
+                {
+                    "type": "launch",
+                    "status": "pending",
+                    "source": "flyd",
+                    "timestamp": 1776743326238
+                }
+            ],
+            "host_status": "ok"
+        }
+    ],
+    "Name": "newhopeggn-discord-bot",
+    "Organization": {
+        "ID": "yw2NK09lG62eytyo75jV2OwzbVT8Mg9GR",
+        "InternalNumericID": "1594867",
+        "Name": "",
+        "Slug": "personal",
+        "RawSlug": "",
+        "PaidPlan": true
+    },
+    "PlatformVersion": "machines",
+    "Status": "suspended",
+    "Version": 40
+}

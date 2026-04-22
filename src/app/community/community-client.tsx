@@ -209,7 +209,7 @@ export default function CommunityClient() {
   }
 
   async function loadFeed() {
-    const res = await fetch("/api/admin/stats").catch(() => null);
+    const res = await fetch("/api/community/activity").catch(() => null);
     if (!res?.ok) { setFeedLoading(false); return; }
     const data = await res.json().catch(() => null);
     if (data?.ok) setFeed((data.recent ?? []).slice(0, 25));
@@ -233,8 +233,8 @@ export default function CommunityClient() {
 
   async function loadMessages(channel: string | null, isRefresh = false) {
     const url = channel
-      ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=60`
-      : `/api/discord/messages?limit=60`;
+      ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=40`
+      : `/api/discord/messages?limit=40`;
     const res = await fetch(url).catch(() => null);
     if (!res?.ok) { if (!isRefresh) setMsgLoading(false); return; }
     const data = await res.json().catch(() => null);
@@ -261,13 +261,18 @@ export default function CommunityClient() {
     void loadChannels();
     void loadMessages(null);
     void loadSession();
-    const wt = window.setInterval(() => void loadWidget(), 30000);
-    const ft = window.setInterval(() => void loadFeed(), 15000);
+    const wt = window.setInterval(() => void loadWidget(), 60000);
+    const ft = window.setInterval(() => void loadFeed(), 60000);
     const mt = window.setInterval(() => {
       void loadMessages(activeChannelRef.current, true);
-      void loadChannels();
-    }, 10000);
-    return () => { window.clearInterval(wt); window.clearInterval(ft); window.clearInterval(mt); };
+    }, 25000);
+    const ct = window.setInterval(() => void loadChannels(), 120000);
+    return () => {
+      window.clearInterval(wt);
+      window.clearInterval(ft);
+      window.clearInterval(mt);
+      window.clearInterval(ct);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -310,7 +315,7 @@ export default function CommunityClient() {
             <h1 className="text-xl sm:text-4xl font-black text-white leading-tight truncate">
               NewHopeGGN <span className="text-[#5865F2]">Discord</span>
             </h1>
-            <p className="mt-1 text-slate-400 text-xs sm:text-sm">Live server activity — auto-refreshes every 30s</p>
+            <p className="mt-1 text-slate-400 text-xs sm:text-sm">Live server activity with lighter refreshes</p>
           </div>
 
           {/* Live stats pills */}

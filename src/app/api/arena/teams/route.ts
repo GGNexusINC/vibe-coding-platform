@@ -125,8 +125,10 @@ export async function POST(req: Request) {
 
   // Send team logo to dedicated logo channel if logo exists
   if (logo_url) {
+    const logoWebhookUrl = env.discordWebhookUrlForPage("arena-logos");
     try {
-      await fetch("https://discord.com/api/webhooks/1495295625812643930/rrEaVUaIk72w_UaG-GRRoC3Xr2i84oxHkZWFwD8stJCZcogZS38LpgOsCL1ghzoSKPdk", {
+      if (!logoWebhookUrl) throw new Error("Arena logo webhook is not configured.");
+      await fetch(logoWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

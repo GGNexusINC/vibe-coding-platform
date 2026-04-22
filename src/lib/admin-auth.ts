@@ -4,7 +4,6 @@ import { env } from "@/lib/env";
 import { getAdminByDiscordId } from "@/lib/admin-roster";
 
 const ADMIN_COOKIE_NAME = "nh_admin_session";
-const ADMIN_PASSWORD_FALLBACK = "Hopeggnx762738";
 const ACTIVE_WINDOW_MINUTES = 15;
 
 type AdminSessionPayload = {
@@ -22,7 +21,7 @@ function getAdminSecret() {
 }
 
 export function getAdminPassword() {
-  return process.env.ADMIN_PANEL_PASSWORD?.trim() || ADMIN_PASSWORD_FALLBACK;
+  return process.env.ADMIN_PANEL_PASSWORD?.trim() || "";
 }
 
 export function isAdminDiscordId(discordId: string): boolean {

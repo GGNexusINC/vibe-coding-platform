@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
-// Secret shared between bot and this server to prevent abuse
-const INGEST_SECRET = process.env.DISCORD_INGEST_SECRET ?? "newhopeggn-bot-secret";
+import { env } from "@/lib/env";
 
 function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,7 +15,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false, error: "Bad body" }, { status: 400 });
 
-  if (body.secret !== INGEST_SECRET) {
+  if (!env.discordIngestSecrets().includes(body.secret)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

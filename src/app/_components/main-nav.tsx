@@ -4,13 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navLinks = [
-  { href: "/about",     label: "About" },
-  { href: "/store",     label: "Store" },
-  { href: "/support",   label: "Support" },
-  { href: "/policies",  label: "Policies" },
-  { href: "/rules",     label: "Rules" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/store", label: "Store" },
+  { href: "/support", label: "Support" },
   { href: "/community", label: "Community" },
-  { href: "/streamers", label: "Streamers" },
+  { href: "/rules", label: "Rules" },
 ];
 
 export function MainNav() {
@@ -38,30 +36,6 @@ export function MainNav() {
       <div className="h-4 w-px bg-white/10 mx-1" />
 
       <Link
-        href="/lottery"
-        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-          pathname === "/lottery"
-            ? "bg-orange-400/15 text-orange-200 ring-1 ring-orange-400/30"
-            : "text-stone-300 hover:bg-orange-400/10 hover:text-orange-100"
-        }`}
-      >
-        🎰 Lottery
-      </Link>
-
-      <Link
-        href="/minigame"
-        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-          pathname === "/minigame"
-            ? "bg-orange-400/15 text-orange-200 ring-1 ring-orange-400/30"
-            : "text-stone-300 hover:bg-orange-400/10 hover:text-orange-100"
-        }`}
-      >
-        🐹 Whack-a-Mole
-      </Link>
-
-      <div className="h-4 w-px bg-white/10 mx-1" />
-
-      <Link
         href="/admin"
         className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
           pathname.startsWith("/admin")
@@ -69,7 +43,7 @@ export function MainNav() {
             : "text-stone-400 hover:bg-orange-400/10 hover:text-orange-100"
         }`}
       >
-        Admin
+        Staff
       </Link>
     </nav>
   );

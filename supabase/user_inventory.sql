@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS user_inventory (
   purchase_date TIMESTAMPTZ NOT NULL DEFAULT now(),
   used_date TIMESTAMPTZ,
   wipe_cycle TEXT, -- e.g., "wipe-2024-01-15"
+  expires_at TIMESTAMPTZ,
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -19,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_user_inventory_user_id ON user_inventory(user_id)
 CREATE INDEX IF NOT EXISTS idx_user_inventory_status ON user_inventory(status);
 CREATE INDEX IF NOT EXISTS idx_user_inventory_item_type ON user_inventory(item_type);
 CREATE INDEX IF NOT EXISTS idx_user_inventory_wipe_cycle ON user_inventory(wipe_cycle);
+CREATE INDEX IF NOT EXISTS idx_user_inventory_expires_at ON user_inventory(expires_at);
 
 -- RLS policies
 ALTER TABLE user_inventory ENABLE ROW LEVEL SECURITY;

@@ -999,7 +999,7 @@ export default function Home() {
         </div>
 
         {/* Staff & Admin Team Section */}
-        <div className="mt-12 rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
+        <div className="hidden mt-12 rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white">{t.staffTitle}</h2>
@@ -1090,7 +1090,7 @@ export default function Home() {
         </div>
 
         {/* Quick Links Footer */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+        <div className="hidden mt-10 flex flex-wrap items-center justify-center gap-3">
           {[
             { href: "/store",     label: "🛒 Store" },
             { href: "/community", label: "👥 Community" },

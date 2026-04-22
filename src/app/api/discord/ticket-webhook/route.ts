@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   // Store the message
-  await supabase.from("discord_messages").insert({
+  await supabase.from("discord_messages").upsert({
     id: messageId,
     channel_id: channelId,
     channel_name: "ticket-channel",

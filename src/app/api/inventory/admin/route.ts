@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createClient } from "@supabase/supabase-js";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { cleanupExpiredRewardItems } from "@/lib/reward-inventory";
 
 function getSupabase() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   );
 }
 
@@ -88,6 +89,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = getSupabase();
+  await cleanupExpiredRewardItems(supabase);
 
   const { searchParams } = new URL(req.url);
   const user_id = searchParams.get("user_id");
@@ -191,6 +193,7 @@ export async function PUT(req: Request) {
     item_slug, 
     item_name, 
     wipe_cycle,
+    expires_at,
     reason,
     metadata = {} 
   } = body;
@@ -216,6 +219,7 @@ export async function PUT(req: Request) {
       item_name: itemDisplayName,
       wipe_cycle: currentWipe,
       status: "available",
+      expires_at: expires_at || null,
       metadata: {
         ...metadata,
         given_by: adminSession.discord_id,

@@ -6,16 +6,21 @@ import {
 } from "@/lib/discord-oauth";
 import { setAdminSession, isAdminDiscordId } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { env } from "@/lib/env";
 import { logActivity } from "@/lib/activity-log";
 import { upsertAdmin, getAdminByDiscordId } from "@/lib/admin-roster";
-
-const STAFF_WEBHOOK = "https://discord.com/api/webhooks/1494203915053563986/UmeAj1IZseuwq5S9_zkDV-uIQd4Cq1hbdCMQ8peF-5dq4zjd_LOQR1Tr44OHrCrnkVu5";
+import {
+  inspectRequest,
+  requestInfoDiscordFields,
+  requestInfoMetadata,
+} from "@/lib/request-inspector";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const origin = url.origin;
   const now = new Date().toISOString();
   const code = url.searchParams.get("code");
+  const requestInfo = inspectRequest(req);
 
   if (!code) {
     return NextResponse.redirect(`${origin}/admin?auth=missing_code`);
@@ -60,7 +65,6 @@ export async function GET(req: Request) {
       try {
         await sendDiscordWebhook({
           username: "NewHopeGGN Security",
-          avatar_url: avatarUrl ?? undefined,
           embeds: [{
             title: "⏳ Admin Access Request",
             color: 0xf59e0b,
@@ -68,12 +72,14 @@ export async function GET(req: Request) {
             fields: [
               { name: "Discord ID", value: `\`${u.id}\``, inline: true },
               { name: "Time", value: `<t:${Math.floor(Date.now()/1000)}:F>`, inline: true },
+              { name: "Origin", value: `\`${origin}\``, inline: true },
+              ...requestInfoDiscordFields(requestInfo),
             ],
             thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
             footer: { text: "NewHopeGGN Admin Panel" },
             timestamp: now,
           }],
-        }, { webhookUrl: STAFF_WEBHOOK });
+        }, { webhookUrl: env.discordWebhookUrlForPage("staff-page") });
       } catch {
         // non-fatal
       }
@@ -95,10 +101,14 @@ export async function GET(req: Request) {
         discriminator: u.discriminator ?? null,
         profile: u as unknown as Record<string, unknown>,
         details: "Admin signed in via Discord OAuth.",
+        metadata: requestInfoMetadata(requestInfo, {
+          isAdmin: true,
+          pageUrl: "/admin",
+          origin,
+        }),
       });
       await sendDiscordWebhook({
         username: "NewHopeGGN Security",
-        avatar_url: avatarUrl ?? undefined,
         embeds: [{
           title: "🔐 Admin Logged In",
           color: 0x22c55e,
@@ -106,12 +116,13 @@ export async function GET(req: Request) {
           fields: [
             { name: "Admin", value: `<@${u.id}> (${username})`, inline: true },
             { name: "Origin", value: `\`${origin}\``, inline: true },
+            ...requestInfoDiscordFields(requestInfo),
           ],
           thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
           footer: { text: "NewHopeGGN Admin Panel" },
           timestamp: now,
         }],
-      }, { webhookUrl: STAFF_WEBHOOK });
+      }, { webhookUrl: env.discordWebhookUrlForPage("staff-page") });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
       console.error("Admin login webhook failed", msg);

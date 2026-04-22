@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { TeamFlairBoard } from "@/app/_components/team-flair-board";
 
 export const metadata: Metadata = {
   title: "About | NewHopeGGN",
-  description: "Learn about NewHopeGGN — a dedicated Once Human private server community with wipe packs, VIP perks, fair play rules, and active staff.",
+  description: "Learn about NewHopeGGN - a dedicated Once Human private server community with wipe packs, VIP perks, fair play rules, and active staff.",
   keywords: ["about", "Once Human", "private server", "community", "NewHopeGGN", "staff"],
   openGraph: {
     title: "About | NewHopeGGN",
-    description: "Learn about NewHopeGGN — a dedicated Once Human private server community.",
+    description: "Learn about NewHopeGGN - a dedicated Once Human private server community.",
     url: "https://newhopeggn.vercel.app/about",
     type: "website",
     images: [{ url: "https://newhopeggn.vercel.app/opengraph-image", width: 1200, height: 630 }],
@@ -18,56 +19,31 @@ const gameScreenshots = [
   {
     src: "/GANGGGPCITURE.png",
     label: "Where It All Started",
-    desc: "The OG crew hanging at base — Buzzworthy, the gang, and good vibes. This is how NewHopeGGN was born.",
-    wide: true,
+    desc: "The OG crew hanging at base - Buzzworthy, the gang, and good vibes. This is how NewHopeGGN was born.",
   },
   {
     src: "/GANG.png",
     label: "Building Together",
-    desc: "The team out building bases side by side — every wipe starts here.",
-    wide: false,
+    desc: "The team out building bases side by side - every wipe starts here.",
   },
   {
     src: "/THANOO.png",
     label: "More Than a Game",
-    desc: "Chilling with Thanos at the compound — it’s about spending time with friends and building real friendships.",
-    wide: false,
+    desc: "Chilling with Thanos at the compound - it is about spending time with friends and building real friendships.",
   },
   {
     src: "/CORTEZ.png",
     label: "Cortez Hours",
     desc: "Late night storage runs with the squad. Every wipe has moments like this.",
-    wide: false,
   },
   {
     src: "/bro.png",
     label: "GG Nexus Crew",
-    desc: "The GG Nexus crew rolling out together — the people behind NewHopeGGN.",
-    wide: false,
+    desc: "The GG Nexus crew rolling out together - the people behind NewHopeGGN.",
   },
 ];
 
-const ownerStyles: Record<string, { border: string; bg: string; glow: string; text: string; badge: string }> = {
-  Kilo:      { border: "rgba(250,204,21,0.5)",  bg: "rgba(250,204,21,0.1)",  glow: "rgba(250,204,21,0.25)",  text: "#fde047", badge: "👑 Owner" },
-  Buzzworthy:{ border: "rgba(34,211,238,0.5)",  bg: "rgba(34,211,238,0.1)",  glow: "rgba(34,211,238,0.25)",  text: "#67e8f9", badge: "⚡ Owner" },
-  Zeus:      { border: "rgba(99,102,241,0.5)",  bg: "rgba(99,102,241,0.1)",  glow: "rgba(99,102,241,0.25)",  text: "#a5b4fc", badge: "🌩️ Owner" },
-  Hope:      { border: "rgba(244,114,182,0.5)", bg: "rgba(244,114,182,0.1)", glow: "rgba(244,114,182,0.25)", text: "#f9a8d4", badge: "💗 Owner" },
-  Jon:       { border: "rgba(74,222,128,0.5)",  bg: "rgba(74,222,128,0.1)",  glow: "rgba(74,222,128,0.25)",  text: "#86efac", badge: "🛡️ Owner" },
-  Cortez:    { border: "rgba(251,146,60,0.5)",  bg: "rgba(251,146,60,0.1)",  glow: "rgba(251,146,60,0.25)",  text: "#fdba74", badge: "🔥 Owner" },
-};
-
-const staffRoles: Record<string, { text: string; border: string; bg: string; glow: string; badge: string }> = {
-  "BÛTTÊR":     { text: "#93c5fd", border: "rgba(147,197,253,0.4)", bg: "rgba(147,197,253,0.07)", glow: "rgba(147,197,253,0.15)", badge: "🎫 Support" },
-  "reda":        { text: "#6ee7b7", border: "rgba(110,231,183,0.4)", bg: "rgba(110,231,183,0.07)", glow: "rgba(110,231,183,0.15)", badge: "🎮 In-Game Support" },
-  "Rem":         { text: "#c4b5fd", border: "rgba(196,181,253,0.4)", bg: "rgba(196,181,253,0.07)", glow: "rgba(196,181,253,0.15)", badge: "🛡️ Discord Mod" },
-  "♠Zenon♠":    { text: "#fca5a5", border: "rgba(252,165,165,0.4)", bg: "rgba(252,165,165,0.07)", glow: "rgba(252,165,165,0.15)", badge: "🎫 Support" },
-  "Whiispperss": { text: "#d8b4fe", border: "rgba(216,180,254,0.4)", bg: "rgba(216,180,254,0.07)", glow: "rgba(216,180,254,0.15)", badge: "🛡️ Discord Mod" },
-};
-
 export default function AboutPage() {
-  const admins = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
-  const staff = ["BÛTTÊR", "reda", "Rem", "♠Zenon♠", "Whiispperss"];
-
   return (
     <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-orange-950/20 via-black/60 to-lime-950/10" />
@@ -77,8 +53,6 @@ export default function AboutPage() {
       <div className="pointer-events-none absolute right-1/4 bottom-8 h-72 w-72 rounded-full bg-lime-500/8 blur-3xl rz-pulse" />
 
       <section className="relative mx-auto w-full max-w-6xl px-4 py-12 space-y-8">
-
-        {/* ── Hero banner ── */}
         <div className="rz-surface rz-panel-border rounded-3xl overflow-hidden">
           <div className="relative h-48 sm:h-64 w-full bg-gradient-to-br from-orange-950/80 via-stone-900 to-black">
             <img
@@ -93,16 +67,14 @@ export default function AboutPage() {
                 Welcome to <span className="text-orange-400">NewHopeGGN</span>
               </h1>
               <p className="mt-2 max-w-2xl text-stone-300 text-sm leading-relaxed">
-                A dedicated Once Human private server community — fair play, rapid support, wipe packs, and a squad of real players ready to survive together.
+                A dedicated Once Human private server community - fair play, rapid support, wipe packs, and a squad of real players ready to survive together.
               </p>
             </div>
           </div>
         </div>
 
-        {/* ── Community photos ── */}
         <div>
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">📸 The Community — Real Moments</div>
-          {/* Wide hero shot */}
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">📸 The Community - Real Moments</div>
           <div className="rz-surface rz-panel-border rounded-2xl overflow-hidden group mb-4">
             <div className="relative h-56 sm:h-72 bg-stone-900">
               <img
@@ -117,7 +89,7 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
-          {/* 2x2 grid of remaining 4 */}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {gameScreenshots.slice(1).map((shot) => (
               <div key={shot.label} className="rz-surface rz-panel-border rounded-2xl overflow-hidden group">
@@ -136,7 +108,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* ── What we provide + team ── */}
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rz-surface rz-panel-border rounded-2xl p-6">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-orange-400 mb-4">⚡ What We Provide</div>
@@ -144,7 +115,7 @@ export default function AboutPage() {
               {[
                 { icon: "🛒", text: "Wipe packs each season with resources and VIP perks" },
                 { icon: "🎫", text: "Fast Discord-based support tickets answered by real staff" },
-                { icon: "📋", text: "Clear server rules for fair play — including No Meteor Truck" },
+                { icon: "📋", text: "Clear server rules for fair play - including No Meteor Truck" },
                 { icon: "💬", text: "Live Discord feed visible directly on the community page" },
                 { icon: "🎰", text: "Server events, lottery, and Whack-a-Mole mini-games" },
               ].map((item) => (
@@ -156,56 +127,9 @@ export default function AboutPage() {
             </ul>
           </div>
 
-          <div className="rz-surface rz-panel-border rounded-2xl p-6">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-lime-400 mb-4">👥 Staff & Admin Team</div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {admins.map((admin) => {
-                if (admin === "Encriptado") return (
-                  <div key={admin} className="relative rounded-xl px-3 py-3 text-center text-sm font-bold transition hover:-translate-y-0.5"
-                    style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.12),rgba(168,85,247,0.12))", boxShadow: "0 0 0 1px rgba(168,85,247,0.35), 0 0 12px rgba(168,85,247,0.12)" }}>
-                    <span style={{ background: "linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)", backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "shimmer 3s linear infinite" }}>{admin}</span>
-                    <div className="mt-1 text-[9px] font-semibold tracking-widest text-purple-300 uppercase opacity-80">✨ Coming Back Soon</div>
-                  </div>
-                );
-                const s = ownerStyles[admin];
-                if (s) return (
-                  <div key={admin} className="relative rounded-xl px-3 py-3 text-center text-sm font-bold transition hover:-translate-y-1"
-                    style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 14px ${s.glow}` }}>
-                    <div style={{ color: s.text }}>{admin}</div>
-                    <div className="mt-1 text-[9px] font-semibold tracking-widest opacity-70" style={{ color: s.text }}>{s.badge}</div>
-                  </div>
-                );
-                return (
-                  <div key={admin} className="rounded-xl border border-orange-400/15 bg-orange-400/5 px-3 py-3 text-center text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-orange-400/35 hover:bg-orange-400/10">
-                    {admin}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-5 pt-4 border-t border-white/5">
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🎫 Moderators & Support</div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {staff.map((name) => {
-                  const s = staffRoles[name];
-                  if (!s) return null;
-                  return (
-                    <div key={name} className="relative rounded-xl px-3 py-3 text-center text-sm font-semibold transition hover:-translate-y-0.5"
-                      style={{ background: s.bg, boxShadow: `0 0 0 1px ${s.border}, 0 0 10px ${s.glow}` }}>
-                      <div style={{ color: s.text }}>{name}</div>
-                      <div className="mt-1 text-[9px] font-semibold tracking-widest opacity-70" style={{ color: s.text }}>{s.badge}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-stone-500 leading-relaxed">
-              Our staff team keeps the server running, tickets answered, and the community positive. Need help? Use the <a href="/support" className="text-orange-400 hover:underline">Support page</a> to open a ticket and chat with staff directly.
-            </p>
-          </div>
+          <TeamFlairBoard variant="about" onlineNames={[]} />
         </div>
-
       </section>
     </div>
   );
 }
-

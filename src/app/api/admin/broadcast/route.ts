@@ -4,6 +4,7 @@ import { logActivity } from "@/lib/activity-log";
 import { env } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
 import type { DiscordWebhookPayload } from "@/lib/discord";
+import { ansiBlock, holographic, neon, goldGradient, ansi, decorations } from "@/lib/discord-formatting";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,29 @@ async function getCustomWebhooks(): Promise<CustomWebhook[]> {
 async function saveCustomWebhooks(hooks: CustomWebhook[]) {
   const sb = getSupabase();
   await sb.from("site_settings").upsert({ key: "custom_webhooks", value: hooks }, { onConflict: "key" });
+}
+
+function parseDiscordColor(input: string) {
+  const raw = input.trim().replace("#", "");
+  if (!raw) return null;
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
+  return Number.parseInt(raw, 16);
+}
+
+// Apply formatting style to message
+function applyFormatting(text: string, style: string): string {
+  switch (style) {
+    case "holographic":
+      return ansiBlock(`${decorations.sparkles} ${holographic(text)} ${decorations.sparkles}`);
+    case "neon":
+      return ansiBlock(`${decorations.fire} ${neon(text)} ${decorations.fire}`);
+    case "gold":
+      return ansiBlock(`${decorations.crown} ${goldGradient(text)} ${decorations.crown}`);
+    case "ansi":
+      return ansiBlock(text);
+    default:
+      return text;
+  }
 }
 
 // GET — return custom webhooks list
@@ -64,13 +88,7 @@ export async function PUT(req: Request) {
   return NextResponse.json({ ok: true, hooks });
 }
 
-function parseDiscordColor(input: string) {
-  const raw = input.trim().replace("#", "");
-  if (!raw) return null;
-  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
-  return Number.parseInt(raw, 16);
-}
-
+// POST — send broadcast message
 export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) {
@@ -81,7 +99,7 @@ export async function POST(req: Request) {
   }
 
   const contentType = req.headers.get("content-type") ?? "";
-  let target = "", audienceLabel = "", title = "", message = "", color = "", imageUrl = "";
+  let target = "", audienceLabel = "", title = "", message = "", color = "", imageUrl = "", formatStyle = "normal";
   let imageFile: File | null = null;
 
   if (contentType.includes("multipart/form-data")) {
@@ -90,9 +108,10 @@ export async function POST(req: Request) {
     target = String(form.get("target") ?? "").trim();
     audienceLabel = String(form.get("audienceLabel") ?? "").trim();
     title = String(form.get("title") ?? "").trim();
-    message = String(form.get("message") ?? "").trim();
+    message = String(form.get("message") ?? "");
     color = String(form.get("color") ?? "").trim();
     imageUrl = String(form.get("imageUrl") ?? "").trim();
+    formatStyle = String(form.get("formatStyle") ?? "").trim() as "normal" | "holographic" | "neon" | "gold" | "ansi";
     const f = form.get("imageFile");
     if (f && typeof f !== "string") imageFile = f as File;
   } else {
@@ -100,23 +119,24 @@ export async function POST(req: Request) {
     target = String(body?.target ?? "").trim();
     audienceLabel = String(body?.audienceLabel ?? "").trim();
     title = String(body?.title ?? "").trim();
-    message = String(body?.message ?? "").trim();
+    message = String(body?.message ?? "");
     color = String(body?.color ?? "").trim();
     imageUrl = String(body?.imageUrl ?? "").trim();
+    formatStyle = (body?.formatStyle ?? "") as "normal" | "holographic" | "neon" | "gold" | "ansi";
   }
 
   // Look up custom webhook URL if target is not a built-in
   let customWebhookUrl: string | undefined;
   if (!allowedTargets.includes(target)) {
     const customHooks = await getCustomWebhooks();
-    const found = customHooks.find(h => h.id === target);
+    const found = customHooks.find((h: CustomWebhook) => h.id === target);
     if (!found) {
       return NextResponse.json({ ok: false, error: "Choose a valid destination." }, { status: 400 });
     }
     customWebhookUrl = found.url;
   }
 
-  if (!title || !message) {
+  if (!title || !message.trim()) {
     return NextResponse.json(
       { ok: false, error: "Title and message are required." },
       { status: 400 },
@@ -191,16 +211,25 @@ export async function POST(req: Request) {
       ...Object.fromEntries(customHooksForLabel.map(h => [h.id, `🔗 ${h.label}`])),
     };
 
+    // Apply formatting style to message
+    const formattedMessage = formatStyle !== "normal" 
+      ? applyFormatting(message.trimEnd(), formatStyle)
+      : message.trimEnd();
+
+    // If using ANSI formatting, we need to add it as content instead of embed description
+    const useAnsi = formatStyle !== "normal";
+
     const payload: DiscordWebhookPayload = {
       username: "NewHopeGGN",
       avatar_url: "https://cdn.discordapp.com/icons/1419522458075005023/a_placeholder.png",
-      embeds: [
+      content: useAnsi ? `${decorations.sparkles} **${title}** ${decorations.sparkles}\n${formattedMessage}` : undefined,
+      embeds: useAnsi ? [] : [
         {
           author: {
             name: audienceLabel ? `📣 Admin Broadcast · ${audienceLabel}` : "📣 Admin Broadcast",
           },
           title,
-          description: message,
+          description: formattedMessage,
           color: embedColor ?? 0x22c55e,
           image: embedImageUrl ? { url: embedImageUrl } : undefined,
           fields: [

@@ -6,29 +6,21 @@ import { usePathname } from "next/navigation";
 
 const sections = [
   {
-    label: "Main",
+    label: "Start Here",
     links: [
-      { href: "/",          emoji: "🏠", label: "Home" },
-      { href: "/dashboard", emoji: "⚡", label: "Dashboard" },
-      { href: "/community", emoji: "💬", label: "Community" },
-      { href: "/store",     emoji: "🛒", label: "Wipe Store" },
+      { href: "/", emoji: "Home", label: "Home" },
+      { href: "/dashboard", emoji: "Dash", label: "Dashboard" },
+      { href: "/store", emoji: "Shop", label: "Wipe Store" },
+      { href: "/support", emoji: "Help", label: "Support" },
     ],
   },
   {
-    label: "Play",
+    label: "More",
     links: [
-      { href: "/lottery",  emoji: "🎰", label: "Lottery" },
-      { href: "/minigame", emoji: "🐹", label: "Whack-a-Mole" },
-      { href: "/streamers",emoji: "📺", label: "Streamers" },
-    ],
-  },
-  {
-    label: "Info",
-    links: [
-      { href: "/about",    emoji: "ℹ️",  label: "About" },
-      { href: "/rules",    emoji: "📋", label: "Rules" },
-      { href: "/support",  emoji: "🎫", label: "Support" },
-      { href: "/policies", emoji: "📄", label: "Policies" },
+      { href: "/community", emoji: "Chat", label: "Community" },
+      { href: "/rules", emoji: "Rules", label: "Rules" },
+      { href: "/lottery", emoji: "Win", label: "Lottery" },
+      { href: "/minigame", emoji: "Game", label: "Whack-a-Mole" },
     ],
   },
 ];
@@ -58,17 +50,13 @@ export function MobileNav() {
 
       {open && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          {/* Drawer */}
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="fixed left-0 right-0 top-0 z-50 bg-[#0d110a]/98 backdrop-blur-2xl border-b border-orange-900/30 shadow-2xl">
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
               <div>
-                <div className="text-sm font-black text-orange-100 tracking-wide">NewHope<span className="text-lime-400">GGN</span></div>
+                <div className="text-sm font-black text-orange-100 tracking-wide">
+                  NewHope<span className="text-lime-400">GGN</span>
+                </div>
                 <div className="text-[10px] text-orange-200/50">Once Human Community</div>
               </div>
               <button
@@ -81,11 +69,12 @@ export function MobileNav() {
               </button>
             </div>
 
-            {/* Sections */}
             <nav className="px-4 py-4 space-y-4 max-h-[80vh] overflow-y-auto">
               {sections.map((section) => (
                 <div key={section.label}>
-                  <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-600 px-2 mb-1.5">{section.label}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-600 px-2 mb-1.5">
+                    {section.label}
+                  </div>
                   <div className="grid grid-cols-2 gap-1.5">
                     {section.links.map((link) => (
                       <Link
@@ -98,7 +87,9 @@ export function MobileNav() {
                             : "bg-white/[0.03] border-white/6 text-stone-300 hover:bg-orange-400/8 hover:text-orange-100 hover:border-orange-400/20"
                         }`}
                       >
-                        <span className="text-base shrink-0">{link.emoji}</span>
+                        <span className="text-[10px] shrink-0 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-stone-400">
+                          {link.emoji}
+                        </span>
                         {link.label}
                       </Link>
                     ))}
@@ -106,15 +97,14 @@ export function MobileNav() {
                 </div>
               ))}
 
-              {/* Admin link at bottom */}
               <div className="pt-1 border-t border-white/6">
                 <Link
                   href="/admin"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm font-semibold text-stone-500 hover:bg-white/5 hover:text-stone-300 transition-all"
                 >
-                  <span className="text-base">🔐</span>
-                  Admin
+                  <span className="text-[10px] rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5">Staff</span>
+                  Staff Login
                 </Link>
               </div>
             </nav>

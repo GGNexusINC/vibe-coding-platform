@@ -7,6 +7,58 @@ export type DiscordWebhookPayload = {
   embeds?: Array<Record<string, unknown>>;
 };
 
+export const NEWHOPE_DISCORD_NAME = "NewHopeGGN Logs";
+export const NEWHOPE_LOGO_URL = "https://newhopeggn.vercel.app/raidzone-bg.png";
+export const NEWHOPE_FOOTER_TEXT = "NewHopeGGN Official Server Log";
+
+export function brandDiscordEmbed(
+  embed: Record<string, unknown>,
+  footerText = NEWHOPE_FOOTER_TEXT,
+): Record<string, unknown> {
+  const author =
+    embed.author && typeof embed.author === "object" && !Array.isArray(embed.author)
+      ? {
+          ...(embed.author as Record<string, unknown>),
+          icon_url: NEWHOPE_LOGO_URL,
+        }
+      : {
+          name: "NewHopeGGN Official",
+          icon_url: NEWHOPE_LOGO_URL,
+        };
+  const footer =
+    embed.footer && typeof embed.footer === "object" && !Array.isArray(embed.footer)
+      ? {
+          ...(embed.footer as Record<string, unknown>),
+          icon_url: NEWHOPE_LOGO_URL,
+        }
+      : {
+          text: footerText,
+          icon_url: NEWHOPE_LOGO_URL,
+        };
+
+  return {
+    ...embed,
+    author,
+    thumbnail: embed.thumbnail ?? { url: NEWHOPE_LOGO_URL },
+    footer,
+    timestamp: embed.timestamp ?? new Date().toISOString(),
+  };
+}
+
+export function brandDiscordWebhookPayload(
+  payload: DiscordWebhookPayload,
+  options?: { username?: string; footerText?: string },
+): DiscordWebhookPayload {
+  return {
+    ...payload,
+    username: options?.username ?? payload.username ?? NEWHOPE_DISCORD_NAME,
+    avatar_url: NEWHOPE_LOGO_URL,
+    embeds: payload.embeds?.map((embed) =>
+      brandDiscordEmbed(embed, options?.footerText),
+    ),
+  };
+}
+
 function redactWebhookUrl(input: string) {
   try {
     const u = new URL(input);
@@ -36,7 +88,7 @@ export async function sendDiscordWebhook(
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(brandDiscordWebhookPayload(payload)),
   });
 
   if (!res.ok) {

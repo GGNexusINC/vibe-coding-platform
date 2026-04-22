@@ -64,7 +64,7 @@ export default function LotteryClient() {
         <h1 className="text-4xl font-bold text-white sm:text-5xl">
           Win Once Human <span className="bg-[linear-gradient(135deg,#facc15,#f97316)] bg-clip-text text-transparent">Items</span>
         </h1>
-        <p className="mt-3 text-slate-400">Enter the lottery for a chance to win in-game items. Winners are drawn by admins and notified via Discord.</p>
+        <p className="mt-3 text-slate-400">Enter the lottery for a chance to win in-game items. Winners land in inventory with a 48-hour claim window, and you can either open a staff ticket or save the reward before it expires.</p>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {/* Prize Card */}
@@ -72,6 +72,11 @@ export default function LotteryClient() {
             <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Current Prize</div>
             <div className="mt-3 text-xl font-bold text-white">{CURRENT_PRIZE}</div>
             <div className="mt-2 text-sm text-slate-400">One winner drawn randomly from all entries.</div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-300">
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">One entry per account</span>
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">48 hour claim timer</span>
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">Use opens a ticket</span>
+            </div>
 
             <div className="mt-6 flex items-center gap-3">
               <div className="text-3xl font-bold text-white">{totalEntries ?? "—"}</div>
@@ -120,7 +125,7 @@ export default function LotteryClient() {
                 ["🎟️", "Enter for free", "Click the button — no cost, no catch."],
                 ["🎲", "Admin draws winner", "A random winner is picked from all entries."],
                 ["📢", "Winner announced", "Result posted on Discord & shown below."],
-                ["📦", "Prize delivered", "Admin contacts winner in-game to deliver items."],
+                ["📦", "Prize delivered", "Reward appears in your inventory with a 48-hour timer."],
               ].map(([icon, title, desc]) => (
                 <li key={title} className="flex gap-3">
                   <span className="text-xl">{icon}</span>

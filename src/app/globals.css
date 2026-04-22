@@ -84,6 +84,32 @@ body {
   }
 }
 
+@keyframes rzRainbowShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes rzLetterRainbow {
+  0%   { color: #ff4fd8; transform: translateY(0px) scale(1); }
+  14%  { color: #ff9a3d; }
+  28%  { color: #ffee55; transform: translateY(-1px) scale(1.02); }
+  42%  { color: #55ffb8; }
+  56%  { color: #54a8ff; transform: translateY(0px) scale(1); }
+  70%  { color: #b96bff; }
+  84%  { color: #ff4fd8; transform: translateY(-1px) scale(1.02); }
+  100% { color: #ff4fd8; transform: translateY(0px) scale(1); }
+}
+
+@keyframes rzDevLetter {
+  0%   { color: #67e8f9; text-shadow: 0 0 0 rgba(103,232,249,0); }
+  50%  { color: #22d3ee; text-shadow: 0 0 14px rgba(34,211,238,0.45); }
+  100% { color: #a5f3fc; text-shadow: 0 0 0 rgba(103,232,249,0); }
+}
+
 @keyframes rzDrift {
   from {
     transform: translate3d(-2%, -2%, 0) scale(1.02);
@@ -106,6 +132,43 @@ body {
 
 .rz-pulse {
   animation: rzPulse 2.8s ease-in-out infinite;
+}
+
+.rz-rainbow-text {
+  background: linear-gradient(
+    90deg,
+    #ff4fd8,
+    #ff9a3d,
+    #ffee55,
+    #55ffb8,
+    #54a8ff,
+    #b96bff,
+    #ff4fd8
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.rz-rainbow-animate {
+  animation: rzRainbowShift 4.5s linear infinite;
+}
+
+.rz-rainbow-letter,
+.rz-dev-letter {
+  display: inline-block;
+  animation-duration: 3.2s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+.rz-rainbow-letter {
+  animation-name: rzLetterRainbow;
+}
+
+.rz-dev-letter {
+  animation-name: rzDevLetter;
 }
 
 .rz-drift {

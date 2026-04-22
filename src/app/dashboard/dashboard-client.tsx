@@ -22,6 +22,10 @@ const quickLinks = [
   { href: "/bans",      emoji: "🔨", label: "Ban List",      desc: "Public moderation record",             color: "border-red-400/25 bg-red-400/8 hover:bg-red-400/12" },
 ];
 
+const primaryQuickLinks = quickLinks.filter((link) =>
+  ["/store", "/support", "/community", "/rules"].includes(link.href)
+);
+
 export default function DashboardClient({ user, msg }: { user: User | null; msg?: string }) {
   const [uid, setUid] = useState("");
   const [savedUid, setSavedUid] = useState<string | null>(null);
@@ -284,8 +288,8 @@ export default function DashboardClient({ user, msg }: { user: User | null; msg?
         <div className="relative rz-surface rounded-2xl p-6 border border-white/8 overflow-hidden">
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
           <div className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">▶ SYS::QUICK_ACCESS</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {quickLinks.map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {primaryQuickLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

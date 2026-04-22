@@ -1,5 +1,6 @@
 // Discord Bot API helper for creating tickets
 import { env } from "./env";
+import { brandDiscordWebhookPayload, NEWHOPE_LOGO_URL } from "./discord";
 
 const BOT_TOKEN = env.discordBotToken();
 const GUILD_ID = env.discordGuildId();
@@ -100,6 +101,7 @@ export async function sendTicketMessage(
     const embed = {
       title: "🎫 New Support Ticket",
       color: 0x22d3ee, // Cyan
+      thumbnail: { url: NEWHOPE_LOGO_URL },
       fields: [
         { name: "User", value: `<@${user.discord_id || "unknown"}> (${user.username})`, inline: true },
         { name: "Subject", value: subject, inline: true },
@@ -172,12 +174,14 @@ export async function sendTicketToWebhook(
     const embed = {
       title: "🎫 Support Ticket Submitted",
       color: 0x22d3ee,
+      thumbnail: { url: NEWHOPE_LOGO_URL },
       fields: [
         { name: "User", value: user.username, inline: true },
         { name: "Subject", value: subject, inline: true },
         { name: "Message", value: message.slice(0, 1024) },
       ],
       timestamp: new Date().toISOString(),
+      footer: { text: "NewHopeGGN Ticket Log", icon_url: NEWHOPE_LOGO_URL },
     };
 
     if (channelId) {
@@ -191,11 +195,10 @@ export async function sendTicketToWebhook(
     const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify(brandDiscordWebhookPayload({
         username: "NewHopeGGN Tickets",
-        avatar_url: user.avatar_url,
         embeds: [embed],
-      }),
+      })),
     });
 
     return res.ok;

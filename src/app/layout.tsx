@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { MobileNav } from "@/app/_components/mobile-nav";
 import { MainNav } from "@/app/_components/main-nav";
 import { Heartbeat } from "@/app/_components/heartbeat";
+import { DeviceAuditBeacon } from "@/app/_components/device-audit-beacon";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -69,6 +70,7 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className="rz-corporate-shell min-h-full flex flex-col bg-[#0a0d06]">
         <Heartbeat />
+        <DeviceAuditBeacon />
         <div className="relative z-10 min-h-screen flex flex-col">
           <header className="sticky top-0 z-40 border-b border-orange-900/30 bg-[#0d110a]/80 backdrop-blur-2xl">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
@@ -160,41 +162,29 @@ export default function RootLayout({
                 </div>
 
                 {/* Nav columns */}
-                <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 text-sm">
+                <div className="grid grid-cols-2 gap-8 text-sm">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-600 mb-3">Play</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-600 mb-3">Start</div>
                     <ul className="space-y-2">
                       {[
-                        { href: "/store",    label: "Wipe Store" },
-                        { href: "/rules",    label: "Server Rules" },
-                        { href: "/bans",     label: "Ban List" },
-                        { href: "/streamers",label: "Streamers" },
+                        { href: "/dashboard", label: "Dashboard" },
+                        { href: "/store", label: "Wipe Store" },
+                        { href: "/support", label: "Support" },
+                        { href: "/community", label: "Community" },
                       ].map(l => (
                         <li key={l.href}><Link href={l.href} className="text-stone-400 hover:text-orange-200 transition">{l.label}</Link></li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-600 mb-3">Community</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-600 mb-3">More</div>
                     <ul className="space-y-2">
                       {[
-                        { href: "/community", label: "Discord Feed" },
-                        { href: "/support",   label: "Support" },
-                        { href: "/lottery",   label: "Lottery" },
-                        { href: "/minigame",  label: "Whack-a-Mole" },
-                      ].map(l => (
-                        <li key={l.href}><Link href={l.href} className="text-stone-400 hover:text-orange-200 transition">{l.label}</Link></li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-600 mb-3">Info</div>
-                    <ul className="space-y-2">
-                      {[
-                        { href: "/about",    label: "About" },
+                        { href: "/rules", label: "Rules" },
+                        { href: "/lottery", label: "Lottery" },
+                        { href: "/minigame", label: "Whack-a-Mole" },
                         { href: "/policies", label: "Policies" },
-                        { href: "/dashboard",label: "Dashboard" },
-                        { href: "/admin",    label: "Staff Login" },
+                        { href: "/admin", label: "Staff Login" },
                       ].map(l => (
                         <li key={l.href}><Link href={l.href} className="text-stone-400 hover:text-orange-200 transition">{l.label}</Link></li>
                       ))}

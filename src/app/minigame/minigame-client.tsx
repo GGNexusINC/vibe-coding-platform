@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { WHACK_A_MOLE_PRIZES, scoreToWhackAMolePrize, type OnceHumanPrize } from "@/lib/once-human-items";
 
 // ── Once Human Whack-a-Mole ──────────────────────────────────────────────────
 // Harder: faster moles, multiple simultaneous, infected bomb moles (-2 penalty),
@@ -28,16 +29,7 @@ const RARITY_STYLE: Record<string, { text: string; border: string; bg: string; g
 };
 
 function scoreToPrize(score: number) {
-  if (score >= 60) return { name: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_1.jpg" };
-  if (score >= 48) return { name: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_2.jpg" };
-  if (score >= 36) return { name: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_3.jpg" };
-  if (score >= 28) return { name: "M416 - Scorched Earth",rarity: "rare",      emoji: "🔥", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_4.jpg" };
-  if (score >= 20) return { name: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_5.jpg" };
-  if (score >= 14) return { name: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_6.jpg" };
-  if (score >= 10)  return { name: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_7.jpg" };
-  if (score >= 6)  return { name: "DE.50",                rarity: "rare",      emoji: "🔫", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_8.jpg" };
-  if (score >= 2)  return { name: "20 Bandage Pack",      rarity: "common",    emoji: "🩹", image: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/ss_9.jpg" };
-  return              { name: "Better Luck Next Time",  rarity: "none",      emoji: "☣️", image: "" };
+  return scoreToWhackAMolePrize(score);
 }
 
 function formatCountdown(ms: number) {
@@ -71,7 +63,7 @@ export default function MinigameClient() {
   const [scoreFlash, setScoreFlash] = useState<string | null>(null);
 
   // result
-  const [result, setResult] = useState<{ name: string; rarity: string; emoji: string } | null>(null);
+  const [result, setResult] = useState<OnceHumanPrize | null>(null);
   const [error, setError] = useState("");
 
   const moleTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
@@ -230,6 +222,7 @@ export default function MinigameClient() {
       setResult(prize);
       setCanPlay(false);
       setMsLeft(7 * 24 * 60 * 60 * 1000);
+      window.dispatchEvent(new Event("newhope:inventory-refresh"));
     }
     setPhase("done");
   }
@@ -290,7 +283,7 @@ export default function MinigameClient() {
           Infected Mole <span className="bg-[linear-gradient(135deg,#4ade80,#22c55e)] bg-clip-text text-transparent">Hunt</span>
         </h1>
         <p className="mt-2 text-slate-400 text-sm max-w-lg">
-          Survivors are emerging from contaminated ground. Whack the regular moles 🐹 for +1 pt. <span className="text-rose-400 font-semibold">Miss and lose −1 pt</span>. <span className="text-rose-400 font-semibold">Hit infected ☣️ and lose −2 pts</span>. Once per week.
+          Survivors are emerging from contaminated ground. Whack the regular moles 🐹 for +1 pt. <span className="text-rose-400 font-semibold">Miss and lose −1 pt</span>. <span className="text-rose-400 font-semibold">Hit infected ☣️ and lose −2 pts</span>. Rewards land in inventory with a 48-hour claim window and can be opened as a ticket or saved. Once per week.
         </p>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -497,15 +490,31 @@ export default function MinigameClient() {
                 <div className={`w-full max-w-sm text-center space-y-3 rounded-[2rem] border p-6 ${rs.border} ${rs.bg} ${rs.glow}`}>
                   <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">☣ Mission Complete</div>
                   <div className="text-2xl font-black text-white">Final Score: <span className="text-emerald-400">{score}</span></div>
-                  <div className="text-5xl my-1 drop-shadow-[0_0_20px_rgba(255,255,255,0.25)]">{result.emoji}</div>
+                  <div className="mx-auto my-1 flex h-24 w-32 items-center justify-center rounded-2xl border border-white/10 bg-black/35 shadow-inner">
+                    {result.image ? (
+                      <img
+                        src={result.image}
+                        alt={`${result.name} Once Human item art`}
+                        className="h-20 w-28 object-contain drop-shadow-[0_0_24px_rgba(255,255,255,0.22)]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-5xl drop-shadow-[0_0_20px_rgba(255,255,255,0.25)]">{result.emoji}</span>
+                    )}
+                  </div>
                   <div className="text-xl font-black text-white">{result.name}</div>
+                  {result.sourceUrl && (
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                      Official item art sourced from Wikily
+                    </div>
+                  )}
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${rs.border} ${rs.text}`}>
                     <span>⬡</span>{result.rarity === "none" ? "No reward" : result.rarity}
                   </div>
                   {result.rarity !== "none" ? (
-                    <div className="text-xs text-slate-400">An admin will deliver your weapon in-game. Watch Discord! 📡</div>
+                    <div className="text-xs text-slate-400">Your reward is auto-added to inventory. Use it to open a ticket or save it before the 48-hour timer ends.</div>
                   ) : (
-                    <div className="text-xs text-slate-500">Score 2+ to earn a weapon. Watch out for infected moles!</div>
+                    <div className="text-xs text-slate-500">Score 2+ to earn a weapon. Rewards include a 48-hour claim window and 3 chances per wipe.</div>
                   )}
                   {error && <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</div>}
                   <div className="text-[10px] text-slate-600 pt-1">Zone re-opens in 7 days</div>
@@ -529,24 +538,19 @@ export default function MinigameClient() {
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3">🔫 Once Human Weapons</div>
               <div className="space-y-1">
-                {[
-                  { score: "60+", prize: "AWS.338 - Bullseye",   rarity: "legendary", emoji: "🎯" },
-                  { score: "48+", prize: "HAMR - Brahminy",       rarity: "legendary", emoji: "🦅" },
-                  { score: "36+", prize: "SN700 - Gulped Lore",  rarity: "epic",      emoji: "🐍" },
-                  { score: "28+", prize: "M416 - Scorched Earth",rarity: "rare",      emoji: "🔥" },
-                  { score: "20+", prize: "SOCR - Outsider",      rarity: "rare",      emoji: "⚔️" },
-                  { score: "14+", prize: "ACS12 - Corrosion",    rarity: "uncommon",  emoji: "☣️" },
-                  { score: "10+", prize: "KV-SBR - Little Jaws",  rarity: "uncommon",  emoji: "🦈" },
-                  { score: "6+",  prize: "DE.50",                rarity: "rare",      emoji: "🔫" },
-                  { score: "2+",  prize: "20 Bandage Pack",      rarity: "common",    emoji: "🩹" },
-                  { score: "0-1", prize: "No reward",            rarity: "none",      emoji: "☣️" },
-                ].map((t) => {
+                {WHACK_A_MOLE_PRIZES.map((t) => {
                   const rs = RARITY_STYLE[t.rarity];
                   return (
-                    <div key={t.score} className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 ${ rs.border} ${rs.bg}`}>
-                      <span className="text-sm">{t.emoji}</span>
-                      <span className={`text-[11px] font-semibold flex-1 ${rs.text}`}>{t.prize}</span>
-                      <span className={`text-[10px] font-black tabular-nums ${rs.text}`}>{t.score}</span>
+                    <div key={t.scoreLabel} className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 ${ rs.border} ${rs.bg}`}>
+                      <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/25">
+                        {t.image ? (
+                          <img src={t.image} alt="" className="h-6 w-8 object-contain" loading="lazy" />
+                        ) : (
+                          <span className="text-sm">{t.emoji}</span>
+                        )}
+                      </span>
+                      <span className={`text-[11px] font-semibold flex-1 ${rs.text}`}>{t.rarity === "none" ? "No reward" : t.name}</span>
+                      <span className={`text-[10px] font-black tabular-nums ${rs.text}`}>{t.scoreLabel}</span>
                     </div>
                   );
                 })}
@@ -562,6 +566,7 @@ export default function MinigameClient() {
                 ["⚡", "Moles speed up as score rises"],
                 ["👥", "Multiple moles above score 10"],
                 ["📅", "One run per week"],
+                ["⏳", "Reward claim expires in 48 hours"],
                 ["📡", "Result sent to Discord"],
               ].map(([icon, rule]) => (
                 <div key={rule} className="flex items-start gap-2 text-[11px] text-slate-400 mb-1">

@@ -3,11 +3,14 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { getAdminSession } from "@/lib/admin-auth";
+import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
+import { env } from "@/lib/env";
+import { cleanupExpiredRewardItems, getCurrentWipeCycle } from "@/lib/reward-inventory";
 
 function getSupabase() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   );
 }
 
@@ -19,6 +22,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = getSupabase();
+  await cleanupExpiredRewardItems(supabase, user.discord_id);
 
   const { data: items, error } = await supabase
     .from("user_inventory")
@@ -47,7 +51,7 @@ export async function POST(req: Request) {
 
   const supabase = getSupabase();
 
-  const { user_id, item_type, item_slug, item_name, wipe_cycle, metadata } = body;
+  const { user_id, item_type, item_slug, item_name, wipe_cycle, metadata, expires_at } = body;
 
   if (!user_id || !item_type || !item_slug) {
     return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -62,7 +66,8 @@ export async function POST(req: Request) {
       item_name: item_name || item_slug,
       wipe_cycle: wipe_cycle || getCurrentWipeCycle(),
       metadata: metadata || {},
-      status: "available"
+      status: "available",
+      expires_at: expires_at || null,
     })
     .select()
     .single();
@@ -82,6 +87,7 @@ export async function PATCH(req: Request) {
   }
 
   const supabase = getSupabase();
+  await cleanupExpiredRewardItems(supabase, user.discord_id);
 
   const body = await req.json().catch(() => ({}));
   const { item_id, action, reason } = body;
@@ -150,9 +156,11 @@ export async function PATCH(req: Request) {
 
   // Send Discord notification
   let discordNotified = false;
+  let supportTicket: { id: string; channelId: string | null } | null = null;
   try {
     const isUse = action === "use";
     const isInsurance = item.item_type === "insurance";
+    const isReward = item.item_type === "reward" || Boolean(item.metadata?.reward_source);
 
     const ACTION_COLORS: Record<string, number> = {
       use:  0xf59e0b,  // amber
@@ -173,10 +181,14 @@ export async function PATCH(req: Request) {
     if (reason) {
       fields.push({ name: "Reason", value: reason, inline: false });
     }
+    if (isReward) {
+      fields.push({ name: "Claim Window", value: item.expires_at ? `<t:${Math.floor(new Date(item.expires_at).getTime() / 1000)}:R>` : "48 hours", inline: true });
+      fields.push({ name: "Source", value: String(item.metadata?.reward_source ?? "reward"), inline: true });
+    }
 
     const title = isUse
-      ? (isInsurance ? "🛡️ Insurance Claimed" : "✅ Package Used")
-      : "� Package Saved for Next Wipe";
+      ? (isReward ? "🏆 Reward Claimed" : isInsurance ? "🛡️ Insurance Claimed" : "✅ Package Used")
+      : isReward ? "💾 Reward Saved" : "💾 Package Saved for Next Wipe";
 
     await sendDiscordWebhook({
       username: "NewHope Package System",
@@ -195,6 +207,72 @@ export async function PATCH(req: Request) {
       ],
     });
     discordNotified = true;
+
+    if (isUse) {
+      const subject = isReward
+        ? `Prize claim: ${item.item_name}`
+        : isInsurance
+          ? `Insurance claim: ${item.item_name}`
+          : `Package claim: ${item.item_name}`;
+      const ticketId = crypto.randomUUID();
+      const claimMessage = [
+        `Item: ${item.item_name}`,
+        `Type: ${item.item_type}`,
+        isReward ? `Source: ${String(item.metadata?.reward_source ?? "reward")}` : null,
+        `User: <@${user.discord_id}> (${user.username})`,
+        `Discord ID: ${user.discord_id}`,
+        item.metadata?.reward_prize ? `Prize label: ${String(item.metadata.reward_prize)}` : null,
+        item.expires_at ? `Claim window: <t:${Math.floor(new Date(item.expires_at).getTime() / 1000)}:F>` : null,
+        reason ? `Reason: ${reason}` : null,
+      ].filter(Boolean).join("\n");
+
+      const ticketChannel = await createTicketChannel(user.username, subject);
+      if (ticketChannel) {
+        await sendTicketMessage(
+          ticketChannel.id,
+          {
+            username: user.username,
+            discord_id: user.discord_id,
+            avatar_url: user.avatar_url || undefined,
+          },
+          subject,
+          claimMessage
+        );
+      }
+
+      const supportWebhook = env.discordWebhookUrlForPage("support");
+      if (supportWebhook) {
+        await sendTicketToWebhook(
+          supportWebhook,
+          {
+            username: user.username,
+            discord_id: user.discord_id,
+            avatar_url: user.avatar_url || undefined,
+          },
+          subject,
+          claimMessage,
+          ticketChannel?.id
+        );
+      }
+
+      const { error: ticketError } = await supabase.from("tickets").insert({
+        id: ticketId,
+        guest_username: user.username,
+        subject,
+        message: claimMessage,
+        discord_channel_id: ticketChannel?.id ?? null,
+        status: "open",
+        user_id: user.discord_id,
+      });
+      if (ticketError) {
+        console.error("[inventory] Failed to create reward ticket:", ticketError);
+      } else {
+        supportTicket = {
+          id: ticketId,
+          channelId: ticketChannel?.id ?? null,
+        };
+      }
+    }
   } catch (e) {
     console.error("Package webhook failed:", e);
   }
@@ -203,6 +281,7 @@ export async function PATCH(req: Request) {
     ok: true, 
     item: updated,
     discord_notified: discordNotified,
+    support_ticket: supportTicket,
   });
 }
 
@@ -232,10 +311,4 @@ export async function DELETE(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
-
-// Helper to get current wipe cycle
-function getCurrentWipeCycle(): string {
-  const now = new Date();
-  return `wipe-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }

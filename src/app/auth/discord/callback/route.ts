@@ -7,6 +7,11 @@ import {
 import { sendDiscordWebhook } from "@/lib/discord";
 import { setSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity-log";
+import {
+  inspectRequest,
+  requestInfoDiscordFields,
+  requestInfoMetadata,
+} from "@/lib/request-inspector";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -14,6 +19,7 @@ export async function GET(req: Request) {
   const now = new Date().toISOString();
   const code = url.searchParams.get("code");
   const stateRaw = url.searchParams.get("state") ?? "";
+  const requestInfo = inspectRequest(req);
 
   if (!code) {
     return NextResponse.redirect(`${origin}/dashboard?auth=missing_code`);
@@ -44,7 +50,6 @@ export async function GET(req: Request) {
       discord_profile: u as unknown as Record<string, unknown>,
     });
 
-    // Best-effort login log
     try {
       await logActivity({
         type: "login",
@@ -55,17 +60,29 @@ export async function GET(req: Request) {
         discriminator: u.discriminator ?? null,
         profile: u as unknown as Record<string, unknown>,
         details: "User signed in via Discord OAuth.",
+        metadata: requestInfoMetadata(requestInfo, {
+          pageUrl: next,
+          origin,
+        }),
       });
       await sendDiscordWebhook({
-        content:
-          `✅ **Login / Inicio de sesion**\n` +
-          `User / Usuario: **${username}**\n` +
-          `Discord ID: \`${u.id}\`\n` +
-          `Time / Hora (UTC): \`${now}\`\n` +
-          `Origin / Origen: \`${origin}\`\n` +
-          `Next route / Ruta siguiente: \`${next}\``,
         username: "NewHopeGGN Logs",
-        avatar_url: avatarUrl ?? undefined,
+        embeds: [{
+          title: "Member Signed In",
+          color: 0x22c55e,
+          description: `Session started <t:${Math.floor(Date.now() / 1000)}:R>.`,
+          fields: [
+            { name: "Member", value: `<@${u.id}> (${username})`, inline: true },
+            { name: "Discord ID", value: `\`${u.id}\``, inline: true },
+            { name: "Next Route", value: `\`${next}\``, inline: true },
+            { name: "Origin", value: `\`${origin}\``, inline: true },
+            { name: "UTC Time", value: `\`${now}\``, inline: true },
+            ...requestInfoDiscordFields(requestInfo),
+          ],
+          thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+          footer: { text: "NewHopeGGN Login Audit" },
+          timestamp: now,
+        }],
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
@@ -80,4 +97,3 @@ export async function GET(req: Request) {
     );
   }
 }
-

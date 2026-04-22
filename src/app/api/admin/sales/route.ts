@@ -17,7 +17,7 @@ export async function GET() {
   const sb = getSupabase();
 
   const { data, error } = await sb
-    .from("activity_log")
+    .from("activity_logs")
     .select("details, username, created_at")
     .eq("type", "purchase_intent")
     .order("created_at", { ascending: false })
@@ -34,14 +34,17 @@ export async function GET() {
     const details = row.details ?? "";
     const referredMatch = details.match(/Referred by:\s*(.+?)\./i);
     const packMatch = details.match(/purchase flow for (.+?) \(/i);
+    const priceMatch = details.match(/\(\$([0-9.]+)\)/);
+    
     const referredBy = referredMatch?.[1]?.trim() ?? "Not specified";
     const pack = packMatch?.[1]?.trim() ?? "Unknown pack";
+    const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
 
     if (!grouped[referredBy]) {
       grouped[referredBy] = { count: 0, revenue: 0, recent: [] };
     }
     grouped[referredBy].count += 1;
-    grouped[referredBy].revenue += 5;
+    grouped[referredBy].revenue += price;
     if (grouped[referredBy].recent.length < 5) {
       grouped[referredBy].recent.push({ buyer: row.username ?? "Unknown", pack, at: row.created_at });
     }

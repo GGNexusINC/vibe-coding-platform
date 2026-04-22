@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server";
 import { clearSession, getSession } from "@/lib/session";
 import { sendDiscordWebhook } from "@/lib/discord";
-import { logActivity } from "@/lib/activity-log";
+import { getRecentActivities, logActivity } from "@/lib/activity-log";
+import {
+  clientAuditDiscordFields,
+  inspectRequest,
+  requestInfoDiscordFields,
+  requestInfoMetadata,
+} from "@/lib/request-inspector";
 
 export async function POST(req: Request) {
   const url = new URL(req.url);
   const origin = url.origin;
   const now = new Date().toISOString();
   const user = await getSession();
+  const requestInfo = inspectRequest(req);
+  const latestClientAudit = user?.discord_id
+    ? (await getRecentActivities(80)).find(
+        (entry) => entry.type === "device_audit" && entry.discordId === user.discord_id,
+      )?.metadata
+    : undefined;
 
   await clearSession();
 
-  // Best-effort logout log
   if (user?.discord_id) {
     try {
       await logActivity({
@@ -23,17 +34,30 @@ export async function POST(req: Request) {
         discriminator: user.discriminator,
         profile: user.discord_profile,
         details: "User signed out from dashboard.",
+        metadata: requestInfoMetadata(requestInfo, {
+          pageUrl: "/auth/sign-out",
+          origin,
+        }),
       });
       await sendDiscordWebhook({
-        content:
-          `🚪 **Logout / Cierre de sesion**\n` +
-          `User / Usuario: **${user.username}**\n` +
-          `Discord ID: \`${user.discord_id}\`\n` +
-          `Time / Hora (UTC): \`${now}\`\n` +
-          `Origin / Origen: \`${origin}\`\n` +
-          `Route / Ruta: \`/auth/sign-out\``,
         username: "NewHopeGGN Logs",
-        avatar_url: user.avatar_url ?? undefined,
+        embeds: [{
+          title: "Member Signed Out",
+          color: 0xf59e0b,
+          description: `Session ended <t:${Math.floor(Date.now() / 1000)}:R>.`,
+          fields: [
+            { name: "Member", value: `<@${user.discord_id}> (${user.username})`, inline: true },
+            { name: "Discord ID", value: `\`${user.discord_id}\``, inline: true },
+            { name: "Route", value: "`/auth/sign-out`", inline: true },
+            { name: "Origin", value: `\`${origin}\``, inline: true },
+            { name: "UTC Time", value: `\`${now}\``, inline: true },
+            ...clientAuditDiscordFields(latestClientAudit),
+            ...requestInfoDiscordFields(requestInfo),
+          ],
+          thumbnail: user.avatar_url ? { url: user.avatar_url } : undefined,
+          footer: { text: "NewHopeGGN Logout Audit" },
+          timestamp: now,
+        }],
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";

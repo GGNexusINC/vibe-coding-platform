@@ -7,12 +7,13 @@
     "start": "node bot.js"
   },
   "dependencies": {
+    "@deepgram/sdk": "^3.9.0",
+    "@discordjs/voice": "0.19.2",
+    "@snazzah/davey": "0.1.11",
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.5",
-    "@discordjs/voice": "^0.18.0",
-    "opusscript": "^0.1.1",
-    "@deepgram/sdk": "^3.9.0",
     "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.1.1",
     "prism-media": "^1.3.5"
   }
 }

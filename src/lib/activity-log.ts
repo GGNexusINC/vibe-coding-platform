@@ -3,6 +3,7 @@ import { appendActivityEntry, readActivityEntries } from "@/lib/activity-store";
 type ActivityType =
   | "login"
   | "logout"
+  | "device_audit"
   | "support_ticket"
   | "purchase_intent"
   | "admin_broadcast";
@@ -45,8 +46,9 @@ export async function logActivity(input: Omit<ActivityLogEntry, "id" | "createdA
 }
 
 export async function getRecentActivities(limit = 80): Promise<ActivityLogEntry[]> {
-  const store = await readActivityEntries();
-  return store.slice(0, Math.max(1, Math.min(limit, MAX_LOGS)));
+  const safeLimit = Math.max(1, Math.min(limit, MAX_LOGS));
+  const store = await readActivityEntries(safeLimit);
+  return store.slice(0, safeLimit);
 }
 
 export async function getActivitySummary(activeWindowMinutes = 15) {
