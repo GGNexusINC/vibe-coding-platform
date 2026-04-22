@@ -21,7 +21,6 @@ const sections = [
       { href: "/rules", emoji: "Rules", label: "Rules" },
       { href: "/lottery", emoji: "Win", label: "Lottery" },
       { href: "/minigame", emoji: "Game", label: "Whack-a-Mole" },
-      { href: "/beta", emoji: "Beta", label: "Beta Portal" },
     ],
   },
 ];
@@ -98,16 +97,6 @@ export function MobileNav() {
                 </div>
               ))}
 
-              <div className="pt-1 border-t border-white/6">
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm font-semibold text-stone-500 hover:bg-white/5 hover:text-stone-300 transition-all"
-                >
-                  <span className="text-[10px] rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5">Staff</span>
-                  Staff Login
-                </Link>
-              </div>
             </nav>
           </div>
         </>

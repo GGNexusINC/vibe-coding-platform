@@ -35,28 +35,6 @@ export function MainNav() {
       })}
 
       <div className="h-4 w-px bg-white/10 mx-1" />
-
-      <Link
-        href="/beta"
-        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-          pathname.startsWith("/beta")
-            ? "bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/30"
-            : "text-stone-400 hover:bg-amber-400/10 hover:text-amber-100"
-        }`}
-      >
-        Beta
-      </Link>
-
-      <Link
-        href="/admin"
-        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-          pathname.startsWith("/admin")
-            ? "bg-orange-400/15 text-orange-200 ring-1 ring-orange-400/30"
-            : "text-stone-400 hover:bg-orange-400/10 hover:text-orange-100"
-        }`}
-      >
-        Staff
-      </Link>
     </nav>
   );
 }
