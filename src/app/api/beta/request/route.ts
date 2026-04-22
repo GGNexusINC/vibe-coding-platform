@@ -41,19 +41,64 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Check if already has a pending request
+    // Check for existing request
     const { data: existingRequest } = await sb
       .from('beta_tester_requests')
       .select('id, status')
       .eq('discord_id', user.discord_id)
-      .eq('status', 'pending')
+      .order('requested_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (existingRequest) {
+    // Block if there's a pending request
+    if (existingRequest?.status === 'pending') {
       return NextResponse.json({ 
         ok: false, 
         error: "You already have a pending request. Please wait for approval." 
       }, { status: 400 });
+    }
+
+    // Block if already approved (they're already a beta tester)
+    if (existingRequest?.status === 'approved') {
+      return NextResponse.json({ 
+        ok: false, 
+        error: "You're already a beta tester! Check /beta portal." 
+      }, { status: 400 });
+    }
+
+    // Allow re-applying if previous request was rejected - update it instead of creating new
+    if (existingRequest?.status === 'rejected') {
+      const { error: updateError } = await sb
+        .from('beta_tester_requests')
+        .update({
+          status: 'pending',
+          reason: reason?.trim() || null,
+          experience: experience?.trim() || null,
+          play_time: playTime?.trim() || null,
+          requested_at: new Date().toISOString(),
+          reviewed_at: null,
+          reviewed_by: null,
+          review_notes: null,
+        })
+        .eq('id', existingRequest.id);
+
+      if (updateError) throw updateError;
+
+      // Get updated request for notification
+      const { data: updatedRequest } = await sb
+        .from('beta_tester_requests')
+        .select('*')
+        .eq('id', existingRequest.id)
+        .single();
+
+      if (updatedRequest) {
+        await notifyAdmins(updatedRequest, user);
+      }
+
+      return NextResponse.json({ 
+        ok: true, 
+        message: "Re-application submitted! Admins will review your application." 
+      });
     }
 
     // Create the request

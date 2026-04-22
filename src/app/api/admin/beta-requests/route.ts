@@ -115,11 +115,19 @@ export async function POST(req: Request) {
           .eq('id', existing.id);
       }
 
-      // Send DM to user
-      await sendApprovalDM(request, true);
+      // Try to send DM to user (don't fail if this doesn't work)
+      try {
+        await sendApprovalDM(request, true);
+      } catch (dmError) {
+        console.error("[admin/beta-requests] DM failed but approval succeeded:", dmError);
+      }
     } else {
-      // Send DM for rejection
-      await sendApprovalDM(request, false, notes);
+      // Try to send DM for rejection (don't fail if this doesn't work)
+      try {
+        await sendApprovalDM(request, false, notes);
+      } catch (dmError) {
+        console.error("[admin/beta-requests] DM failed but rejection succeeded:", dmError);
+      }
     }
 
     return NextResponse.json({ 
