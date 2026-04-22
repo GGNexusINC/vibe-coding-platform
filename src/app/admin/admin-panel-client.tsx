@@ -4059,18 +4059,107 @@ export function AdminPanelClient() {
                         >
                           <option value="pack">Pack</option>
                           <option value="insurance">Insurance</option>
+                          <option value="prize">Prize/Reward</option>
                           <option value="construction">Construction</option>
                           <option value="defense">Defense</option>
                           <option value="tactical">Tactical</option>
+                          <option value="other">Other</option>
                         </select>
+                      </div>
+
+                      {/* Preset Items */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Item</label>
+                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                          {/* Whack-a-Mole Prizes */}
+                          <div className="col-span-2 text-xs font-bold text-amber-400 uppercase mt-1">🎯 Whack-a-Mole Prizes</div>
+                          {[
+                            { name: "Legendary Gear Crate", slug: "legendary-gear-crate" },
+                            { name: "Rare Resources Bundle", slug: "rare-resources-bundle" },
+                            { name: "Premium Ammo Box", slug: "premium-ammo-box" },
+                            { name: "Elite Medical Kit", slug: "elite-medical-kit" },
+                            { name: "Superior Building Materials", slug: "superior-building-materials" },
+                            { name: "Advanced Tools Set", slug: "advanced-tools-set" },
+                            { name: "Rare Seeds Pack", slug: "rare-seeds-pack" },
+                            { name: "Weapon Mods Bundle", slug: "weapon-mods-bundle" },
+                          ].map((item) => (
+                            <button
+                              key={item.slug}
+                              type="button"
+                              onClick={() => setGivePackageForm(prev => ({ 
+                                ...prev, 
+                                item_name: item.name, 
+                                item_slug: item.slug,
+                                item_type: "prize"
+                              }))}
+                              className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
+                                givePackageForm.item_slug === item.slug
+                                  ? "bg-amber-500/20 border border-amber-500/30 text-amber-300"
+                                  : "bg-slate-800 border border-white/5 text-slate-300 hover:bg-slate-700"
+                              }`}
+                            >
+                              {item.name}
+                            </button>
+                          ))}
+
+                          {/* Standard Packs */}
+                          <div className="col-span-2 text-xs font-bold text-cyan-400 uppercase mt-2">📦 Standard Packs</div>
+                          {[
+                            { name: "Starter Pack", slug: "starter-pack" },
+                            { name: "Builder's Pack", slug: "builders-pack" },
+                            { name: "Defender's Pack", slug: "defenders-pack" },
+                            { name: "Scout's Pack", slug: "scouts-pack" },
+                            { name: "Wipe Pack - Basic", slug: "wipe-pack-basic" },
+                            { name: "Wipe Pack - Premium", slug: "wipe-pack-premium" },
+                            { name: "Wipe Pack - Ultimate", slug: "wipe-pack-ultimate" },
+                          ].map((item) => (
+                            <button
+                              key={item.slug}
+                              type="button"
+                              onClick={() => setGivePackageForm(prev => ({ 
+                                ...prev, 
+                                item_name: item.name, 
+                                item_slug: item.slug,
+                                item_type: "pack"
+                              }))}
+                              className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
+                                givePackageForm.item_slug === item.slug
+                                  ? "bg-cyan-500/20 border border-cyan-500/30 text-cyan-300"
+                                  : "bg-slate-800 border border-white/5 text-slate-300 hover:bg-slate-700"
+                              }`}
+                            >
+                              {item.name}
+                            </button>
+                          ))}
+
+                          {/* Insurance */}
+                          <div className="col-span-2 text-xs font-bold text-violet-400 uppercase mt-2">🛡️ Insurance</div>
+                          <button
+                            type="button"
+                            onClick={() => setGivePackageForm(prev => ({ 
+                              ...prev, 
+                              item_name: "Insurance Claim", 
+                              item_slug: "insurance-claim",
+                              item_type: "insurance"
+                            }))}
+                            className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition ${
+                              givePackageForm.item_slug === "insurance-claim"
+                                ? "bg-violet-500/20 border border-violet-500/30 text-violet-300"
+                                : "bg-slate-800 border border-white/5 text-slate-300 hover:bg-slate-700"
+                            }`}
+                          >
+                            Insurance Claim
+                          </button>
+                        </div>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Package Name *</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                          Custom Item Name {givePackageForm.item_name && "✓"}
+                        </label>
                         <input
                           type="text"
-                          required
-                          placeholder="e.g., Construction Package"
+                          placeholder="Or type a custom item name..."
                           value={givePackageForm.item_name}
                           onChange={(e) => {
                             const name = e.target.value;
@@ -4079,6 +4168,11 @@ export function AdminPanelClient() {
                           }}
                           className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-cyan-500/50 outline-none"
                         />
+                        {givePackageForm.item_slug && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Slug: <span className="font-mono">{givePackageForm.item_slug}</span>
+                          </div>
+                        )}
                       </div>
                       
                       <div>
