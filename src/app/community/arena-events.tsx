@@ -432,7 +432,7 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
             </div>
 
             {selectedEvent?.id === event.id ? (
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-3 max-h-[70vh] overflow-y-auto md:max-h-none md:overflow-visible">
                 {/* Voice Channel Assignment Banner */}
                 {userTeam && event.status === "active" && event.metadata?.vc_assignments && (
                   (() => {
@@ -1074,12 +1074,14 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
                   </div>
                 )}
 
-                <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="w-full py-2 rounded-lg bg-slate-800 text-slate-400 text-sm hover:bg-slate-700 transition"
-                >
-                  Close
-                </button>
+                <div className="sticky bottom-0 bg-slate-900/95 backdrop-blur border-t border-white/10 pt-3 pb-safe md:static md:bg-transparent md:border-0 md:pb-0">
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="w-full py-3 rounded-lg bg-slate-800 text-slate-400 text-sm font-semibold hover:bg-slate-700 transition md:py-2"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
               <button
