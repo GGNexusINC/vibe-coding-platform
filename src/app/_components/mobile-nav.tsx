@@ -21,6 +21,7 @@ const sections = [
       { href: "/rules", emoji: "Rules", label: "Rules" },
       { href: "/lottery", emoji: "Win", label: "Lottery" },
       { href: "/minigame", emoji: "Game", label: "Whack-a-Mole" },
+      { href: "/beta", emoji: "Beta", label: "Beta Portal" },
     ],
   },
 ];
