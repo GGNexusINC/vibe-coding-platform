@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity-log";
 import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
-import { sendDiscordWebhook } from "@/lib/discord";
 import { env } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
@@ -94,30 +93,6 @@ export async function POST(req: Request) {
         ticketChannelId,
       );
     }
-
-    const ts = Math.floor(Date.now() / 1000);
-    await sendDiscordWebhook(
-      {
-        username: "NewHopeGGN Support",
-        embeds: [{
-          title: "New Support Ticket",
-          color: 0x06b6d4,
-          description: `**${subject}**\n\`\`\`${message.slice(0, 500)}${message.length > 500 ? "..." : ""}\`\`\``,
-          fields: [
-            {
-              name: "User",
-              value: user?.discord_id ? `<@${user.discord_id}> (${user.username})` : (user?.username ?? "Guest"),
-              inline: true,
-            },
-            { name: "Submitted", value: `<t:${ts}:R>`, inline: true },
-            ...(ticketChannelId ? [{ name: "Channel", value: `<#${ticketChannelId}>`, inline: true }] : []),
-          ],
-          footer: { text: `Ticket ID: ${ticketId}` },
-          timestamp: new Date().toISOString(),
-        }],
-      },
-      { webhookUrl: env.discordWebhookUrlForPage("tickets") || supportWebhookUrl },
-    ).catch(() => {});
 
     return NextResponse.json({
       ok: true,
