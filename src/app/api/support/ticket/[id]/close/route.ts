@@ -58,10 +58,12 @@ export async function POST(
     { webhookUrl: env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support") },
   ).catch(() => {});
 
+  // Only admins can delete Discord channels
   if (!isAdmin || !channelId || !botToken) {
-    return NextResponse.json({ ok: true, message: "Status updated" });
+    return NextResponse.json({ ok: true, message: "Ticket closed" });
   }
 
+  // Admin closing - notify Discord and schedule channel deletion
   try {
     await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: "POST",
@@ -70,15 +72,19 @@ export async function POST(
     });
 
     setTimeout(async () => {
-      await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bot ${botToken}` },
-      });
+      try {
+        await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+      } catch (deleteErr) {
+        console.error("[ticket-close] Channel delete failed:", deleteErr);
+      }
     }, 10000);
 
-    return NextResponse.json({ ok: true, message: "Ticket closed" });
+    return NextResponse.json({ ok: true, message: "Ticket closed - channel will be deleted in 10s" });
   } catch (e) {
     console.error("[ticket-close] Discord error:", e);
-    return NextResponse.json({ ok: true, message: "Status updated, Discord failed" });
+    return NextResponse.json({ ok: true, message: "Ticket closed but Discord notification failed" });
   }
 }

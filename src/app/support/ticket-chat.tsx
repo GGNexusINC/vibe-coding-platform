@@ -108,7 +108,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
 
   // Close ticket
   const closeTicket = async () => {
-    if (!confirm("Close this ticket? The channel will be deleted.")) return;
+    if (!confirm("Are you sure you want to close this ticket? This action is permanent and cannot be undone.")) return;
     
     setClosing(true);
     try {
@@ -140,7 +140,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
       <div className="bg-gray-900 rounded-lg border border-gray-700 p-4 mt-4">
         <div className="text-center text-gray-400 py-8">
           <p className="text-lg mb-2">🔒 Ticket Closed</p>
-          <p className="text-sm">This ticket has been closed and the Discord channel deleted.</p>
+          <p className="text-sm">This ticket has been closed.</p>
         </div>
       </div>
     );
