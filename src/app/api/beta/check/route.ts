@@ -23,16 +23,27 @@ export async function GET() {
     // Check if user is in beta_testers table
     const { data: betaTester, error } = await sb
       .from('beta_testers')
-      .select('id, permissions, notes, joined_at')
+      .select('id, permissions, notes, joined_at, is_active')
       .eq('discord_id', user.discord_id)
-      .eq('is_active', true)
       .single();
 
+    // If no record found or not active
     if (error || !betaTester) {
+      console.log(`[beta/check] User ${user.discord_id} not found in beta_testers`);
       return NextResponse.json({ 
         ok: true, 
         isBetaTester: false,
         message: "You are not a beta tester"
+      });
+    }
+
+    // Check if active
+    if (!betaTester.is_active) {
+      console.log(`[beta/check] User ${user.discord_id} found but is_active=false`);
+      return NextResponse.json({ 
+        ok: true, 
+        isBetaTester: false,
+        message: "Your beta access is inactive"
       });
     }
 

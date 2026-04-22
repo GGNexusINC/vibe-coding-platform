@@ -92,6 +92,12 @@ export function BetaPortalClient() {
     return (
       <div className="min-h-screen bg-slate-950">
         <div className="max-w-4xl mx-auto px-4 py-12">
+          {/* Debug info - remove after fixing */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 rounded bg-slate-800 text-xs text-slate-400 font-mono">
+              Debug: betaStatus={JSON.stringify(betaStatus)}
+            </div>
+          )}
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
