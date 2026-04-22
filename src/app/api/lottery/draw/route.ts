@@ -87,7 +87,7 @@ export async function POST(req: Request) {
           fields: [
             { name: "Claim Window", value: "48 hours", inline: true },
             { name: "Choice", value: "Use it to open a ticket or save it in inventory", inline: true },
-            { name: "Draw Rule", value: "One winner per draw • admins pick the result", inline: true },
+            { name: "Draw Rule", value: "One winner per draw • randomly selected by system", inline: true },
             { name: "Winner", value: winner.username, inline: true },
             { name: "Discord ID", value: `\`${winner.discordId}\``, inline: true },
             { name: "Prize", value: winner.prize, inline: false },
