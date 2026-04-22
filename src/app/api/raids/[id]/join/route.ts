@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
+
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -99,6 +102,9 @@ export async function POST(
       details: { role },
     });
 
+    // Send notifications
+    await notifyJoin(raidId, user, role, sb);
+
     return NextResponse.json({ ok: true, message: "Joined raid successfully" });
   } catch (e) {
     console.error("[raids/join] POST error:", e);
@@ -106,5 +112,105 @@ export async function POST(
       { ok: false, error: e instanceof Error ? e.message : "Failed to join raid" },
       { status: 500 }
     );
+  }
+}
+
+// Send DM to user and log to admin channel
+async function notifyJoin(raidId: string, user: any, role: string, sb: any) {
+  const logsWebhookUrl = env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support");
+  
+  // Get raid details
+  const { data: raid } = await sb
+    .from('raids')
+    .select('target_location, raid_type, created_by')
+    .eq('id', raidId)
+    .single();
+
+  if (!raid) return;
+
+  // 1. Send DM to user who joined
+  if (BOT_TOKEN && user.discord_id) {
+    try {
+      const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bot ${BOT_TOKEN}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ recipient_id: user.discord_id }),
+      });
+      
+      if (dmRes.ok) {
+        const dm = await dmRes.json();
+        await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bot ${BOT_TOKEN}`,
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            content: `✅ **You've joined a raid!**\n\n**Target:** ${raid.target_location}\n**Your Role:** ${role}\n\nView raid: ${process.env.NEXT_PUBLIC_SITE_URL}/beta/raids?id=${raidId}`,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error("[raids/join] DM to user failed:", e);
+    }
+  }
+
+  // 2. Send DM to raid creator
+  if (BOT_TOKEN && raid.created_by && raid.created_by !== user.discord_id) {
+    try {
+      const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bot ${BOT_TOKEN}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ recipient_id: raid.created_by }),
+      });
+      
+      if (dmRes.ok) {
+        const dm = await dmRes.json();
+        await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bot ${BOT_TOKEN}`,
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            content: `👥 **New team member!**\n\n**${user.username}** joined your raid on **${raid.target_location}** as **${role}**`,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error("[raids/join] DM to creator failed:", e);
+    }
+  }
+  
+  // 3. Send log to admin channel
+  if (logsWebhookUrl) {
+    try {
+      await fetch(logsWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Raid System Logs',
+          embeds: [{
+            title: '📝 User Joined Raid (Log)',
+            color: 0x22c55e,
+            fields: [
+              { name: 'User', value: `<@${user.discord_id}> (${user.username})`, inline: true },
+              { name: 'Role', value: role, inline: true },
+              { name: 'Raid Target', value: raid.target_location, inline: true },
+              { name: 'Raid ID', value: raidId, inline: false },
+            ],
+            timestamp: new Date().toISOString(),
+          }],
+        }),
+      });
+    } catch (e) {
+      console.error("[raids/join] Log webhook failed:", e);
+    }
   }
 }

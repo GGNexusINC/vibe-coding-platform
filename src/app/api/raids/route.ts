@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -118,8 +120,8 @@ export async function POST(req: Request) {
       details: { target_location: targetLocation, raid_type: raidType },
     });
 
-    // Send Discord notification
-    await notifyDiscordRaid(raid, user);
+    // Send DM to creator and log to admin channel
+    await notifyRaidCreated(raid, user);
 
     return NextResponse.json({ ok: true, raid });
   } catch (e) {
@@ -131,46 +133,68 @@ export async function POST(req: Request) {
   }
 }
 
-async function notifyDiscordRaid(raid: any, creator: any) {
-  const webhookUrl = env.discordWebhookUrlForPage("general-chat");
-  if (!webhookUrl) return;
-
-  const raidTypeLabels: Record<string, string> = {
-    normal: '🚨 Raid Alert',
-    counter: '🛡️ Counter Raid',
-    defense: '⚔️ Base Defense',
-  };
-
-  const embed = {
-    title: raidTypeLabels[raid.raid_type] || '🚨 Raid Alert',
-    description: `**${raid.target_location}** is being targeted!`,
-    color: raid.raid_type === 'defense' ? 0xef4444 : raid.raid_type === 'counter' ? 0x3b82f6 : 0xf59e0b,
-    fields: [
-      { name: '🎯 Target', value: raid.target_location, inline: true },
-      { name: '👥 Team Size', value: `${raid.team_size} members`, inline: true },
-      ...(raid.enemy_count ? [{ name: '⚠️ Enemy Count', value: `${raid.enemy_count}`, inline: true }] : []),
-      ...(raid.description ? [{ name: '📝 Details', value: raid.description }] : []),
-      { name: '🔗 Join Raid', value: `[Click here to join the raid team](${process.env.NEXT_PUBLIC_SITE_URL}/beta/raids?id=${raid.id})` },
-    ],
-    author: {
-      name: `Called by ${creator.username}`,
-      icon_url: creator.avatar_url,
-    },
-    footer: { text: 'NewHopeGGN Raid System • Join fast!' },
-    timestamp: new Date().toISOString(),
-  };
-
-  try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'NewHopeGGN Raid Alert',
-        content: '@everyone A raid team is forming!',
-        embeds: [embed],
-      }),
-    });
-  } catch (e) {
-    console.error("[raids] Discord notification failed:", e);
+// Send DM to user and log to admin channel
+async function notifyRaidCreated(raid: any, creator: any) {
+  const logsWebhookUrl = env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support");
+  
+  // 1. Send DM to creator
+  if (BOT_TOKEN && creator.discord_id) {
+    try {
+      // Create DM channel
+      const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bot ${BOT_TOKEN}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ recipient_id: creator.discord_id }),
+      });
+      
+      if (dmRes.ok) {
+        const dm = await dmRes.json();
+        
+        // Send DM
+        await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bot ${BOT_TOKEN}`,
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            content: `� **Your raid has been created!**\n\n**Target:** ${raid.target_location}\n**Type:** ${raid.raid_type}\n**Team Size:** ${raid.team_size}\n\nManage your raid: ${process.env.NEXT_PUBLIC_SITE_URL}/beta/raids?id=${raid.id}`,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error("[raids] DM notification failed:", e);
+    }
+  }
+  
+  // 2. Send log to admin logs channel
+  if (logsWebhookUrl) {
+    try {
+      await fetch(logsWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Raid System Logs',
+          embeds: [{
+            title: '📝 Raid Created (Log)',
+            description: `**${creator.username}** created a new raid`,
+            color: 0x64748b,
+            fields: [
+              { name: 'Creator', value: `<@${creator.discord_id}> (${creator.username})`, inline: true },
+              { name: 'Target', value: raid.target_location, inline: true },
+              { name: 'Type', value: raid.raid_type, inline: true },
+              { name: 'Team Size', value: `${raid.team_size}`, inline: true },
+              { name: 'Raid ID', value: raid.id, inline: false },
+            ],
+            timestamp: new Date().toISOString(),
+          }],
+        }),
+      });
+    } catch (e) {
+      console.error("[raids] Log webhook failed:", e);
+    }
   }
 }
