@@ -39,7 +39,7 @@ export async function GET() {
   }
 }
 
-// POST - Approve or reject a request
+// POST - Approve, reject, or delete a request
 export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) {
@@ -50,16 +50,31 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { requestId, action, notes } = body;
 
-    if (!requestId || !action || !['approve', 'reject'].includes(action)) {
+    if (!requestId || !action || !['approve', 'reject', 'delete'].includes(action)) {
       return NextResponse.json(
-        { ok: false, error: "Invalid action. Use 'approve' or 'reject'" },
+        { ok: false, error: "Invalid action. Use 'approve', 'reject', or 'delete'" },
         { status: 400 }
       );
     }
 
     const sb = getSupabase();
 
-    // Get the request
+    // Handle delete action - just remove the request
+    if (action === 'delete') {
+      const { error: deleteError } = await sb
+        .from('beta_tester_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (deleteError) throw deleteError;
+
+      return NextResponse.json({ 
+        ok: true, 
+        message: "Request removed successfully" 
+      });
+    }
+
+    // Get the request for approve/reject
     const { data: request, error: reqError } = await sb
       .from('beta_tester_requests')
       .select('*')

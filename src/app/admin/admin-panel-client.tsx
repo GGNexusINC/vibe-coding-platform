@@ -1154,7 +1154,7 @@ export function AdminPanelClient() {
     setBetaRequestsLoading(false);
   }
 
-  async function handleBetaRequest(requestId: string, action: 'approve' | 'reject', notes?: string) {
+  async function handleBetaRequest(requestId: string, action: 'approve' | 'reject' | 'delete', notes?: string) {
     setBetaRequestActionLoading(requestId);
     const res = await fetch("/api/admin/beta-requests", {
       method: "POST",
@@ -2565,11 +2565,24 @@ export function AdminPanelClient() {
                             </div>
                           )}
 
-                          {request.status !== 'pending' && request.reviewed_by && (
-                            <p className="text-xs text-slate-500 mt-3">
-                              {request.status === 'approved' ? 'Approved' : 'Declined'} by {request.reviewed_by} on {new Date(request.reviewed_at).toLocaleDateString()}
-                              {request.review_notes && ` - "${request.review_notes}"`}
-                            </p>
+                          {request.status !== 'pending' && (
+                            <div className="flex items-center justify-between mt-3">
+                              <p className="text-xs text-slate-500">
+                                {request.status === 'approved' ? 'Approved' : 'Declined'} by {request.reviewed_by || 'Admin'} on {new Date(request.reviewed_at).toLocaleDateString()}
+                                {request.review_notes && ` - "${request.review_notes}"`}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  if (confirm('Remove this application from the list?')) {
+                                    void handleBetaRequest(request.id, 'delete');
+                                  }
+                                }}
+                                disabled={betaRequestActionLoading === request.id}
+                                className="px-3 py-1 rounded border border-slate-600 bg-slate-800 text-slate-400 text-xs hover:bg-slate-700 transition disabled:opacity-50"
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
