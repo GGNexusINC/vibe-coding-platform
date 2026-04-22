@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSession } from "@/lib/session";
 import { RaidDashboard } from "./raid-dashboard";
 
 interface BetaStatus {
@@ -12,11 +11,20 @@ interface BetaStatus {
   joinedAt?: string;
 }
 
+interface BetaRequest {
+  id: string;
+  status: string;
+  requested_at: string;
+  reason?: string;
+}
+
 export function BetaPortalClient() {
   const [loading, setLoading] = useState(true);
   const [betaStatus, setBetaStatus] = useState<BetaStatus | null>(null);
+  const [existingRequest, setExistingRequest] = useState<BetaRequest | null>(null);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSignupForm, setShowSignupForm] = useState(false);
 
   useEffect(() => {
     async function checkAccess() {
@@ -38,6 +46,15 @@ export function BetaPortalClient() {
         const betaData = await betaRes.json();
         
         setBetaStatus(betaData);
+
+        // If not a beta tester, check for existing request
+        if (!betaData.isBetaTester) {
+          const requestRes = await fetch("/api/beta/request");
+          const requestData = await requestRes.json();
+          if (requestData.ok && requestData.request) {
+            setExistingRequest(requestData.request);
+          }
+        }
       } catch (e) {
         setError("Failed to verify beta access");
       } finally {
@@ -112,26 +129,10 @@ export function BetaPortalClient() {
           </div>
 
           {/* Application CTA */}
-          <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-slate-950/60 p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Want to Become a Beta Tester?</h2>
-            <p className="text-slate-400 mb-6">
-              Contact the server staff or admins to request beta access. Active members with good standing are eligible.
-            </p>
-            <div className="flex justify-center gap-4">
-              <a 
-                href="/support" 
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold hover:opacity-90 transition"
-              >
-                Contact Staff
-              </a>
-              <a 
-                href="/discord" 
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition"
-              >
-                Join Discord
-              </a>
-            </div>
-          </div>
+          <BetaSignupSection 
+            existingRequest={existingRequest}
+            user={user}
+          />
         </div>
       </div>
     );
@@ -172,6 +173,151 @@ export function BetaPortalClient() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <RaidDashboard user={user} />
       </div>
+    </div>
+  );
+}
+
+// Beta Signup Section Component
+function BetaSignupSection({ existingRequest, user }: { existingRequest: BetaRequest | null; user: any }) {
+  const [form, setForm] = useState({ reason: '', experience: '', playTime: '' });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/beta/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        setMessage('Application submitted! Check your DMs for updates.');
+        setForm({ reason: '', experience: '', playTime: '' });
+      } else {
+        setMessage(data.error || 'Failed to submit');
+      }
+    } catch (e) {
+      setMessage('Failed to submit application');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show pending status
+  if (existingRequest?.status === 'pending') {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-slate-950/60 p-8 text-center">
+        <div className="text-4xl mb-4">⏳</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Application Pending</h2>
+        <p className="text-slate-400 mb-4">
+          Your beta tester application was submitted on {new Date(existingRequest.requested_at).toLocaleDateString()}.
+        </p>
+        <p className="text-amber-400 text-sm">
+          Admins are reviewing your request. You'll receive a DM when approved.
+        </p>
+      </div>
+    );
+  }
+
+  // Show rejected status
+  if (existingRequest?.status === 'rejected') {
+    return (
+      <div className="rounded-2xl border border-red-500/30 bg-gradient-to-b from-red-950/30 to-slate-950/60 p-8 text-center">
+        <div className="text-4xl mb-4">❌</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Application Not Approved</h2>
+        <p className="text-slate-400 mb-4">
+          Your previous application was not approved at this time.
+        </p>
+        <p className="text-slate-500 text-sm">
+          You can apply again in the future.
+        </p>
+      </div>
+    );
+  }
+
+  // Show signup form
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-slate-950/60 p-8">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-white mb-2">Apply for Beta Access</h2>
+        <p className="text-slate-400">
+          Active members with good standing are eligible. Tell us why you want to join!
+        </p>
+      </div>
+
+      {message && (
+        <div className={`mb-6 p-4 rounded-xl text-center ${
+          message.includes('submitted') 
+            ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
+            : 'bg-red-500/20 border border-red-500/30 text-red-400'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">
+            Why do you want to join the beta? *
+          </label>
+          <textarea
+            value={form.reason}
+            onChange={(e) => setForm({ ...form, reason: e.target.value })}
+            placeholder="Tell us what excites you about testing new features..."
+            required
+            rows={3}
+            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-amber-500/50 focus:outline-none resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">
+            What's your experience with Once Human?
+          </label>
+          <textarea
+            value={form.experience}
+            onChange={(e) => setForm({ ...form, experience: e.target.value })}
+            placeholder="How long have you played? What do you enjoy most?"
+            rows={2}
+            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-amber-500/50 focus:outline-none resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">
+            How often do you play?
+          </label>
+          <select
+            value={form.playTime}
+            onChange={(e) => setForm({ ...form, playTime: e.target.value })}
+            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-amber-500/50 focus:outline-none"
+          >
+            <option value="">Select play time...</option>
+            <option value="daily">Daily (2+ hours)</option>
+            <option value="few_times_week">Few times a week</option>
+            <option value="weekends">Weekends only</option>
+            <option value="casual">Casual (occasionally)</option>
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !form.reason.trim()}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold hover:opacity-90 transition disabled:opacity-50"
+        >
+          {loading ? 'Submitting...' : '📝 Submit Application'}
+        </button>
+
+        <p className="text-center text-xs text-slate-500">
+          Admins will review your application and you'll receive a DM with the decision.
+        </p>
+      </form>
     </div>
   );
 }
