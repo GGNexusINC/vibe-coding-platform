@@ -97,8 +97,13 @@ type BotPremiumPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+import { getAdminSession } from "@/lib/admin-auth";
+
 export default async function BotPremiumPage({ searchParams }: BotPremiumPageProps) {
   const params = await searchParams;
+  const adminSession = await getAdminSession();
+  const isAdmin = !!adminSession;
+  
   const ref = Array.isArray(params?.ref) ? params?.ref[0] : params?.ref;
   const fromDiscord = ref === "discord" || ref === "nhpremium";
 
@@ -128,12 +133,14 @@ export default async function BotPremiumPage({ searchParams }: BotPremiumPagePro
                 <DiscordMark />
                 Add to Server
               </a>
-              <Link
-                href="/dashboard?tab=bot"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-6 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/15"
-              >
-                Bot Dashboard
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/dashboard?tab=bot"
+                  className="inline-flex h-12 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-6 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/15"
+                >
+                  Bot Dashboard
+                </Link>
+              )}
               <Link
                 href={setupSupportUrl}
                 className="inline-flex h-12 items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 text-sm font-black text-slate-100 transition hover:bg-white/10"

@@ -28,9 +28,17 @@ const primaryQuickLinks = quickLinks.filter((link) =>
   ["/store", "/support", "/community", "/rules"].includes(link.href)
 );
 
-export default function DashboardClient({ user, msg }: { user: User | null; msg?: string }) {
+export default function DashboardClient({ 
+  user, 
+  msg,
+  isAdmin = false 
+}: { 
+  user: User | null; 
+  msg?: string;
+  isAdmin?: boolean;
+}) {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "bot" ? "bot" : "player";
+  const initialTab = searchParams.get("tab") === "bot" && isAdmin ? "bot" : "player";
   const [activeTab, setActiveTab] = useState<"player" | "bot">(initialTab);
   
   const [uid, setUid] = useState("");
@@ -109,27 +117,26 @@ export default function DashboardClient({ user, msg }: { user: User | null; msg?
             </p>
           </div>
 
-          <div className="flex p-1 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md self-start sm:self-center">
+          {/* Tab Selectors */}
+          <div className="flex bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 gap-1.5">
             <button
               onClick={() => setActiveTab("player")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
-                activeTab === "player" 
-                  ? "bg-orange-500 text-stone-950 shadow-[0_0_20px_rgba(249,115,22,0.4)]" 
-                  : "text-slate-400 hover:text-white"
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${
+                activeTab === "player" ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
-              Once Human
+              <span>🎮</span> Once Human
             </button>
-            <button
-              onClick={() => setActiveTab("bot")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
-                activeTab === "bot" 
-                  ? "bg-[#5865F2] text-white shadow-[0_0_20px_rgba(88,101,242,0.4)]" 
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Bot Control
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab("bot")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${
+                  activeTab === "bot" ? "bg-[#5865F2] text-white shadow-lg shadow-[#5865F2]/20" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span>🤖</span> Bot Control
+              </button>
+            )}
           </div>
         </div>
 

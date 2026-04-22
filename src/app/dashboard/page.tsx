@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/session";
+import { getAdminSession } from "@/lib/admin-auth";
 import DashboardClient from "./dashboard-client";
 
 export const metadata: Metadata = {
@@ -28,6 +29,9 @@ export default async function DashboardPage({
 }) {
   const sp = searchParams ?? {};
   const user = await getSession();
+  const adminSession = await getAdminSession();
+  const isAdmin = !!adminSession;
+
   const msgParam = sp.msg;
   const msg = typeof msgParam === "string" ? msgParam : undefined;
 
@@ -36,6 +40,7 @@ export default async function DashboardPage({
       <DashboardClient 
         user={user} 
         msg={msg} 
+        isAdmin={isAdmin}
       />
     </Suspense>
   );
