@@ -91,30 +91,24 @@ export function BetaPortalClient() {
   if (!betaStatus?.isBetaTester) {
     return (
       <div className="min-h-screen bg-slate-950">
-        <div className="max-w-4xl mx-auto px-4 py-12">
-          {/* Debug info - remove after fixing */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mb-4 p-3 rounded bg-slate-800 text-xs text-slate-400 font-mono">
-              Debug: betaStatus={JSON.stringify(betaStatus)}
-            </div>
-          )}
+        <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 md:mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-sm font-bold text-amber-300 uppercase tracking-wider">Beta Access Required</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4">
+            <h1 className="text-3xl md:text-5xl font-black text-white mb-4">
               Beta Tester <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Portal</span>
             </h1>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            <p className="text-slate-400 md:text-lg max-w-2xl mx-auto px-2">
               Exclusive features for our beta testers. Join the program to access the raid system and other upcoming features.
             </p>
           </div>
 
-          {/* Features Preview */}
-          <div className="grid md:grid-cols-2 gap-6 mb-12">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+          {/* Features Preview - Mobile scrollable */}
+          <div className="md:grid md:grid-cols-2 gap-6 mb-8 md:mb-12 overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="min-w-[280px] md:min-w-0 rounded-2xl border border-slate-800 bg-slate-900/50 p-6 md:mb-0">
               <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center mb-4">
                 <span className="text-2xl">🚨</span>
               </div>
@@ -123,7 +117,7 @@ export function BetaPortalClient() {
                 Notify your team instantly when a raid is happening. Assign roles like Miner, Builder, PvP Fighter, and more.
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+            <div className="min-w-[280px] md:min-w-0 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
               <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4">
                 <span className="text-2xl">👥</span>
               </div>
