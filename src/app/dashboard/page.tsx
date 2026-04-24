@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/session";
-import DashboardClient from "./dashboard-client";
+import { DashboardLoader } from "./dashboard-loader";
 
 export const metadata: Metadata = {
   title: "Dashboard | NewHopeGGN",
@@ -17,28 +17,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: ["https://newhopeggn.vercel.app/opengraph-image"],
   },
+
 };
 
-import { Suspense } from "react";
-
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: Record<string, string | string[] | undefined>;
+export default async function DashboardPage(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sp = searchParams ?? {};
+  const searchParams = await props.searchParams;
   const user = await getSession();
+  const msg = typeof searchParams.msg === "string" ? searchParams.msg : undefined;
 
-  const msgParam = sp.msg;
-  const msg = typeof msgParam === "string" ? msgParam : undefined;
-
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-orange-200/50">Loading Dashboard...</div>}>
-      <DashboardClient 
-        user={user} 
-        msg={msg} 
-      />
-    </Suspense>
-  );
+  return <DashboardLoader user={user} msg={msg} />;
 }
-

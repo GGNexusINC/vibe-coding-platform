@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "NewHopeGGN — Once Human Community";
+export const alt = "VoxBridge — Once Human Community";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -16,7 +16,7 @@ export default function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0a0d06 0%, #0f1a10 40%, #0d110a 100%)",
+          background: "linear-gradient(135deg, #050810 0%, #0c1220 40%, #050810 100%)",
           position: "relative",
           overflow: "hidden",
           fontFamily: "sans-serif",
@@ -31,7 +31,7 @@ export default function OgImage() {
             width: "600px",
             height: "600px",
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)",
           }}
         />
         {/* Radial glow bottom-right */}
@@ -43,7 +43,7 @@ export default function OgImage() {
             width: "500px",
             height: "500px",
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(132,204,22,0.12) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 70%)",
           }}
         />
 
@@ -64,8 +64,8 @@ export default function OgImage() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "rgba(249,115,22,0.12)",
-            border: "1px solid rgba(249,115,22,0.3)",
+            background: "rgba(99,102,241,0.12)",
+            border: "1px solid rgba(99,102,241,0.3)",
             borderRadius: "100px",
             padding: "6px 18px",
             marginBottom: "28px",
@@ -76,11 +76,11 @@ export default function OgImage() {
               width: "8px",
               height: "8px",
               borderRadius: "50%",
-              background: "#4ade80",
+              background: "#6366f1",
             }}
           />
-          <span style={{ color: "#fdba74", fontSize: "16px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Once Human Community Server
+          <span style={{ color: "#a5b4fc", fontSize: "16px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            VoxBridge Community Platform
           </span>
         </div>
 
@@ -95,34 +95,34 @@ export default function OgImage() {
         >
           <span
             style={{
-              fontSize: "96px",
+              fontSize: "110px",
               fontWeight: 900,
-              color: "#fff1e6",
+              color: "#fff",
               letterSpacing: "-0.02em",
               lineHeight: 1,
             }}
           >
-            NewHope
+            Vox
           </span>
           <span
             style={{
-              fontSize: "96px",
+              fontSize: "110px",
               fontWeight: 900,
-              color: "#a3e635",
+              color: "#6366f1",
               letterSpacing: "-0.02em",
               lineHeight: 1,
             }}
           >
-            GGN
+            Bridge
           </span>
         </div>
 
         {/* Divider line */}
         <div
           style={{
-            width: "120px",
-            height: "3px",
-            background: "linear-gradient(90deg, transparent, #f97316, transparent)",
+            width: "160px",
+            height: "4px",
+            background: "linear-gradient(90deg, transparent, #6366f1, transparent)",
             marginBottom: "24px",
             borderRadius: "2px",
           }}
@@ -131,24 +131,24 @@ export default function OgImage() {
         {/* Description */}
         <div
           style={{
-            fontSize: "22px",
-            color: "#a8a29e",
+            fontSize: "24px",
+            color: "#94a3b8",
             textAlign: "center",
-            maxWidth: "700px",
+            maxWidth: "750px",
             lineHeight: 1.5,
             marginBottom: "36px",
           }}
         >
-          Wipe packs · VIP perks · Live Discord feed · Support tickets
+          Translation · VIP Perks · Live Feed · Community Tools
         </div>
 
         {/* Feature pills */}
         <div style={{ display: "flex", gap: "12px" }}>
           {[
-            { label: "🛒  Wipe Store",     color: "#f97316" },
+            { label: "🛒  Wipe Store",     color: "#6366f1" },
             { label: "🎫  Support",         color: "#22d3ee" },
-            { label: "💬  Community",       color: "#a78bfa" },
-            { label: "🎰  Lottery",         color: "#fbbf24" },
+            { label: "💬  Community",       color: "#10b981" },
+            { label: "🎰  Lottery",         color: "#f59e0b" },
           ].map(({ label, color }) => (
             <div
               key={label}
@@ -158,10 +158,10 @@ export default function OgImage() {
                 background: `${color}18`,
                 border: `1px solid ${color}40`,
                 borderRadius: "100px",
-                padding: "8px 20px",
-                fontSize: "15px",
-                fontWeight: 600,
-                color: "#e7e5e4",
+                padding: "8px 24px",
+                fontSize: "16px",
+                fontWeight: 700,
+                color: "#f8fafc",
               }}
             >
               {label}
@@ -175,11 +175,13 @@ export default function OgImage() {
             position: "absolute",
             bottom: "28px",
             fontSize: "15px",
-            color: "#57534e",
-            letterSpacing: "0.1em",
+            color: "#475569",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            fontWeight: 700,
           }}
         >
-          newhopeggn.vercel.app
+          voxbridge.app
         </div>
       </div>
     ),

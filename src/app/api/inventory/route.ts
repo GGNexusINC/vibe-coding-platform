@@ -6,6 +6,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { createTicketChannel, sendTicketMessage, sendTicketToWebhook } from "@/lib/discord-bot";
 import { env } from "@/lib/env";
 import { cleanupExpiredRewardItems, getCurrentWipeCycle } from "@/lib/reward-inventory";
+import { getOnceHumanItemArt } from "@/lib/once-human-items";
 
 function getSupabase() {
   return createClient(
@@ -215,6 +216,7 @@ export async function PATCH(req: Request) {
           ? `Insurance claim: ${item.item_name}`
           : `Package claim: ${item.item_name}`;
       const ticketId = crypto.randomUUID();
+      const itemImageUrl = getOnceHumanItemArt(item.item_name)?.image ?? null;
       const claimMessage = [
         `Item: ${item.item_name}`,
         `Type: ${item.item_type}`,
@@ -236,12 +238,27 @@ export async function PATCH(req: Request) {
             avatar_url: user.avatar_url || undefined,
           },
           subject,
-          claimMessage
+          claimMessage,
+          itemImageUrl
         );
       }
 
+      const serverAuditWebhook = env.discordWebhookUrlForPage("server-audit");
       const supportWebhook = env.discordWebhookUrlForPage("support");
-      if (supportWebhook) {
+      if (serverAuditWebhook) {
+        await sendTicketToWebhook(
+          serverAuditWebhook,
+          {
+            username: user.username,
+            discord_id: user.discord_id,
+            avatar_url: user.avatar_url || undefined,
+          },
+          subject,
+          claimMessage,
+          undefined,
+          itemImageUrl
+        );
+      } else if (supportWebhook && !ticketChannel) {
         await sendTicketToWebhook(
           supportWebhook,
           {
@@ -251,7 +268,8 @@ export async function PATCH(req: Request) {
           },
           subject,
           claimMessage,
-          ticketChannel?.id
+          undefined,
+          itemImageUrl
         );
       }
 

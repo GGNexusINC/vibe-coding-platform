@@ -319,7 +319,13 @@ export function InventorySection() {
   const [showHistory, setShowHistory] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTicket, setActiveTicket] = useState<{ id: string; channelId: string } | null>(null);
+  const [activeTicket, setActiveTicket] = useState<{
+    id: string;
+    channelId: string;
+    itemName?: string;
+    itemType?: string;
+    itemImage?: string;
+  } | null>(null);
   const [confirmItem, setConfirmItem] = useState<{ id: string; action: "use" | "save"; type: string } | null>(null);
 
   useEffect(() => {
@@ -362,7 +368,7 @@ export function InventorySection() {
     setConfirmItem({ id: itemId, action, type: itemType });
   }
 
-  async function openFallbackClaimTicket(itemName: string, itemType: string) {
+  async function openFallbackClaimTicket(itemName: string, itemType: string, itemImage?: string) {
     const subject = `Package claim: ${itemName}`;
     const body = [
       "I claimed this item from my inventory and need staff delivery.",
@@ -378,7 +384,7 @@ export function InventorySection() {
     });
     const ticket = await res.json().catch(() => null);
     if (res.ok && ticket?.ticketId && ticket?.channelId) {
-      setActiveTicket({ id: ticket.ticketId, channelId: ticket.channelId });
+      setActiveTicket({ id: ticket.ticketId, channelId: ticket.channelId, itemName, itemType, itemImage });
       return true;
     }
     return false;
@@ -387,6 +393,10 @@ export function InventorySection() {
   async function confirmAction() {
     if (!confirmItem) return;
     const { id: itemId, action, type: itemType } = confirmItem;
+    const claimedItem = items.find((item) => item.id === itemId);
+    const claimedItemName = claimedItem?.item_name ?? "Inventory item";
+    const claimedItemType = claimedItem?.item_type ?? itemType;
+    const claimedItemImage = getOnceHumanItemArt(claimedItemName)?.image ?? undefined;
     setConfirmItem(null);
     setActionLoading(itemId);
     setMessage("");
@@ -407,12 +417,19 @@ export function InventorySection() {
 
       const ticket = data.support_ticket;
       if (action === "use" && ticket?.id && ticket?.channelId) {
-        setActiveTicket({ id: ticket.id, channelId: ticket.channelId });
+        setActiveTicket({
+          id: ticket.id,
+          channelId: ticket.channelId,
+          itemName: data.item?.item_name ?? claimedItemName,
+          itemType: data.item?.item_type ?? claimedItemType,
+          itemImage: getOnceHumanItemArt(data.item?.item_name ?? claimedItemName)?.image ?? claimedItemImage,
+        });
         setMessage("Prize claimed. Your live support chat is open below.");
       } else if (action === "use") {
         const opened = await openFallbackClaimTicket(
-          data.item?.item_name ?? "Inventory item",
-          data.item?.item_type ?? itemType,
+          data.item?.item_name ?? claimedItemName,
+          data.item?.item_type ?? claimedItemType,
+          claimedItemImage,
         );
         setMessage(opened ? "Claimed. Your live support chat is open below." : "Package claimed. Staff have been notified.");
       } else {
@@ -554,10 +571,27 @@ export function InventorySection() {
                   Support center
                 </a>
               </div>
+              {activeTicket.itemName && (
+                <div className="mb-4 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+                  {activeTicket.itemImage ? (
+                    <img
+                      src={activeTicket.itemImage}
+                      alt={activeTicket.itemName}
+                      className="h-16 w-16 shrink-0 rounded-xl border border-white/10 bg-slate-950 object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Claiming Exact Item</div>
+                    <div className="mt-1 truncate text-sm font-black text-white">{activeTicket.itemName}</div>
+                    <div className="mt-0.5 text-xs text-slate-400">{activeTicket.itemType || "Reward item"}</div>
+                  </div>
+                </div>
+              )}
               <TicketChat
                 ticketId={activeTicket.id}
                 channelId={activeTicket.channelId}
                 onClose={() => setActiveTicket(null)}
+                presenceSide="user"
               />
             </div>
           )}

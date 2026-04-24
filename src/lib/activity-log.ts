@@ -5,6 +5,8 @@ type ActivityType =
   | "logout"
   | "device_audit"
   | "support_ticket"
+  | "ticket_presence"
+  | "bot_status"
   | "purchase_intent"
   | "admin_broadcast";
 

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { BOT_PLAN_PRICES, canUseBotFeature } from "@/lib/bot-premium";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { defaultBotPremium } from "@/lib/bot-premium";
 
 const PERM_VIEW_CHANNEL = BigInt("1024");
 const PERM_CONNECT = BigInt("1048576");
@@ -6,13 +9,6 @@ const PERM_SPEAK = BigInt("2097152");
 const PERM_ADMIN = BigInt("8");
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://newhopeggn.vercel.app";
 const PREMIUM_PANEL_URL = process.env.PREMIUM_PANEL_URL || `${SITE_URL}/bot?ref=discord`;
-const MAIN_GUILD_ID = process.env.GUILD_ID || process.env.DISCORD_GUILD_ID || "1419522458075005023";
-const PREMIUM_GUILD_IDS = new Set(
-  String(process.env.PREMIUM_GUILD_IDS || "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean)
-);
 
 type DiscordRole = { id: string; permissions: string };
 type DiscordMember = { roles?: string[]; user?: { id: string } };
@@ -38,6 +34,23 @@ type InteractionBody = {
     resolved?: { channels?: Record<string, DiscordChannel> };
     custom_id?: string;
   };
+};
+
+const defaultGuildSettings = {
+  prefix: "!",
+  language: "en",
+  logging: {
+    enabled: false,
+    channelId: "",
+    events: ["joins", "leaves", "bans", "commands", "voice", "errors"],
+  },
+  translation: {
+    enabled: false,
+    targetLang: "auto",
+    channelIds: [] as string[],
+    includeBotMessages: false,
+  },
+  premium: defaultBotPremium("free"),
 };
 
 async function verifyDiscordSignature(
@@ -126,8 +139,70 @@ function slashOption(body: InteractionBody, name: string): string | boolean | un
   return body.data?.options?.find((opt) => opt.name === name)?.value;
 }
 
-function isPremiumGuild(guildId?: string): boolean {
-  return Boolean(guildId && (guildId === MAIN_GUILD_ID || PREMIUM_GUILD_IDS.has(guildId)));
+async function updateGuildTranslationSettings(
+  guildId: string,
+  patch: {
+    enabled: boolean;
+    targetLang: string;
+    channelIds: string[];
+    includeBotMessages: boolean;
+  },
+) {
+  const supabase = createSupabaseAdminClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("bot_settings")
+    .select("settings")
+    .eq("guild_id", guildId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const currentSettings =
+    existing?.settings && typeof existing.settings === "object"
+      ? (existing.settings as Record<string, unknown>)
+      : {};
+  const currentLogging =
+    currentSettings.logging && typeof currentSettings.logging === "object"
+      ? (currentSettings.logging as Record<string, unknown>)
+      : {};
+  const currentTranslation =
+    currentSettings.translation && typeof currentSettings.translation === "object"
+      ? (currentSettings.translation as Record<string, unknown>)
+      : {};
+
+  const nextSettings = {
+    ...defaultGuildSettings,
+    ...currentSettings,
+    logging: {
+      ...defaultGuildSettings.logging,
+      ...currentLogging,
+    },
+    translation: {
+      ...defaultGuildSettings.translation,
+      ...currentTranslation,
+      ...patch,
+    },
+    premium: currentSettings.premium ?? defaultGuildSettings.premium,
+  };
+
+  const { error } = await supabase
+    .from("bot_settings")
+    .upsert(
+      {
+        guild_id: guildId,
+        settings: nextSettings,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "guild_id" },
+    );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return nextSettings;
 }
 
 function premiumResponse(featureName = "premium voice translation") {
@@ -144,7 +219,7 @@ function premiumResponse(featureName = "premium voice translation") {
           fields: [
             {
               name: "Plans",
-              value: "Starter: $49/mo text tools\nPro Voice: $149/mo live VC + spoken translation\nServer Ops: $399/mo logs, controls, and priority setup",
+              value: `Starter: $${BOT_PLAN_PRICES.starter}/mo text tools\nPro Voice: $${BOT_PLAN_PRICES.pro_voice}/mo live VC + spoken translation\nServer Ops: $${BOT_PLAN_PRICES.server_ops}/mo logs, controls, and priority setup`,
             },
             {
               name: "Access",
@@ -365,7 +440,7 @@ export async function POST(req: Request) {
         });
       }
 
-      if (speak && !isPremiumGuild(guildId)) {
+      if (speak && !(await canUseBotFeature(guildId, "spokenVoice"))) {
         return premiumResponse("voice-channel translated speech");
       }
 
@@ -412,6 +487,193 @@ export async function POST(req: Request) {
       }
     }
 
+    if (commandName === "nhnotes") {
+      const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+      const channelId = body.channel_id;
+      const groqKey = process.env.GROQ_API_KEY;
+
+      if (!groqKey) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: AI Summarization is not configured (missing GROQ_API_KEY on Vercel dashboard).",
+            flags: 64,
+          },
+        });
+      }
+
+      if (!botToken || !channelId) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: missing bot token or channel context.",
+            flags: 64,
+          },
+        });
+      }
+
+      try {
+        const messages = await discordApi<any[]>(`/channels/${channelId}/messages?limit=50`, botToken);
+        const transcript = messages
+          .reverse()
+          .map((m) => `${m.author.username}: ${m.content}`)
+          .filter(Boolean)
+          .join("\n");
+
+        if (transcript.length < 20) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: "Not enough chat history to summarize.", flags: 64 },
+          });
+        }
+
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a helpful AI assistant. Summarize the following chat conversation into a brief, easy-to-read bulleted list of key takeaways. Do not include extra conversational filler.",
+              },
+              { role: "user", content: transcript.slice(-12000) },
+            ],
+            temperature: 0.5,
+          }),
+        });
+
+        const groqData = await groqRes.json();
+        const summary = groqData.choices?.[0]?.message?.content || "Could not generate a summary.";
+
+        return NextResponse.json({
+          type: 4,
+          data: {
+            embeds: [
+              {
+                color: 0x5865f2,
+                title: "📝 Channel Conversation Notes",
+                description: summary,
+                footer: { text: "Powered by Groq & Llama 3" },
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+        });
+      } catch (error) {
+        console.error("[discord-interactions] nhnotes error:", error);
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: `ERROR: summarization failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            flags: 64,
+          },
+        });
+      }
+    }
+
+
+    if (commandName === "autotext") {
+      const guildId = body.guild_id;
+      const requesterId = body.member?.user?.id || body.user?.id;
+      const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN;
+      const mode = String(slashOption(body, "mode") || "off").toLowerCase();
+      const language = String(slashOption(body, "language") || "auto").toLowerCase().trim();
+      const rawChannelId = slashOption(body, "channel");
+      const channelId = typeof rawChannelId === "string" ? rawChannelId : "";
+      const botMessages = String(slashOption(body, "bot_messages") || "").toLowerCase().trim();
+
+      if (!guildId) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: missing guild context for autotext.",
+            flags: 64,
+          },
+        });
+      }
+
+      if (!botToken) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: bot token is not configured.",
+            flags: 64,
+          },
+        });
+      }
+
+      if (!requesterId) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: missing user context for autotext.",
+            flags: 64,
+          },
+        });
+      }
+
+      const [member, roles] = await Promise.all([
+        discordApi<DiscordGuildMember>(`/guilds/${guildId}/members/${requesterId}`, botToken),
+        discordApi<DiscordRole[]>(`/guilds/${guildId}/roles`, botToken),
+      ]);
+
+      const requesterRoleIds = new Set(member.roles ?? []);
+      let requesterPerms = BigInt(0);
+      const everyoneRole = roles.find((role) => role.id === guildId);
+      requesterPerms |= parsePerms(everyoneRole?.permissions);
+      for (const role of roles) {
+        if (requesterRoleIds.has(role.id)) requesterPerms |= parsePerms(role.permissions);
+      }
+
+      const canManageGuild = hasPerm(requesterPerms, BigInt("32"));
+      if (!canManageGuild && !hasPerm(requesterPerms, PERM_ADMIN)) {
+        return NextResponse.json({
+          type: 4,
+          data: {
+            content: "ERROR: you need Manage Server or Administrator to change auto text translation.",
+            flags: 64,
+          },
+        });
+      }
+
+      const enabled = mode === "on";
+      const existingSettings = await updateGuildTranslationSettings(guildId, {
+        enabled,
+        targetLang: language,
+        channelIds: enabled && channelId ? [channelId] : [],
+        includeBotMessages: botMessages === "on",
+      });
+
+      try {
+        if (body.channel_id) {
+          await sendBotControlMessage(body.channel_id, botToken, {
+            action: "autotext_sync",
+            guildId,
+            translation: existingSettings.translation,
+          });
+        }
+      } catch (error) {
+        console.error("[discord-interactions] autotext sync queue failed:", error);
+      }
+
+      return NextResponse.json({
+        type: 4,
+        data: {
+          flags: 64,
+          content:
+            `Auto text translation is now **${enabled ? "enabled" : "disabled"}**.\n` +
+            `Target language: **${language}**\n` +
+            `Scope: **${channelId ? `<#${channelId}>` : "all text channels"}**\n` +
+            `Bot and webhook messages: **${existingSettings.translation.includeBotMessages ? "included" : "ignored"}**`,
+        },
+      });
+    }
+
     if (commandName === "vcpermcheck") {
       try {
         const content = await buildVcPermCheckMessage(body);
@@ -435,7 +697,7 @@ export async function POST(req: Request) {
       const userId = body.member?.user?.id || body.user?.id;
       const targetLang = String(body.data?.options?.find((opt) => opt.name === "translate_to")?.value || "en");
 
-      if (!isPremiumGuild(guildId)) {
+      if (!(await canUseBotFeature(guildId, "liveVoice"))) {
         return premiumResponse("live voice translation");
       }
 
@@ -483,7 +745,7 @@ export async function POST(req: Request) {
       const channelId = body.channel_id;
       const userId = body.member?.user?.id || body.user?.id;
 
-      if (!isPremiumGuild(guildId)) {
+      if (!(await canUseBotFeature(guildId, "liveVoice"))) {
         return premiumResponse("auto live voice translation");
       }
 

@@ -24,16 +24,22 @@ export const env = {
   supabaseAnonKey: () => requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   adminDiscordId: () => getEnv("ADMIN_DISCORD_ID") ?? "",
   discordIngestSecrets: (): string[] => {
-    return [getEnv("DISCORD_INGEST_SECRET"), getEnv("INGEST_SECRET"), "newhopeggn-bot-secret"]
+    return [
+      getEnv("DISCORD_INGEST_SECRET"),
+      getEnv("INGEST_SECRET"),
+      getEnv("BOT_STATUS_SECRET"),
+      getEnv("DISCORD_BOT_STATUS_SECRET"),
+      "newhopeggn-bot-secret",
+    ]
       .map((value) => value?.trim())
       .filter(
         (value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index,
       );
   },
   discordIngestSecret: () =>
-    getEnv("DISCORD_INGEST_SECRET") ?? getEnv("INGEST_SECRET") ?? "",
+    getEnv("DISCORD_INGEST_SECRET") ?? getEnv("INGEST_SECRET") ?? "newhopeggn-bot-secret",
   ingestSecret: () =>
-    getEnv("INGEST_SECRET") ?? getEnv("DISCORD_INGEST_SECRET") ?? "",
+    getEnv("INGEST_SECRET") ?? getEnv("DISCORD_INGEST_SECRET") ?? "newhopeggn-bot-secret",
   discordLogChannelId: () => getEnv("LOG_CHANNEL_ID") ?? "",
   flyApiToken: () => getEnv("FLY_API_TOKEN") ?? getEnv("FLY_ACCESS_TOKEN") ?? "",
   flyBotAppName: () => getEnv("FLY_BOT_APP_NAME") ?? getEnv("FLY_APP_NAME") ?? "newhopeggn-discord-bot",
@@ -63,6 +69,9 @@ export const env = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
       "general-chat": "DISCORD_WEBHOOK_URL_GENERAL_CHAT",
       "staff-page":   "DISCORD_WEBHOOK_URL_STAFF_PAGE",
+      "staff-audits": "DISCORD_WEBHOOK_URL_STAFF_AUDITS",
+      "login-audits": "DISCORD_WEBHOOK_URL_LOGIN_AUDITS",
+      "server-audit": "DISCORD_WEBHOOK_URL_SERVER_AUDIT",
       "support":      "DISCORD_WEBHOOK_URL_SUPPORT",
       "tickets":      "DISCORD_WEBHOOK_URL_TICKETS",
       "script-hook":  "DISCORD_WEBHOOK_URL_SCRIPT_HOOK",

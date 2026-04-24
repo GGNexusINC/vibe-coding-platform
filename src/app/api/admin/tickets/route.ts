@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { sendDiscordWebhook } from "@/lib/discord";
 import { env } from "@/lib/env";
 import { createClient } from "@supabase/supabase-js";
+import { getRecentActivities } from "@/lib/activity-log";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,31 @@ export async function GET() {
     console.error("[admin/tickets] Supabase error:", error);
     return NextResponse.json({ ok: false, error: error.message, code: error.code }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, tickets: data ?? [], count: data?.length ?? 0 });
+  const recentPresence = await getRecentActivities(300);
+  const latestUserPresence = new Map<string, string>();
+
+  for (const entry of recentPresence) {
+    if (entry.type !== "ticket_presence") continue;
+    if (entry.metadata?.side !== "user") continue;
+    const ticketId = typeof entry.metadata.ticketId === "string" ? entry.metadata.ticketId : "";
+    if (!ticketId || latestUserPresence.has(ticketId)) continue;
+    latestUserPresence.set(ticketId, entry.createdAt);
+  }
+
+  const now = Date.now();
+  const tickets = (data ?? []).map((ticket) => {
+    const lastUserActiveAt = latestUserPresence.get(ticket.id) ?? null;
+    const userActive = lastUserActiveAt
+      ? now - new Date(lastUserActiveAt).getTime() < 30_000
+      : false;
+    return {
+      ...ticket,
+      last_user_active_at: lastUserActiveAt,
+      user_active: userActive,
+    };
+  });
+
+  return NextResponse.json({ ok: true, tickets, count: tickets.length });
 }
 
 export async function PATCH(req: Request) {
@@ -69,7 +94,12 @@ export async function PATCH(req: Request) {
           timestamp: new Date().toISOString(),
         }],
       },
-      { webhookUrl: env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support") },
+      {
+        webhookUrl:
+          env.discordWebhookUrlForPage("server-audit") ||
+          env.discordWebhookUrlForPage("tickets") ||
+          env.discordWebhookUrlForPage("support"),
+      },
     ).catch(() => {});
   }
 

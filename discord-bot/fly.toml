@@ -10,7 +10,6 @@ primary_region = 'iad'
 
 [env]
   SITE_URL = "https://newhopeggn.vercel.app"
-  INGEST_SECRET = "newhopeggn-bot-secret"
 
 [processes]
   app = "node bot.js"

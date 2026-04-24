@@ -56,7 +56,7 @@ export function getDiscordAuthorizeUrl(params: {
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "identify");
+  url.searchParams.set("scope", "identify guilds");
   url.searchParams.set("state", `${params.state}:${encodeURIComponent(params.next)}`);
   return url.toString();
 }
@@ -118,4 +118,28 @@ export function getDiscordAvatarUrl(u: DiscordUser) {
   if (!u.avatar) return null;
   return `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`;
 }
+export async function fetchUserGuilds(accessToken: string) {
+  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`Discord guilds fetch failed: ${res.status} ${txt}`);
+  }
+  return (await res.json()) as {
+    id: string;
+    name: string;
+    icon: string | null;
+    owner: boolean;
+    permissions: string;
+    features: string[];
+  }[];
+}export async function isBotInGuild(guildId: string) {
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) return false;
 
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}`, {
+    headers: { authorization: `Bot ${botToken}` },
+  });
+  return res.ok;
+}

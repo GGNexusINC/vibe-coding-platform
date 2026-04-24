@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WHACK_A_MOLE_PRIZES } from "@/lib/once-human-items";
+import { BotSection } from "@/app/_components/bot-control/bot-section";
 
 type ActivityEntry = {
   id: string;
@@ -636,6 +637,7 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
 export function AdminPanelClient() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null; }[]>([]);
 
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [statsError, setStatsError] = useState("");
@@ -663,7 +665,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -821,6 +823,14 @@ export function AdminPanelClient() {
   const selectedMemberProfileJson = selectedMember?.profile
     ? JSON.stringify(selectedMember.profile, null, 2)
     : "";
+
+  const inventoryMemberMap = useMemo(() => {
+    const map = new Map<string, MemberSummary>();
+    (stats?.summary.members ?? []).forEach((m: MemberSummary) => {
+      map.set(m.discordId, m);
+    });
+    return map;
+  }, [stats?.summary.members]);
 
   const botSnapshot = stats?.botStatus?.snapshot ?? null;
   const botEvents = stats?.botEvents ?? [];
@@ -1000,6 +1010,13 @@ export function AdminPanelClient() {
 
   useEffect(() => {
     if (!isAuthed) return;
+
+    fetch("/api/bot/guilds", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ok) setGuilds(data.guilds ?? []);
+      })
+      .catch(() => {});
 
     const statsTimer = window.setInterval(() => {
       void loadStats();
@@ -1878,6 +1895,7 @@ export function AdminPanelClient() {
     { id: "members"   as const, label: "Members",    icon: "◉" },
     { id: "roster"    as const, label: "Roster",     icon: "◈", badge: pendingAdmins },
     { id: "broadcast" as const, label: "Broadcast",  icon: "◎" },
+    { id: "bot"       as const, label: "Bot Control",icon: "🤖" },
   ] as const;
 
   const featureTabs = [
@@ -2481,6 +2499,13 @@ export function AdminPanelClient() {
                 </div>
                 <ActivityFeed entries={filteredRecent} />
               </div>
+            </div>
+          )}
+
+          {/* ════ BOT CONTROL ════ */}
+          {activeTab === "bot" && (
+            <div className="grid min-w-0 max-w-full gap-4">
+              <BotSection guilds={guilds} isAdminPanel={true} />
             </div>
           )}
 
@@ -3940,7 +3965,7 @@ export function AdminPanelClient() {
 
               {/* Inventory Table */}
               <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
-                <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+                <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1.5fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
                   <span>User</span>
                   <span>Item</span>
                   <span>Status</span>
@@ -3965,9 +3990,30 @@ export function AdminPanelClient() {
                         return item.user_id?.toLowerCase().includes(inventorySearch.toLowerCase());
                       })
                       .map((item) => (
-                        <div key={item.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
-                          <div className="font-mono text-xs text-slate-400 truncate">
-                            {item.user_id?.slice(0, 12)}...
+                        <div key={item.id} className="px-5 py-3 grid grid-cols-[1.5fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {(() => {
+                              const m = inventoryMemberMap.get(item.user_id);
+                              return (
+                                <>
+                                  <div className="h-8 w-8 rounded-full border border-white/10 bg-slate-800 flex-shrink-0 overflow-hidden shadow-inner">
+                                    {m?.avatarUrl ? (
+                                      <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-600 font-bold">?</div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-white font-bold truncate">
+                                      {m?.globalName || m?.username || "Unknown User"}
+                                    </div>
+                                    <div className="font-mono text-[10px] text-slate-500 truncate">
+                                      {item.user_id}
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                           <div>
                             <span className="text-white">{item.item_name}</span>
@@ -4073,7 +4119,7 @@ export function AdminPanelClient() {
 
                 {/* Logs Table */}
                 <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
-                  <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+                  <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1fr_1fr_1.5fr_1fr_1.2fr] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
                     <span>Time</span>
                     <span>Action</span>
                     <span>User</span>
@@ -4088,7 +4134,7 @@ export function AdminPanelClient() {
                   ) : (
                     <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
                       {packageLogs.map((log) => (
-                        <div key={log.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
+                        <div key={log.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1.5fr_1fr_1.2fr] gap-4 items-center text-sm">
                           <div className="text-xs text-slate-500">
                             {new Date(log.action_at).toLocaleString()}
                           </div>
@@ -4103,12 +4149,49 @@ export function AdminPanelClient() {
                               {log.action.replace("_", " ")}
                             </span>
                           </div>
-                          <div className="font-mono text-xs text-slate-400 truncate">
-                            {log.user_id?.slice(0, 12)}...
+                          <div className="flex items-center gap-2 min-w-0">
+                            {(() => {
+                              const m = inventoryMemberMap.get(log.user_id);
+                              return (
+                                <>
+                                  <div className="h-6 w-6 rounded-full border border-white/10 bg-slate-800 flex-shrink-0 overflow-hidden">
+                                    {m?.avatarUrl ? (
+                                      <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center text-[8px] text-slate-600 font-bold">?</div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-white font-semibold truncate leading-tight">
+                                      {m?.globalName || m?.username || "Unknown"}
+                                    </div>
+                                    <div className="font-mono text-[9px] text-slate-500 truncate">
+                                      {log.user_id?.slice(0, 8)}...
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
-                          <div className="text-white">{log.item_name}</div>
-                          <div className="text-xs text-slate-500">
-                            {log.action_by_name || log.action_by?.slice(0, 8)}...
+                          <div className="text-white truncate">{log.item_name}</div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {(() => {
+                              const m = inventoryMemberMap.get(log.action_by);
+                              return (
+                                <>
+                                  <div className="h-5 w-5 rounded-full border border-white/10 bg-slate-800 flex-shrink-0 overflow-hidden">
+                                    {m?.avatarUrl ? (
+                                      <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center text-[7px] text-slate-600 font-bold">?</div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 text-[11px] text-slate-400 truncate">
+                                    {m?.globalName || log.action_by_name || log.action_by?.slice(0, 8)}
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
@@ -4175,10 +4258,19 @@ export function AdminPanelClient() {
                                         setUserSearchQuery(`${name} (${m.discordId})`);
                                         setShowUserDropdown(false);
                                       }}
-                                      className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 border-b border-white/5 last:border-0"
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 border-b border-white/5 last:border-0 flex items-center gap-3"
                                     >
-                                      <div className="font-medium text-white">{name}</div>
-                                      <div className="text-xs text-slate-500 font-mono">{m.discordId}</div>
+                                      <div className="h-8 w-8 rounded-full border border-white/10 bg-slate-700 flex-shrink-0 overflow-hidden shadow-inner">
+                                        {m.avatarUrl ? (
+                                          <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                        ) : (
+                                          <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-500 font-bold">?</div>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-white truncate">{name}</div>
+                                        <div className="text-xs text-slate-500 font-mono truncate">{m.discordId}</div>
+                                      </div>
                                     </button>
                                   );
                                 })}

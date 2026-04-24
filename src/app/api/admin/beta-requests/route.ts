@@ -40,8 +40,7 @@ export async function GET() {
     const { data: requests, error } = await sb
       .from("beta_tester_requests")
       .select("*")
-      .eq("status", "pending")
-      .order("requested_at", { ascending: true });
+      .order("requested_at", { ascending: false });
 
     if (error) throw error;
 

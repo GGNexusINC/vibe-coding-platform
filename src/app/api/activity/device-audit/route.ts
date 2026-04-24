@@ -6,7 +6,8 @@ import { env } from "@/lib/env";
 import { getSession } from "@/lib/session";
 import { inspectRequest, requestInfoMetadata } from "@/lib/request-inspector";
 
-const STAFF_WEBHOOK = env.discordWebhookUrlForPage("staff-page");
+const STAFF_WEBHOOK =
+  env.discordWebhookUrlForPage("staff-audits") || env.discordWebhookUrlForPage("staff-page");
 
 function text(value: unknown, fallback = "Unknown", max = 700) {
   if (typeof value !== "string") return fallback;

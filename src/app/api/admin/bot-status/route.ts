@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const secret = String(body?.secret ?? req.headers.get("x-newhopeggn-secret") ?? "").trim();
   const expectedSecrets = env.discordIngestSecrets().map((value) => value.trim()).filter(Boolean);
 
-  if (!expectedSecrets.length || (!expectedSecrets.includes(secret) && secret !== "newhopeggn-bot-secret")) {
+  if (!expectedSecrets.length || !expectedSecrets.includes(secret)) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
@@ -48,6 +48,8 @@ export async function POST(req: Request) {
         title: kind === "restart" ? "Bot restart" : kind === "voice" ? "Voice update" : "Bot heartbeat",
         detail: `${snapshot.botTag ?? "Discord bot"} reported ${reason}.`,
         meta: { reason, service: snapshot.service, status: snapshot.status },
+      }).catch((eventError) => {
+        console.warn("[bot-status] event write skipped:", eventError);
       });
     }
     return NextResponse.json({ ok: true });

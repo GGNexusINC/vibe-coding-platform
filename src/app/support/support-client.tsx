@@ -62,6 +62,7 @@ export default function SupportClient() {
 
   async function submitTicket(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setStatus("");
 
@@ -342,6 +343,7 @@ export default function SupportClient() {
             <TicketChat 
               ticketId={activeTicket.id} 
               channelId={activeTicket.channelId}
+              presenceSide="user"
             />
           )}
         </div>

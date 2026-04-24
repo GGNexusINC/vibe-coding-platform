@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Rules | NewHopeGGN",
-  description: "Community rules and guidelines for NewHopeGGN Once Human server. Respect, safety, and fair play policies.",
-  keywords: ["rules", "guidelines", "community", "Once Human", "NewHopeGGN", "conduct"],
+  title: "Rules | VoxBridge",
+  description: "Community rules and guidelines for VoxBridge Once Human server. Respect, safety, and fair play policies.",
+  keywords: ["rules", "guidelines", "community", "Once Human", "VoxBridge", "conduct"],
   openGraph: {
-    title: "Rules | NewHopeGGN",
+    title: "Rules | VoxBridge",
     description: "Community rules and guidelines for NewHopeGGN Once Human server.",
     url: "https://newhopeggn.vercel.app/rules",
     type: "website",
@@ -78,7 +78,7 @@ export default function RulesPage() {
       <section className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
         <div className="rz-chip">⚠️ Server Rules</div>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-          NewHopeGGN <span className="text-orange-400">Once Human</span> Server Rules
+          VoxBridge <span className="text-orange-400">Once Human</span> Server Rules
         </h1>
         <p className="mt-4 max-w-3xl text-base leading-8 text-stone-300">
           Welcome to the contamination zone. Respect the space, respect your fellow survivors,

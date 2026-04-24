@@ -1,0 +1,100 @@
+﻿[2m2026-04-24T03:54:46Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:54:46Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:54:47Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:54:47Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 940804710267486249
+[2m2026-04-24T03:54:47Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:54:47Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:54:50Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:54:52Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:54:52Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 940804710267486249
+[2m2026-04-24T03:54:53Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:54:53Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:54:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:54:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] (ADM)-THANOS: Mhmm. Did you hear it pop up, though? Always heard it pop -> Mmmm. ¿Pero lo escuchaste aparecer? Siempre lo escuché pop
+[2m2026-04-24T03:54:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:54:57Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] (ADM)-THANOS: in there. Mhmm. -> ahí dentro. Mmmm.
+[2m2026-04-24T03:55:00Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:01Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:55:01Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 940804710267486249
+[2m2026-04-24T03:55:01Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:07Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 940804710267486249
+[2m2026-04-24T03:55:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:55:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 940804710267486249
+[2m2026-04-24T03:55:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Buzzworthy (Dream Big): slash VC auto. I don't even know, bro. The is that? Look, I sent you the what you were supposed to type. Now we got somebody overhearing us now. Now it's recording now it's recording. Oh no, but it's not picking me up. It's not picking me up gang. It's not picking me up. Oh yeah, they don't wanna pick me up, gang. I don't know. Probably is like, oh, bro, that's my creator bro. -> barra diagonal VC automático. Ni siquiera lo sé, hermano. ¿Es eso? Mira, te envié lo que se suponía que debías escribir. Ahora tenemos a alguien escuchándonos. Ahora está grabando, ahora está grabando. Oh no, pero no me capta. No me está ligando a mi pandilla. No me recoge. Oh, sí, no quieren recogerme, pandilla. No sé. Probablemente sea como, oh, hermano, ese es mi hermano creador.
+[2m2026-04-24T03:55:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:09Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:09Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:09Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] [ⱯDM]_COʁꓕEZ: Oh, it's got Thanos right there. -> Oh, tiene a Thanos justo ahí.
+[2m2026-04-24T03:55:11Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:55:11Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:12Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:55:13Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:55:16Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:55:16Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] (ADM)-THANOS: Yes. -> Sí.
+[2m2026-04-24T03:55:16Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:18Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:55:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:55:22Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 506429797446975488
+[2m2026-04-24T03:55:22Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream closed
+[2m2026-04-24T03:55:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 940804710267486249
+[2m2026-04-24T03:55:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream opening (audio)
+[2m2026-04-24T03:55:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] [ⱯDM]_COʁꓕEZ: But there you go. Yeah. -> Pero ahí lo tienes. Sí.
+[2m2026-04-24T03:55:23Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream opened
+[2m2026-04-24T03:55:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:55:27Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 940804710267486249
+[2m2026-04-24T03:55:28Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Relay #👑-staff-chat-👑 from hopelockhart0626: wait
+[2m2026-04-24T03:55:28Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:55:28Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] (ADM)-THANOS: Listen. -> Escuchar.
+[2m2026-04-24T03:55:28Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:28Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking start: 1310794181190352997
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 1310794181190352997
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Speech started
+[2m2026-04-24T03:55:29Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] [ⱯDM]_COʁꓕEZ: What else it can do. Does can it, -> ¿Qué más puede hacer? ¿Puede hacerlo?
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] connection state: ready -> destroyed
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 506429797446975488
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream closed
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] speaking end: 940804710267486249
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream closed
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] Deepgram stream closed
+[2m2026-04-24T03:55:34Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][voice] [ⱯDM]_COʁꓕEZ: the WordPress, -> el WordPress,
+[2m2026-04-24T03:55:51Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Relay #👑-staff-chat-👑 from hopelockhart0626: i cannot remember where the admin log in is <@940804710267486249>
+[2m2026-04-24T04:00:24Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Relay #👑 Staff-Voice 👑 from rigobuzzworthy: https://cdn.discordapp.com/attachments/1492351390310207571/1497084771749199946/Screenshot_2026-04-23
+[2m2026-04-24T04:24:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting member sync...
+[2m2026-04-24T04:24:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetching members batch 1, after: 0
+[2m2026-04-24T04:24:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetched 114 members in batch 1
+[2m2026-04-24T04:24:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Synced 114 guild members (batch 1)
+[2m2026-04-24T04:24:19Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Completed member sync. Synced 114 members in total.
+[2m2026-04-24T04:25:52Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Configuring firecracker
+[2m2026-04-24T04:25:52Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Sending signal SIGINT to main child process w/ PID 634
+[2m2026-04-24T04:25:52Z[0m runner[18530d9cd07158] [32miad[0m [[34minfo[0m]Configuring firecracker
+[2m2026-04-24T04:25:54Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-24T04:25:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node bot.js` as root
+[2m2026-04-24T04:25:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-24T04:25:55Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Machine created and started in 2.626s
+[2m2026-04-24T04:25:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting...
+[2m2026-04-24T04:25:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] DAVE support library loaded
+[2m2026-04-24T04:25:55Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m]2026/04/24 04:25:55 INFO SSH listening listen_address=[fdaa:6b:10b8:a7b:507:98cd:de33:2]:22
+[2m2026-04-24T04:25:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Opus engine: unknown
+[2m2026-04-24T04:25:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] BOT_TOKEN present: true
+[2m2026-04-24T04:25:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] SITE_URL: https://newhopeggn.vercel.app
+[2m2026-04-24T04:25:56Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Attempting to login to Discord...
+[2m2026-04-24T04:31:03Z[0m runner[e829392cdd6518] [32miad[0m [[34minfo[0m]Pulling container image registry.fly.io/newhopeggn-discord-bot@sha256:1f16694e3aec16e0613910a9a221d654a63a3fd6453de25a95f3cdf850e3f8e9
+[2m2026-04-24T04:31:03Z[0m runner[18530d9cd07158] [32miad[0m [[34minfo[0m]Pulling container image registry.fly.io/newhopeggn-discord-bot@sha256:1f16694e3aec16e0613910a9a221d654a63a3fd6453de25a95f3cdf850e3f8e9
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Logged in as NEWHOPEGGN#0961
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Relaying to: https://newhopeggn.vercel.app/api/discord/ingest
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Registering global slash commands...
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m](node:634) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m](Use `node --trace-deprecation ...` to show where the warning was created)
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Clearing guild slash commands for 1419522458075005023 to avoid duplicates...
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Slash commands synchronized.
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Starting member sync...
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetching members batch 1, after: 0
+[2m2026-04-24T04:31:08Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Fetched 114 members in batch 1
+[2m2026-04-24T04:31:09Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Synced 114 guild members (batch 1)
+[2m2026-04-24T04:31:09Z[0m app[e829392cdd6518] [32miad[0m [[34minfo[0m][bot] Completed member sync. Synced 114 members in total.

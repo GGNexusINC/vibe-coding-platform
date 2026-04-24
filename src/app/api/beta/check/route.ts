@@ -35,31 +35,22 @@ export async function GET() {
     }
 
     // Some older approvals may exist in requests before the beta_testers row was synced.
+    // Check if user has a request (any status)
+    const { data: request } = await sb
+      .from('beta_tester_requests')
+      .select('*')
+      .eq('discord_id', user.discord_id)
+      .order('requested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     if (!betaTester) {
-      const { data: approvedRequest } = await sb
-        .from('beta_tester_requests')
-        .select('id, reviewed_at')
-        .eq('discord_id', user.discord_id)
-        .eq('status', 'approved')
-        .order('reviewed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (approvedRequest) {
-        return NextResponse.json({
-          ok: true,
-          isBetaTester: true,
-          permissions: [],
-          notes: "Approved beta tester",
-          joinedAt: approvedRequest.reviewed_at,
-        });
-      }
-
-      console.log(`[beta/check] User ${user.discord_id} not found in active beta_testers`);
+      const isApproved = request?.status === 'approved';
       return NextResponse.json({ 
         ok: true, 
-        isBetaTester: false,
-        message: "You are not a beta tester"
+        isBetaTester: isApproved,
+        request: request || null,
+        message: isApproved ? "Welcome to Beta" : request ? `Your request is ${request.status}` : "You are not a beta tester"
       });
     }
 

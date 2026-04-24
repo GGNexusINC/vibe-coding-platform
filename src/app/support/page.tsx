@@ -3,11 +3,12 @@ import { Suspense } from "react";
 import SupportClient from "./support-client";
 
 export const metadata: Metadata = {
-  title: "Support | NewHopeGGN",
-  description: "Get help with payments, UID linking, pack delivery, and more. Submit a support ticket and our staff team will respond directly through Discord.",
-  keywords: ["support", "help", "ticket", "Once Human", "NewHopeGGN", "contact"],
+  title: "Support | VoxBridge",
+  description:
+    "VoxBridge support center. Get help with wipe packs, technical issues, or community questions.",
+  keywords: ["support", "help", "ticket", "Once Human", "VoxBridge", "contact"],
   openGraph: {
-    title: "Support | NewHopeGGN",
+    title: "Support | VoxBridge",
     description: "Get help with payments, UID linking, pack delivery, and more. Our staff team is ready to assist.",
     url: "https://newhopeggn.vercel.app/support",
     type: "website",

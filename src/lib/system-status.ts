@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { appendActivityEntry, readActivityEntries } from "@/lib/activity-store";
 
 const TABLE = "site_settings";
 const KEY = "bot_system_status";
@@ -44,6 +45,11 @@ export type BotSystemStatus = {
     configured: boolean;
     activeSessions: number;
   };
+  stt?: {
+    mode: "deepgram" | "local" | "hybrid";
+    localWorkerConfigured: boolean;
+    localWorkerUrl?: string | null;
+  };
   voice: {
     activeListeners: number;
     connections: BotConnectionStatus[];
@@ -63,25 +69,38 @@ export type BotOpsEvent = {
 
 export async function readBotSystemStatus(): Promise<{ updatedAt: string; snapshot: BotSystemStatus } | null> {
   const sb = getSupabase();
-  if (!sb) return null;
+  if (sb) {
+    const { data, error } = await sb
+      .from(TABLE)
+      .select("value, updated_at")
+      .eq("key", KEY)
+      .maybeSingle();
 
-  const { data, error } = await sb
-    .from(TABLE)
-    .select("value, updated_at")
-    .eq("key", KEY)
-    .maybeSingle();
+    if (!error && data?.value) {
+      return {
+        updatedAt: String(data.updated_at ?? ""),
+        snapshot: data.value as BotSystemStatus,
+      };
+    }
+  }
 
-  if (error || !data?.value) return null;
+  const fallback = (await readActivityEntries(80)).find((entry) => {
+    return entry.type === "bot_status" && entry.metadata?.snapshot && typeof entry.metadata.snapshot === "object";
+  });
 
+  if (!fallback?.metadata?.snapshot) return null;
   return {
-    updatedAt: String(data.updated_at ?? ""),
-    snapshot: data.value as BotSystemStatus,
+    updatedAt: fallback.createdAt,
+    snapshot: fallback.metadata.snapshot as BotSystemStatus,
   };
 }
 
 export async function writeBotSystemStatus(snapshot: BotSystemStatus) {
   const sb = getSupabase();
-  if (!sb) return false;
+  if (!sb) {
+    await writeBotStatusFallback(snapshot);
+    return true;
+  }
 
   const { error } = await sb.from(TABLE).upsert(
     {
@@ -92,10 +111,32 @@ export async function writeBotSystemStatus(snapshot: BotSystemStatus) {
   );
 
   if (error) {
-    throw error;
+    console.warn("[bot-status] site_settings write failed, using activity fallback:", error.message);
+    await writeBotStatusFallback(snapshot);
+    return true;
   }
 
   return true;
+}
+
+async function writeBotStatusFallback(snapshot: BotSystemStatus) {
+  await appendActivityEntry(
+    {
+      id: `bot-status-${Date.now()}`,
+      type: "bot_status",
+      createdAt: new Date().toISOString(),
+      username: snapshot.botTag ?? "NEWHOPEGGN",
+      discordId: snapshot.botId ?? undefined,
+      details: `${snapshot.botTag ?? "Discord bot"} heartbeat: ${snapshot.status}`,
+      metadata: {
+        service: snapshot.service,
+        status: snapshot.status,
+        heartbeatAt: snapshot.heartbeatAt,
+        snapshot: snapshot as unknown as Record<string, unknown>,
+      },
+    },
+    300,
+  );
 }
 
 export async function readBotOpsEvents(): Promise<BotOpsEvent[]> {

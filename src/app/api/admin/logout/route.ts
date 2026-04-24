@@ -56,7 +56,12 @@ export async function POST(req: Request) {
           timestamp: new Date().toISOString(),
         }],
       },
-      { webhookUrl: env.discordWebhookUrlForPage("staff-page") },
+      {
+        webhookUrl:
+          env.discordWebhookUrlForPage("login-audits") ||
+          env.discordWebhookUrlForPage("staff-audits") ||
+          env.discordWebhookUrlForPage("staff-page"),
+      },
     ),
   ).catch(() => {});
 

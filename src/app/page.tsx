@@ -5,12 +5,12 @@ import { createPortal } from "react-dom";
 
 const translations = {
   en: {
-    chip: "NewHopeGGN",
+    chip: "VoxBridge",
     title: "NewHopeGGN",
     subtitle: "Your Once Human community home base.",
     description: "Survive together. Build together. NewHopeGGN is a Once Human community server — buy wipe packs, open support tickets, and connect with your squad through Discord.",
     storeBtn: "🛒 Wipe Store",
-    staffBtn: "Staff Login",
+    staffBtn: "Play Lottery",
     highlights: [
       { title: "Once Human Server", copy: "A dedicated Once Human community — wipes, events, and base-building with real players." },
       { title: "Arena Events", copy: "PvP tournaments with auto-matchmaking. Form teams, get assigned voice channels, and fight! Discord DMs notify you when it's your turn." },
@@ -35,12 +35,12 @@ const translations = {
     offline: "Offline",
   },
   es: {
-    chip: "NewHopeGGN",
+    chip: "VoxBridge",
     title: "NewHopeGGN",
     subtitle: "Tu base comunitaria de Once Human.",
     description: "Sobrevive juntos. Construye juntos. NewHopeGGN es un servidor comunitario de Once Human — compra packs de wipe, abre tickets de soporte y conecta con tu equipo por Discord.",
     storeBtn: "🛒 Tienda Wipe",
-    staffBtn: "Login Staff",
+    staffBtn: "Jugar Lotería",
     highlights: [
       { title: "Servidor Once Human", copy: "Una comunidad dedicada a Once Human — wipes, eventos y construcción de bases con jugadores reales." },
       { title: "Soporte Rápido", copy: "Abre un ticket y el staff responde directamente por Discord. Sin esperas." },
@@ -467,7 +467,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
               <text x="32" y="37" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="900" fontFamily="monospace" letterSpacing="-1">NH</text>
             </svg>
             <div style={{ fontSize:"1.5rem", fontWeight:900, letterSpacing:"0.18em", textTransform:"uppercase", color:"#fff", lineHeight:1 }}>
-              New<span style={{ color:"#f97316" }}>Hope</span><span style={{ color:"#fbbf24" }}>GGN</span>
+              Vox<span style={{ color:"#f97316" }}>Bridge</span>
             </div>
             <div style={{ marginTop:"0.35rem", fontSize:"0.65rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"#475569", fontFamily:"monospace" }}>
               NEXUS OS · Version 4.2.1 · Build 2026.04
@@ -557,15 +557,15 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
           <div style={{ position:"relative", userSelect:"none", transform:`translateX(${gx}) skewX(${gsk})`, transition:"transform 0.04s", maxWidth:"90vw", textAlign:"center" }}>
             <div style={{ fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", color:"#fff", lineHeight:1, whiteSpace:"nowrap",
               textShadow: isGlitching ? "5px 0 #f43f5e,-5px 0 #14b8a6,0 0 50px #f97316" : "0 0 70px rgba(249,115,22,1),0 0 140px rgba(249,115,22,0.5)" }}>
-              NEW<span style={{ color:"#f97316" }}>HOPE</span><span style={{ color:"#fbbf24" }}>GGN</span>
+              VOX<span style={{ color:"#f97316" }}>BRIDGE</span>
             </div>
             {isGlitching && <>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#f43f5e", opacity:0.7, transform:"translateX(6px) translateY(-3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
+                color:"#f43f5e", opacity:0.7, transform:"translateX(6px) translateY(-3px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#14b8a6", opacity:0.7, transform:"translateX(-6px) translateY(3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
+                color:"#14b8a6", opacity:0.7, transform:"translateX(-6px) translateY(3px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#8338ec", opacity:0.4, transform:"translateY(4px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGNN</div>
+                color:"#8338ec", opacity:0.4, transform:"translateY(4px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
             </>}
           </div>
         </div>
@@ -579,7 +579,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
           <div style={{ marginBottom:"2rem", textAlign:"center", userSelect:"none" }}>
             <div style={{ fontSize:"clamp(2rem,6vw,4rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.1em", lineHeight:1,
               textShadow:"0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.6)" }}>
-              <span style={{ color:"#fed7aa" }}>NEW</span><span style={{ color:"#f97316" }}>HOPE</span><span style={{ color:"#fbbf24" }}>GGN</span>
+              <span style={{ color:"#fed7aa" }}>VOX</span><span style={{ color:"#f97316" }}>BRIDGE</span>
             </div>
             <div style={{ marginTop:"0.5rem", fontFamily:"monospace", fontSize:"0.7rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(94,234,212,0.8)",
               textShadow:"0 0 20px rgba(20,184,166,0.9)" }}>
@@ -651,7 +651,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             <div style={{ marginTop:"1rem", maxWidth:"28rem", textAlign:"center", fontSize:"0.875rem", color:"#94a3b8", lineHeight:1.6 }}>
               Before the servers, before the wipes — there was a signal.<br/>
               A small group heard it first. They called it{" "}
-              <span style={{ fontWeight:"bold", color:"#fdba74", textShadow:"0 0 20px rgba(249,115,22,0.8)" }}>NewHopeGGN</span>.
+              <span style={{ fontWeight:"bold", color:"#fdba74", textShadow:"0 0 20px rgba(249,115,22,0.8)" }}>VoxBridge</span>.
             </div>
           )}
 
@@ -730,28 +730,30 @@ export default function Home() {
       <video
         src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
         autoPlay loop muted playsInline
-        className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-15"
+        preload="metadata"
+        poster="/raidzone-bg.png"
+        className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-15 md:block"
         onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
       />
       <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
       <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,16,24,0.55),rgba(4,16,24,0.7),rgba(4,16,24,0.97))]" />
-      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-cyan-400/14 blur-3xl rz-pulse" />
-      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl rz-pulse" />
-      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-amber-300/8 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-orange-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-orange-500/10 blur-3xl" />
 
       <section className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:py-24">
         {/* Language Toggle */}
         <div className="absolute top-4 right-4 flex rounded-full border border-white/10 bg-slate-950/80 p-1 backdrop-blur-sm">
           <button
             onClick={() => setLang("en")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${lang === "en" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-white"}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${lang === "en" ? "bg-orange-500/20 text-orange-300" : "text-slate-400 hover:text-white"}`}
           >
             EN
           </button>
           <button
             onClick={() => setLang("es")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${lang === "es" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-white"}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${lang === "es" ? "bg-orange-500/20 text-orange-300" : "text-slate-400 hover:text-white"}`}
           >
             ES
           </button>
@@ -769,8 +771,8 @@ export default function Home() {
             {eggActive && <EasterEggOverlay onClose={() => setEggActive(false)} />}
 
             <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-4xl font-semibold uppercase tracking-[0.06em] text-white sm:text-5xl xl:text-6xl">
-              {t.title}
-              <span className="mt-3 block bg-[linear-gradient(135deg,#fed7aa,#f97316,#fbbf24)] bg-clip-text text-transparent">
+              NewHope<span className="text-lime-400">GGN</span>
+              <span className="mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
                 {t.subtitle}
               </span>
             </h1>
@@ -787,11 +789,15 @@ export default function Home() {
                 {t.storeBtn}
               </a>
               <a
-                href="/admin"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white transition hover:bg-white/10"
+                href="/lottery"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-lime-400/30 bg-lime-400/10 px-6 text-sm font-bold text-lime-100 transition hover:scale-[1.02] hover:bg-lime-400/15 shadow-[0_0_22px_rgba(132,204,22,0.16)]"
               >
                 {t.staffBtn}
               </a>
+            </div>
+
+            <div className="mt-4 max-w-2xl rounded-2xl border border-lime-400/20 bg-lime-400/[0.07] px-4 py-3 text-sm leading-6 text-lime-100/80 shadow-[0_0_28px_rgba(132,204,22,0.10)]">
+              Play the lottery for a chance to win wipe packs, rare rewards, and staff-verified prize claims.
             </div>
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
@@ -814,6 +820,8 @@ export default function Home() {
                   loop
                   muted
                   playsInline
+                  preload="metadata"
+                  poster="/raidzone-bg.png"
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
                 />
@@ -835,14 +843,16 @@ export default function Home() {
                     ? `${pad(d)}d ${pad(h)}h ${pad(m)}m`
                     : `${pad(h)}:${pad(m)}:${pad(s)}`;
                   return (
-                    <div className={`absolute top-3 right-3 flex flex-col items-end gap-0.5 rounded-xl px-3 py-1.5 backdrop-blur-md pointer-events-none ${
-                      past ? "bg-rose-950/80 border border-rose-500/30" : "bg-slate-950/80 border border-orange-500/25"
+                    <div className={`absolute top-3 right-3 isolate flex flex-col items-end gap-0.5 overflow-hidden rounded-2xl px-3 py-2 backdrop-blur-xl pointer-events-none shadow-[0_0_30px_rgba(249,115,22,0.28)] ${
+                      past ? "bg-rose-950/85 border border-rose-400/40" : "bg-slate-950/85 border border-amber-300/35"
                     }`}>
+                      <div className="absolute inset-x-0 top-0 h-px animate-pulse bg-gradient-to-r from-transparent via-amber-200 to-transparent" />
+                      <div className="absolute -right-5 -top-5 h-12 w-12 rounded-full bg-amber-300/20 blur-xl" />
                       <div className={`text-[9px] font-bold uppercase tracking-[0.2em] ${
-                        past ? "text-rose-400/80" : "text-orange-400/70"
+                        past ? "text-rose-300/90" : "text-amber-200/90"
                       }`}>{past ? "⚠ WIPED" : `⏳ ${wipeLabel}`}</div>
                       <div className={`font-mono text-base font-black tabular-nums leading-none ${
-                        past ? "text-rose-300" : "text-orange-200"
+                        past ? "text-rose-200" : "text-amber-100"
                       }`}>{display}</div>
                     </div>
                   );
@@ -899,37 +909,45 @@ export default function Home() {
             ? [{ val: pad(d), label: "DAYS" }, { val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }]
             : [{ val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }, { val: pad(s), label: "SEC" }];
           return (
-            <div className={`mt-8 rounded-[2rem] border overflow-hidden relative ${past ? "border-rose-500/30 bg-gradient-to-r from-rose-950/40 to-slate-950/60" : "border-orange-500/25 bg-gradient-to-r from-orange-950/30 to-amber-950/20"}`}>
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(249,115,22,0.04),transparent_60%)]" />
-              <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6 px-7 py-6">
-                <div>
-                  <div className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-3 ${past ? "text-rose-400/70" : "text-orange-400/70"}`}>
+            <div className={`group relative mt-8 overflow-hidden rounded-[2.25rem] border shadow-[0_28px_90px_rgba(0,0,0,0.32)] ${past ? "border-rose-400/35 bg-gradient-to-br from-rose-950/55 via-slate-950/92 to-black" : "border-amber-300/35 bg-gradient-to-br from-amber-950/45 via-slate-950/92 to-black"}`}>
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(251,191,36,0.22),transparent_28%),radial-gradient(circle_at_84%_12%,rgba(34,211,238,0.13),transparent_26%),linear-gradient(135deg,rgba(249,115,22,0.08),transparent_58%)]" />
+              <div className="pointer-events-none absolute -left-20 top-1/2 h-48 w-48 -translate-y-1/2 rounded-full border border-amber-300/20 shadow-[0_0_70px_rgba(251,191,36,0.16)]" />
+              <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-amber-300/15 blur-3xl transition duration-700 group-hover:bg-cyan-300/15" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px animate-pulse bg-gradient-to-r from-transparent via-amber-200 to-transparent" />
+              <div className="relative flex flex-col items-center justify-between gap-7 px-7 py-7 sm:flex-row">
+                <div className="min-w-0">
+                  <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${past ? "border-rose-300/30 bg-rose-400/10 text-rose-200" : "border-amber-300/30 bg-amber-300/10 text-amber-100"}`}>
+                    <span className={`h-2 w-2 rounded-full ${past ? "bg-rose-300" : "bg-emerald-300 animate-pulse"}`} />
                     {past ? "⚠ SERVER WIPED" : `⏳ ${wipeLabel}`}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {segments.map((seg, i) => (
-                      <div key={seg.label} className="flex items-center gap-1">
-                        {i > 0 && <span className={`text-2xl font-black mb-3 ${past ? "text-rose-500/50" : "text-orange-500/50"}`}>:</span>}
+                      <div key={seg.label} className="flex items-center gap-2">
+                        {i > 0 && <span className={`mb-4 text-3xl font-black ${past ? "text-rose-400/45" : "text-amber-300/45"}`}>:</span>}
                         <div className="flex flex-col items-center">
-                          <div className={`font-mono text-4xl font-black tracking-tighter tabular-nums leading-none px-2 py-1 rounded-xl ${past ? "text-rose-300 bg-rose-500/10 border border-rose-500/20" : "text-orange-200 bg-orange-500/10 border border-orange-500/15"}`}>
+                          <div className={`relative overflow-hidden rounded-2xl border px-3 py-2 font-mono text-5xl font-black leading-none tracking-tighter tabular-nums sm:text-6xl ${past ? "border-rose-300/25 bg-rose-400/10 text-rose-100 shadow-[0_0_24px_rgba(251,113,133,0.14)]" : "border-amber-200/25 bg-amber-300/10 text-amber-50 shadow-[0_0_28px_rgba(251,191,36,0.18)]"}`}>
+                            <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-white/[0.04]" />
                             {seg.val}
                           </div>
-                          <div className={`text-[9px] font-bold tracking-[0.2em] mt-1 ${past ? "text-rose-500/60" : "text-orange-500/50"}`}>{seg.label}</div>
+                          <div className={`mt-2 text-[9px] font-black tracking-[0.26em] ${past ? "text-rose-300/55" : "text-amber-200/60"}`}>{seg.label}</div>
                         </div>
                       </div>
                     ))}
                   </div>
+                  <div className="mt-4 text-xs font-semibold text-slate-400">
+                    Exact wipe target: <span className="text-slate-200">{new Date(wipeMs).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center sm:items-end gap-2">
+                <div className="flex flex-col items-center gap-3 sm:items-end">
                   {!past ? (
                     <>
-                      <p className="text-xs text-orange-300/60 text-center sm:text-right">Wipe incoming — grab your pack now</p>
-                      <a href="/store" className="inline-flex items-center gap-2 rounded-xl border border-orange-400/25 bg-orange-400/10 px-4 py-2 text-xs font-bold text-orange-300 hover:bg-orange-400/20 transition">
-                        🛒 Wipe Store
+                      <p className="max-w-xs text-center text-xs font-semibold leading-5 text-amber-100/70 sm:text-right">Wipe incoming. Lock in packs, perks, and inventory prep before the reset hits.</p>
+                      <a href="/store" className="inline-flex items-center gap-2 rounded-2xl border border-amber-200/30 bg-amber-300/15 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.14)] transition hover:-translate-y-0.5 hover:bg-amber-300/25">
+                        Open Wipe Store
                       </a>
                     </>
                   ) : (
-                    <p className="text-xs text-rose-300/50">New wipe timer will be set soon</p>
+                    <p className="text-xs font-semibold text-rose-200/70">New wipe timer will be set soon.</p>
                   )}
                 </div>
               </div>
@@ -951,7 +969,7 @@ export default function Home() {
               href="/auth/discord/start?next=/dashboard"
               className="shrink-0 inline-flex h-10 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.35)]"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
               Sign in with Discord
             </a>
           </div>

@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import CommunityClient from "./community-client";
 
 export const metadata: Metadata = {
-  title: "Community | NewHopeGGN",
-  description: "Join the NewHopeGGN Discord community. Live voice channels, Discord messages, server stats, and member activity.",
-  keywords: ["community", "Discord", "Once Human", "voice channels", "chat", "NewHopeGGN"],
+  title: "Community | VoxBridge",
+  description: "Join the VoxBridge Discord community. Live voice channels, Discord messages, server stats, and member activity.",
+  keywords: ["community", "Discord", "Once Human", "voice channels", "chat", "VoxBridge"],
   openGraph: {
-    title: "Community | NewHopeGGN",
+    title: "Community | VoxBridge",
     description: "Join the NewHopeGGN Discord community. Live voice channels, messages, and member activity.",
     url: "https://newhopeggn.vercel.app/community",
     type: "website",

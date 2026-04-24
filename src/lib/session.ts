@@ -11,6 +11,7 @@ type SessionPayload = {
   global_name?: string | null;
   discriminator?: string | null;
   discord_profile?: Record<string, unknown>;
+  access_token?: string;
 };
 
 function getSecretKey() {

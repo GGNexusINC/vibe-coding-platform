@@ -1,5 +1,5 @@
 /**
- * NewHopeGGN Discord Bot
+ * VoxBridge Discord Bot
  * - Message relay to website
  * - Full moderation logging (bans, unbans, deletes, edits, joins, leaves, role/nick changes)
  *
@@ -11,7 +11,7 @@
  *   SERVER MEMBERS INTENT, MESSAGE CONTENT INTENT
  *
  * Env vars:
- *   BOT_TOKEN, SITE_URL, INGEST_SECRET, GUILD_ID, LOG_CHANNEL_ID
+ *   BOT_TOKEN, SITE_URL, INGEST_SECRET, BOT_STATUS_SECRET, GUILD_ID, LOG_CHANNEL_ID
  */
 
 process.stderr.write("[bot] Starting...\n");
@@ -29,34 +29,161 @@ const { createClient: createDeepgramClient, LiveTranscriptionEvents } = require(
 const prism = require("prism-media");
 const sodium = require("libsodium-wrappers");
 const { Readable } = require("stream");
+const { getGuildConfig, setGuildConfigOverride } = require("./guild-config-manager");
 // libsodium-wrappers initializes lazily when needed
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
 const SITE_URL       = process.env.SITE_URL       || "https://newhopeggn.vercel.app";
-const INGEST_SECRET  = process.env.INGEST_SECRET || process.env.DISCORD_INGEST_SECRET || "newhopeggn-bot-secret";
+const INGEST_SECRET  = process.env.INGEST_SECRET || process.env.DISCORD_INGEST_SECRET || "";
+const BOT_STATUS_SECRET = process.env.BOT_STATUS_SECRET || process.env.DISCORD_BOT_STATUS_SECRET || INGEST_SECRET;
 const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
 const LOG_CHANNEL_ID       = process.env.LOG_CHANNEL_ID || "";
 const TRANSLATE_TARGET     = process.env.TRANSLATE_TARGET_LANG || "en";
-const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "https://discord.com/api/webhooks/1495921032996065371/26WHqlDgpGOu4-Vau922YxmCWLmbo1VSdF_6E8I-CTQi87vtLIfcekLk0TnHh4pOCyeC";
+const STAFF_VOICE_WEBHOOK  = process.env.STAFF_VOICE_WEBHOOK || "";
 const DEEPGRAM_API_KEY     = process.env.DEEPGRAM_API_KEY || "";
+const GROQ_API_KEY         = process.env.GROQ_API_KEY || "";
+const VOICE_STT_MODE       = (process.env.VOICE_STT_MODE || "deepgram").toLowerCase();
+const LOCAL_STT_WORKER_URL = process.env.LOCAL_STT_WORKER_URL || "";
 const VC_TARGET_LANG       = process.env.VC_TARGET_LANG || "en";
 const VOICE_CONTROL_PREFIX = "[NH-CONTROL]";
 const TRANSLATION_PROVIDER = (process.env.TRANSLATION_PROVIDER || "google").toLowerCase();
 const VC_AUTO_LANG = "auto";
-const PREMIUM_PANEL_URL = process.env.PREMIUM_PANEL_URL || `${SITE_URL}/bot?ref=discord`;
+const PREMIUM_PANEL_URL = process.env.PREMIUM_PANEL_URL || `${SITE_URL}/bot/dashboard`;
 const PREMIUM_GUILD_IDS = new Set(
   String(process.env.PREMIUM_GUILD_IDS || "")
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean)
 );
-const MAIN_GUILD_ID = GUILD_ID;
 const TRANSLATION_COOLDOWN_MS = 3500;
 const TRANSLATION_429_BACKOFF_MS = 15_000;
 const translatedTranscriptCache = new Map();
 const translationBackoffUntil = new Map();
+const premiumAccessCache = new Map();
+const vcTranscripts = new Map();
+const textTranslationCooldowns = new Map();
 let globalTranslationBackoffUntil = 0;
+const aiChannelHistory = new Map();
+
+function hasDeepgramVoiceBackend() {
+  return Boolean(DEEPGRAM_API_KEY);
+}
+
+function hasLocalVoiceBackend() {
+  return Boolean(LOCAL_STT_WORKER_URL);
+}
+
+function hasAnyVoiceBackend() {
+  return hasDeepgramVoiceBackend() || hasLocalVoiceBackend();
+}
+
+function buildPcmWavBuffer(chunks, sampleRate = 48000, channels = 1, bitsPerSample = 16) {
+  const pcmBuffer = Buffer.concat(chunks.filter(Boolean));
+  const byteRate = sampleRate * channels * (bitsPerSample / 8);
+  const blockAlign = channels * (bitsPerSample / 8);
+  const header = Buffer.alloc(44);
+
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcmBuffer.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcmBuffer.length, 40);
+
+  return Buffer.concat([header, pcmBuffer]);
+}
+
+async function transcribeWithLocalWorker(wavBuffer, options = {}) {
+  if (!hasLocalVoiceBackend()) {
+    throw new Error("LOCAL_STT_WORKER_URL is not configured.");
+  }
+
+  const form = new FormData();
+  form.append("audio", new Blob([wavBuffer], { type: "audio/wav" }), "voice.wav");
+  if (options.language) form.append("language", options.language);
+  if (typeof options.beamSize === "number") form.append("beam_size", String(options.beamSize));
+  if (typeof options.vadFilter === "boolean") form.append("vad_filter", String(options.vadFilter));
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const res = await fetch(`${LOCAL_STT_WORKER_URL.replace(/\/$/, "")}/transcribe`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.ok) {
+      throw new Error(payload?.detail || payload?.error || `Local STT failed (${res.status})`);
+    }
+    return {
+      text: String(payload.text || "").trim(),
+      language: payload.language || null,
+      latencyMs: payload.latencyMs || null,
+      provider: "local",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function transcribeWithDeepgramPrerecorded(wavBuffer) {
+  if (!hasDeepgramVoiceBackend()) {
+    throw new Error("DEEPGRAM_API_KEY is not configured.");
+  }
+
+  const res = await fetch("https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&detect_language=true", {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${DEEPGRAM_API_KEY}`,
+      "content-type": "audio/wav",
+    },
+    body: wavBuffer,
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.err_msg || payload?.error || `Deepgram prerecorded failed (${res.status})`);
+  }
+
+  const transcript = payload?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+  const language = payload?.results?.channels?.[0]?.detected_language || payload?.results?.channels?.[0]?.alternatives?.[0]?.languages?.[0] || null;
+  return {
+    text: String(transcript || "").trim(),
+    language,
+    latencyMs: null,
+    provider: "deepgram-prerecorded",
+  };
+}
+
+async function getVoiceSttBackendForGuild(guildId) {
+  const normalizedMode = ["deepgram", "local", "hybrid"].includes(VOICE_STT_MODE) ? VOICE_STT_MODE : "deepgram";
+
+  if (normalizedMode === "local") {
+    if (hasLocalVoiceBackend()) return "local";
+    if (hasDeepgramVoiceBackend()) return "deepgram";
+    return "none";
+  }
+
+  if (normalizedMode === "hybrid") {
+    const premiumVoice = await canUsePremiumFeature(guildId, "liveVoice");
+    if (premiumVoice && hasDeepgramVoiceBackend()) return "deepgram";
+    if (hasLocalVoiceBackend()) return "local";
+    if (hasDeepgramVoiceBackend()) return "deepgram";
+    return "none";
+  }
+
+  if (hasDeepgramVoiceBackend()) return "deepgram";
+  if (hasLocalVoiceBackend()) return "local";
+  return "none";
+}
 
 console.log(`[bot] Opus engine: ${prism.opus.Encoder?.type ?? "unknown"}`);
 
@@ -87,12 +214,16 @@ const client = new Client({
 
 // ── Logging helpers ────────────────────────────────────────────────────────────
 const BOT_AVATAR = "https://newhopeggn.vercel.app/favicon-32x32.png";
-const BOT_NAME   = "NewHopeGGN Logs";
+const BOT_NAME   = "VoxBridge Logs";
 
 /** Fetch the log channel, returns null if not configured or not found */
-async function getLogChannel() {
-  if (!LOG_CHANNEL_ID) return null;
-  return client.channels.cache.get(LOG_CHANNEL_ID) ?? await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+async function getLogChannel(guild) {
+  if (!guild) return null;
+  const config = await getGuildConfig(guild.id);
+  if (!config.logging?.enabled) return null;
+  const logId = config.logging?.channelId || (guild.id === GUILD_ID ? LOG_CHANNEL_ID : null);
+  if (!logId) return null;
+  return client.channels.cache.get(logId) ?? await client.channels.fetch(logId).catch(() => null);
 }
 
 /**
@@ -100,7 +231,12 @@ async function getLogChannel() {
  * @param {object} opts - { color, title, description, fields, thumbnail, footer }
  */
 async function sendLog(opts) {
-  const ch = await getLogChannel();
+  const guild = opts.guild ?? (opts.guildId ? client.guilds.cache.get(opts.guildId) : null);
+  if (!guild) return;
+  const config = await getGuildConfig(guild.id);
+  const enabledEvents = Array.isArray(config.logging?.events) ? config.logging.events : [];
+  if (opts.eventId && enabledEvents.length > 0 && !enabledEvents.includes(opts.eventId)) return;
+  const ch = await getLogChannel(guild);
   if (!ch) return;
   try {
     const embed = new EmbedBuilder()
@@ -146,28 +282,111 @@ function guildIconOf(guild) {
   return guild?.iconURL?.({ size: 128 }) ?? BOT_AVATAR;
 }
 
-function isPremiumGuild(guildId) {
-  return Boolean(guildId && (guildId === MAIN_GUILD_ID || PREMIUM_GUILD_IDS.has(guildId)));
+const appliedNicknames = new Map();
+
+async function syncBotNickname(guild, nickname) {
+  if (!guild || !guild.members || !guild.members.me) return;
+  const currentNick = guild.members.me.nickname || "";
+  const targetNick = nickname || ""; // empty means reset
+  
+  if (currentNick === targetNick) return;
+  
+  const cacheKey = `${guild.id}:nick`;
+  const lastSync = appliedNicknames.get(cacheKey) || 0;
+  if (Date.now() - lastSync < 60000) return; // limit sync once per minute per guild
+
+  try {
+    await guild.members.me.setNickname(targetNick);
+    appliedNicknames.set(cacheKey, Date.now());
+    console.log(`[bot] Updated nickname in ${guild.name} to "${targetNick || "Default"}"`);
+  } catch (error) {
+    console.warn(`[bot] Failed to set nickname in ${guild.id}:`, error.message);
+    appliedNicknames.set(cacheKey, Date.now() + 300000); // Wait 5 mins on error
+  }
 }
 
-function premiumUpgradePayload(featureName = "premium voice translation") {
+async function canUsePremiumFeature(guildId, feature = "liveVoice") {
+  if (!guildId) return false;
+
+  const cacheKey = `${guildId}:${feature}`;
+  const cached = premiumAccessCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.allowed;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${SITE_URL}/api/bot/premium-check`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ secret: INGEST_SECRET, guildId, feature }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data?.ok) {
+      const allowed = Boolean(data.allowed);
+      premiumAccessCache.set(cacheKey, { allowed, expiresAt: Date.now() + (allowed ? 30_000 : 5_000) });
+      return allowed;
+    }
+
+    console.warn(`[bot] premium check denied/unavailable for ${guildId}:${feature}: ${res.status}`);
+  } catch (error) {
+    console.warn(`[bot] premium check failed for ${guildId}:${feature}: ${error?.message ?? error}`);
+  }
+
+  // Keep NewHope's primary server resilient even if the premium API has a temporary hiccup.
+  const isPrimaryGuild = guildId === GUILD_ID;
+  const fallbackAllowed =
+    (PREMIUM_GUILD_IDS.has(guildId) || isPrimaryGuild) &&
+    ["textTranslate", "liveVoice", "spokenVoice", "staffLogs", "reliability"].includes(feature);
+  premiumAccessCache.set(cacheKey, { allowed: fallbackAllowed, expiresAt: Date.now() + (fallbackAllowed ? 10_000 : 3_000) });
+  return fallbackAllowed;
+}
+
+async function updateGuildConfigFromBot(guildId, settingsPatch) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch(`${SITE_URL}/api/bot/guild-config`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        secret: INGEST_SECRET,
+        guildId,
+        settings: settingsPatch,
+      }),
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    return data.settings || null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function premiumUpgradePayload(featureName = "premium voice translation", guildId = null) {
+  const url = guildId ? `${PREMIUM_PANEL_URL}?guildId=${guildId}` : PREMIUM_PANEL_URL;
   const embed = new EmbedBuilder()
     .setColor(0x5865f2)
-    .setTitle("NewHope Translate Premium")
-    .setDescription(`**${featureName}** is available on NewHopeGGN and premium-enabled Discord servers.`)
+    .setTitle("VoxBridge Premium")
+    .setDescription(`**${featureName}** is available on VoxBridge and premium-enabled Discord servers.`)
     .addFields(
       { name: "Included", value: "Voice-channel TTS, live VC translation, admin controls, usage logs, and priority setup." },
-      { name: "Panel", value: `[Open NewHope Translate Premium](${PREMIUM_PANEL_URL})` },
+      { name: "Panel", value: `[Open VoxBridge Premium](${url})` },
     )
     .setThumbnail(BOT_AVATAR)
-    .setFooter({ text: "NewHopeGGN Translate", iconURL: BOT_AVATAR })
+    .setFooter({ text: "VoxBridge Translate", iconURL: BOT_AVATAR })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setLabel("Open Premium Panel")
       .setStyle(ButtonStyle.Link)
-      .setURL(PREMIUM_PANEL_URL),
+      .setURL(url),
   );
 
   return { embeds: [embed], components: [row], ephemeral: true };
@@ -196,7 +415,7 @@ const vcListenCommand = new SlashCommandBuilder()
 
 const vcAutoCommand = new SlashCommandBuilder()
   .setName("vcauto")
-  .setDescription("Quick-start live voice translation to English")
+  .setDescription("Start smart English/Spanish live voice translation")
   .toJSON();
 
 const vcStopCommand = new SlashCommandBuilder()
@@ -216,9 +435,63 @@ const vcPermCheckCommand = new SlashCommandBuilder()
   )
   .toJSON();
 
+const notesCommand = new SlashCommandBuilder()
+  .setName("nhnotes")
+  .setDescription("Summarizes the last 50 messages in this channel using AI.")
+  .toJSON();
+
 const premiumCommand = new SlashCommandBuilder()
   .setName("nhpremium")
-  .setDescription("Open the NewHope Translate premium panel and pricing")
+  .setDescription("Open the VoxBridge premium panel, plans, and setup")
+  .toJSON();
+
+const autoTextCommand = new SlashCommandBuilder()
+  .setName("autotext")
+  .setDescription("Enable or disable automatic text translation for this server")
+  .addStringOption((opt) =>
+    opt
+      .setName("mode")
+      .setDescription("Turn auto text translation on or off")
+      .setRequired(true)
+      .addChoices(
+        { name: "Enable", value: "on" },
+        { name: "Disable", value: "off" },
+      ),
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("language")
+      .setDescription("Target language for translated text")
+      .setRequired(false)
+      .addChoices(
+        { name: "Auto English ↔ Spanish", value: "auto" },
+        { name: "🇺🇸 English", value: "en" },
+        { name: "🇪🇸 Spanish", value: "es" },
+        { name: "🇵🇹 Portuguese", value: "pt" },
+        { name: "🇫🇷 French", value: "fr" },
+        { name: "🇩🇪 German", value: "de" },
+        { name: "🇷🇺 Russian", value: "ru" },
+        { name: "🇨🇳 Chinese", value: "zh" },
+        { name: "🇯🇵 Japanese", value: "ja" },
+      ),
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("bot_messages")
+      .setDescription("Whether bot and webhook messages should also be translated")
+      .setRequired(false)
+      .addChoices(
+        { name: "Off", value: "off" },
+        { name: "On", value: "on" },
+      ),
+  )
+  .addChannelOption((opt) =>
+    opt
+      .setName("channel")
+      .setDescription("Optional text channel to limit this auto text rule to")
+      .addChannelTypes(ChannelType.GuildText, ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread)
+      .setRequired(false),
+  )
   .toJSON();
 
 const translateCommand = new SlashCommandBuilder()
@@ -259,10 +532,56 @@ const translateCommand = new SlashCommandBuilder()
   )
   .toJSON();
 
+const aiCommand = new SlashCommandBuilder()
+  .setName("nhai")
+  .setDescription("Configure AI conversation responses")
+  .addStringOption(opt => 
+    opt.setName("mode")
+      .setDescription("Enable or disable AI responses")
+      .setRequired(true)
+      .addChoices(
+        { name: "Enable", value: "on" },
+        { name: "Disable", value: "off" }
+      )
+  )
+  .addStringOption(opt =>
+    opt.setName("tone")
+      .setDescription("Choose the AI personality tone")
+      .setRequired(false)
+      .addChoices(
+        { name: "Default (Helpful)", value: "default" },
+        { name: "Funny/Joker", value: "funny" },
+        { name: "Brat (Sassy/Attitude)", value: "brat" },
+        { name: "Professional", value: "professional" }
+      )
+  )
+  .addStringOption(opt =>
+    opt.setName("frequency")
+      .setDescription("How often should the bot jump into conversation?")
+      .setRequired(false)
+      .addChoices(
+        { name: "Most of the time (50% chance)", value: "most" },
+        { name: "Sometimes (20% chance)", value: "sometimes" },
+        { name: "Rarely (5% chance)", value: "rarely" }
+      )
+  )
+  .addChannelOption(opt =>
+    opt.setName("channel")
+      .setDescription("Specific channel to configure (defaults to current channel)")
+      .setRequired(false)
+  )
+  .addBooleanOption(opt =>
+    opt.setName("bilingual")
+      .setDescription("Should the AI respond in both English and Spanish?")
+      .setRequired(false)
+  )
+  .toJSON();
+
+
 async function registerSlashCommands() {
   try {
     const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
-    const commandList = [translateCommand, premiumCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand];
+    const commandList = [translateCommand, autoTextCommand, premiumCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand, notesCommand, aiCommand];
 
     console.log("[bot] Registering global slash commands...");
     await rest.put(
@@ -270,17 +589,130 @@ async function registerSlashCommands() {
       { body: commandList },
     );
 
-    // Clear guild-specific commands to avoid duplicates in the main guild.
-    // If we leave them in both, the guild sees duplicates.
-    console.log(`[bot] Clearing guild slash commands for ${GUILD_ID}...`);
-    await rest.put(
-      Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-      { body: [] },
-    );
+    if (GUILD_ID) {
+      console.log(`[bot] Clearing guild slash commands for ${GUILD_ID} to avoid duplicates...`);
+      await rest.put(
+        Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+        { body: [] },
+      );
+    }
 
     console.log("[bot] Slash commands synchronized.");
   } catch (e) {
     console.error("[bot] Failed to register slash commands:", e.message);
+  }
+}
+
+function getTextTranslationCooldownKey(msg) {
+  return `${msg.guildId || "dm"}:${msg.channelId}:${msg.author?.id || "unknown"}`;
+}
+
+function shouldSkipTextTranslation(msg, config) {
+  if (!msg.guildId || !msg.author) return true;
+  if (msg.author.id === client.user?.id) return true;
+  if (msg.author.bot && !config.translation?.includeBotMessages) return true;
+  if (msg.webhookId && !config.translation?.includeBotMessages) return true;
+  if (!config.translation?.enabled) return true;
+  if (msg.channelId === config.logging?.channelId) return true;
+  if (!msg.content?.trim()) return true;
+  if (msg.content.trim().startsWith("/") || msg.content.trim().startsWith(VOICE_CONTROL_PREFIX)) return true;
+  const allowedChannelIds = Array.isArray(config.translation?.channelIds) ? config.translation.channelIds.filter(Boolean) : [];
+  if (allowedChannelIds.length > 0 && !allowedChannelIds.includes(msg.channelId)) return true;
+
+  const cooldownKey = getTextTranslationCooldownKey(msg);
+  const cooldownUntil = textTranslationCooldowns.get(cooldownKey) || 0;
+  if (cooldownUntil > Date.now()) return true;
+
+  return false;
+}
+
+function resolveTextTargetLang(configTarget, originalText) {
+  if (configTarget && configTarget !== "auto") return configTarget;
+  const detectedSource = detectEnglishSpanish(originalText);
+  return resolveAutoTargetLang(detectedSource);
+}
+
+async function postTextTranslation(msg, originalText, translatedText, targetLang) {
+  const langLabels = {
+    en: "English",
+    es: "Spanish",
+    pt: "Portuguese",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    zh: "Chinese",
+    ja: "Japanese",
+  };
+  const flagLabels = {
+    en: "🇺🇸",
+    es: "🇪🇸",
+    pt: "🇵🇹",
+    fr: "🇫🇷",
+    de: "🇩🇪",
+    ru: "🇷🇺",
+    zh: "🇨🇳",
+    ja: "🇯🇵",
+  };
+
+  const targetLabel = langLabels[targetLang] || String(targetLang || "Auto");
+  const flag = flagLabels[targetLang] || "🌐";
+  const embed = new EmbedBuilder()
+    .setColor(0x14b8a6)
+    .setAuthor({
+      name: `${msg.member?.displayName ?? msg.author.username} (text)`,
+      iconURL: msg.author.displayAvatarURL({ size: 64 }),
+    })
+    .addFields(
+      { name: "📝 Said", value: originalText.slice(0, 1024) },
+      { name: `${flag} Translation`, value: translatedText.slice(0, 1024) },
+    )
+    .setFooter({ text: `VoxBridge Auto Text Translate • ${targetLabel}`, iconURL: BOT_AVATAR })
+    .setTimestamp();
+
+  await msg.channel.send({ embeds: [embed] }).catch((error) => {
+    console.error("[bot] text translation send failed:", error?.message ?? error);
+  });
+}
+
+async function maybeAutoTranslateTextMessage(msg) {
+  const config = await getGuildConfig(msg.guildId);
+  if (config.botNickname && msg.guild) syncBotNickname(msg.guild, config.botNickname);
+  if (shouldSkipTextTranslation(msg, config)) return;
+  if (!(await canUsePremiumFeature(msg.guildId, "textTranslate"))) return;
+
+  const originalText = msg.content.trim();
+  const targetLang = resolveTextTargetLang(config.translation?.targetLang, originalText);
+  if (!targetLang) return;
+
+  const cooldownKey = getTextTranslationCooldownKey(msg);
+  textTranslationCooldowns.set(cooldownKey, Date.now() + TRANSLATION_COOLDOWN_MS);
+
+  try {
+    const { translated } = await translateText(originalText, targetLang);
+    if (!translated) return;
+    if (translated.trim().toLowerCase() === originalText.trim().toLowerCase()) return;
+    await postTextTranslation(msg, originalText, translated, targetLang);
+  } catch (error) {
+    console.error("[bot] auto text translate failed:", error?.message ?? error);
+    if (String(error?.message ?? "").includes("HTTP 429")) {
+      await sendLog({
+        guild: msg.guild,
+        eventId: "errors",
+        color: 0xef4444,
+        title: "Translation Rate Limit Hit",
+        description: "Auto text translation hit a provider rate limit. The bot will keep running and retry on the next messages.",
+        fields: [
+          { name: "Channel", value: `<#${msg.channelId}>`, inline: true },
+          { name: "User", value: userTag(msg.author), inline: true },
+        ],
+      });
+    }
+  } finally {
+    setTimeout(() => {
+      if ((textTranslationCooldowns.get(cooldownKey) || 0) <= Date.now()) {
+        textTranslationCooldowns.delete(cooldownKey);
+      }
+    }, TRANSLATION_COOLDOWN_MS + 1000);
   }
 }
 
@@ -303,7 +735,53 @@ function stopVoiceSession(guildId) {
   const existing = getVoiceConnection(guildId);
   if (existing) existing.destroy();
   activeListeners.delete(guildId);
+  void sendLog({
+    guildId,
+    eventId: "voice",
+    color: 0x64748b,
+    title: "Voice Translation Stopped",
+    fields: [
+      { name: "Server", value: session.guildName || "Unknown", inline: true },
+      { name: "Channel", value: session.voiceChannelName || "Unknown", inline: true },
+      { name: "Target", value: session.targetLang || "auto", inline: true },
+    ],
+  });
   void publishSystemStatus("voice-stop");
+
+  const transcriptData = vcTranscripts.get(guildId);
+  vcTranscripts.delete(guildId);
+  if (transcriptData && transcriptData.lines.length > 3 && GROQ_API_KEY) {
+    const textToSummarize = transcriptData.lines.join("\n");
+    fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: "You are a helpful AI assistant. Summarize the following voice chat translation transcript into a brief, easy-to-read bulleted list of key takeaways. Only return the summary." },
+          { role: "user", content: textToSummarize.slice(-12000) }
+        ],
+        temperature: 0.5
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      const summary = data.choices?.[0]?.message?.content;
+      if (summary && transcriptData.channel) {
+        const embed = new EmbedBuilder()
+          .setColor(0x5865f2)
+          .setTitle("🎙️ Voice Session Summary")
+          .setDescription(summary)
+          .setFooter({ text: "Powered by Groq & Llama 3" });
+        transcriptData.channel.send({ embeds: [embed] }).catch(() => {});
+      }
+    })
+    .catch(console.error);
+  }
+
   return true;
 }
 
@@ -349,18 +827,57 @@ function getVoiceStatusSnapshot() {
     discord: {
       guilds: client.guilds.cache.size,
       voiceConnections: connections.length,
+      guildList: client.guilds.cache.map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        memberCount: g.memberCount,
+        ownerId: g.ownerId,
+        joinedAt: g.joinedAt
+      }))
     },
     deepgram: {
       configured: Boolean(DEEPGRAM_API_KEY),
       activeSessions: activeListenersCount,
     },
+    stt: {
+      mode: VOICE_STT_MODE,
+      localWorkerConfigured: Boolean(LOCAL_STT_WORKER_URL),
+      localWorkerUrl: LOCAL_STT_WORKER_URL || null,
+    },
     voice: {
       activeListeners: activeListenersCount,
       connections,
     },
-    notes: connections.length === 0 ? ["No active voice listeners right now."] : [],
+    notes: [
+      ...(connections.length === 0 ? ["No active voice listeners right now."] : []),
+      ...(VOICE_STT_MODE !== "deepgram" && !LOCAL_STT_WORKER_URL ? ["Local STT mode selected without LOCAL_STT_WORKER_URL configured."] : []),
+    ],
     lastError: lastStatusError,
   };
+}
+
+async function logBotActivity(type, details, user = null, metadata = {}) {
+  if (!SITE_URL) return;
+  try {
+    await fetch(`${SITE_URL}/api/discord/activity`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        secret: INGEST_SECRET,
+        type,
+        discord_id: user?.id,
+        username: user?.tag || user?.username || "System",
+        details,
+        metadata: {
+          ...metadata,
+          source: "bot-process"
+        }
+      }),
+    });
+  } catch (e) {
+    console.error(`[bot] Activity log error (${type}):`, e.message);
+  }
 }
 
 async function publishSystemStatus(reason = "heartbeat") {
@@ -370,7 +887,7 @@ async function publishSystemStatus(reason = "heartbeat") {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        secret: INGEST_SECRET,
+        secret: BOT_STATUS_SECRET,
         snapshot: getVoiceStatusSnapshot(),
         reason,
       }),
@@ -388,29 +905,41 @@ async function publishSystemStatus(reason = "heartbeat") {
   }
 }
 
-async function postToStaffVoice(username, avatarUrl, original, translated, targetLang) {
-  if (!STAFF_VOICE_WEBHOOK) return;
+function buildVoiceTranslationEmbed(username, avatarUrl, original, translated, targetLang) {
   const LANG_FLAGS = {
     en: "🇺🇸", es: "🇪🇸", pt: "🇵🇹", fr: "🇫🇷",
     de: "🇩🇪", ru: "🇷🇺", zh: "🇨🇳", ja: "🇯🇵",
   };
   const flag = LANG_FLAGS[targetLang] ?? "🌐";
+  return {
+    color: 0x7c3aed,
+    author: { name: `🎤 ${username} (voice)`, icon_url: avatarUrl || BOT_AVATAR },
+    fields: [
+      { name: "📝 Said", value: original.slice(0, 1024) },
+      { name: `${flag} Translation`, value: translated.slice(0, 1024) },
+    ],
+    footer: { text: "VoxBridge Live Voice Translate", icon_url: BOT_AVATAR },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+async function postVoiceTranslation(outputChannel, username, avatarUrl, original, translated, targetLang) {
+  const embed = buildVoiceTranslationEmbed(username, avatarUrl, original, translated, targetLang);
+
+  if (outputChannel?.send) {
+    await outputChannel.send({ embeds: [EmbedBuilder.from(embed)] }).catch((error) => {
+      console.error("[voice] output channel send failed:", error?.message ?? error);
+    });
+  }
+
+  if (!STAFF_VOICE_WEBHOOK) return;
   await fetch(STAFF_VOICE_WEBHOOK, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      username: "NewHopeGGN Voice",
+      username: "VoxBridge Voice",
       avatar_url: avatarUrl || BOT_AVATAR,
-      embeds: [{
-        color: 0x7c3aed,
-        author: { name: `🎤 ${username} (voice)`, icon_url: avatarUrl || BOT_AVATAR },
-        fields: [
-          { name: "📝 Said",                   value: original.slice(0, 1024) },
-          { name: `${flag} Translation`,      value: translated.slice(0, 1024) },
-        ],
-        footer: { text: "NewHopeGGN Live Voice Translate", icon_url: BOT_AVATAR },
-        timestamp: new Date().toISOString(),
-      }],
+      embeds: [embed],
     }),
   }).catch(e => console.error("[voice] webhook error:", e.message));
 }
@@ -446,18 +975,18 @@ function detectEnglishSpanish(text) {
   return "en";
 }
 
-async function startListeningToUser(connection, userId, member, targetLang, onEnded = null) {
-  if (!DEEPGRAM_API_KEY) {
-    console.error("[voice] DEEPGRAM_API_KEY not set");
+async function startListeningToUser(connection, guildId, userId, member, targetLang, outputChannel = null, onEnded = null) {
+  const receiver = connection.receiver;
+  const backend = await getVoiceSttBackendForGuild(guildId);
+  if (backend === "none") {
+    console.error("[voice] No configured voice STT backend is available");
     return null;
   }
-
-  const receiver = connection.receiver;
-  const deepgram = createDeepgramClient(DEEPGRAM_API_KEY);
 
   let audioStream = null;
   let opusDecoder = null;
   let dgLive = null;
+  let deepgram = null;
   let fullTranscript = "";
   let deepgramReady = false;
   let deepgramOpening = false;
@@ -467,6 +996,8 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
   let pendingTranscript = "";
   let pendingTranscriptAt = 0;
   let pendingSourceLang = "en";
+  const pcmChunks = [];
+  const localFallbackToDeepgram = VOICE_STT_MODE === "hybrid" && hasDeepgramVoiceBackend();
 
   const finalize = (reason = "ended") => {
     if (finished) return;
@@ -514,7 +1045,10 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
       const username = member?.displayName ?? member?.user?.username ?? `User ${userId}`;
       const avatarUrl = member?.user?.displayAvatarURL({ size: 64 }) ?? BOT_AVATAR;
       console.log(`[voice] ${username}: ${transcript} -> ${translated}`);
-      await postToStaffVoice(username, avatarUrl, transcript, translated, outputLang);
+      await postVoiceTranslation(outputChannel, username, avatarUrl, transcript, translated, outputLang);
+      if (vcTranscripts.has(guildId)) {
+        vcTranscripts.get(guildId).lines.push(`${username}: ${translated}`);
+      }
     } catch (e) {
       console.error("[voice] translate error:", e.message);
       if (String(e?.message ?? "").includes("HTTP 429")) {
@@ -525,13 +1059,46 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
       } else if (transcript.length > 0) {
         const username = member?.displayName ?? member?.user?.username ?? `User ${userId}`;
         const avatarUrl = member?.user?.displayAvatarURL({ size: 64 }) ?? BOT_AVATAR;
-        await postToStaffVoice(username, avatarUrl, transcript, transcript, outputLang);
+        await postVoiceTranslation(outputChannel, username, avatarUrl, transcript, transcript, outputLang);
       }
     }
   };
 
+  const flushLocalTranscript = async () => {
+    if (pcmChunks.length === 0) return;
+
+    const wavBuffer = buildPcmWavBuffer(pcmChunks);
+    let transcriptResult = null;
+
+    try {
+      transcriptResult = await transcribeWithLocalWorker(wavBuffer);
+    } catch (localError) {
+      console.error("[voice] local STT error:", localError?.message ?? localError);
+      if (!localFallbackToDeepgram) return;
+      try {
+        transcriptResult = await transcribeWithDeepgramPrerecorded(wavBuffer);
+      } catch (fallbackError) {
+        console.error("[voice] local->Deepgram fallback STT error:", fallbackError?.message ?? fallbackError);
+        return;
+      }
+    }
+
+    const transcript = String(transcriptResult?.text || "").trim();
+    if (transcript.length < 2) return;
+
+    pendingTranscript = transcript;
+    pendingSourceLang = transcriptResult?.language
+      ? String(transcriptResult.language).toLowerCase()
+      : detectEnglishSpanish(transcript);
+    pendingTranscriptAt = Date.now();
+    await translatePendingTranscript();
+  };
+
   const openDeepgramStream = (reason = "reopen") => {
     if (finished || deepgramReady || deepgramOpening) return;
+    if (!deepgram) {
+      deepgram = createDeepgramClient(DEEPGRAM_API_KEY);
+    }
     deepgramOpening = true;
     dgLive = deepgram.listen.live({
       model: "nova-2",
@@ -588,9 +1155,13 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
   };
 
   try {
-    audioStream = receiver.subscribe(userId, {
-      end: { behavior: EndBehaviorType.Manual },
-    });
+    audioStream = receiver.subscribe(userId, backend === "local"
+      ? {
+          end: { behavior: EndBehaviorType.AfterSilence, duration: 700 },
+        }
+      : {
+          end: { behavior: EndBehaviorType.Manual },
+        });
     opusDecoder = new prism.opus.Decoder({
       rate: 48000,
       channels: 1,
@@ -617,6 +1188,10 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
       sawAudioChunk = true;
       console.log("[voice] PCM audio flowing, first chunk bytes:", chunk.length);
     }
+    if (backend === "local") {
+      pcmChunks.push(Buffer.from(chunk));
+      return;
+    }
     if (!deepgramReady) {
       openDeepgramStream("audio");
       return;
@@ -627,6 +1202,16 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
   audioStream.on("error", (e) => {
     console.error("[voice] Discord audio stream error:", e.message);
     finalize("audio-error");
+  });
+  audioStream.on("end", async () => {
+    if (backend !== "local") return;
+    try {
+      await flushLocalTranscript();
+    } catch (error) {
+      console.error("[voice] local transcript flush error:", error?.message ?? error);
+    } finally {
+      finalize("audio-end");
+    }
   });
   opusDecoder.on("error", (e) => {
     console.error("[voice] Opus decoder error:", e.message);
@@ -640,10 +1225,11 @@ async function startListeningToUser(connection, userId, member, targetLang, onEn
   };
 }
 
-async function startVoiceListening(connection, guild, targetLang, voiceChannel = null) {
+async function startVoiceListening(connection, guild, targetLang, voiceChannel = null, outputChannel = null) {
   const receiver = connection.receiver;
   const cleanups = [];
   const startingListeners = new Set();
+  const preferredBackend = await getVoiceSttBackendForGuild(guild.id);
 
   const startListenerForUser = async (userId) => {
     if (cleanups[userId] || startingListeners.has(userId)) return;
@@ -652,7 +1238,7 @@ async function startVoiceListening(connection, guild, targetLang, voiceChannel =
     try {
       if (member?.user?.bot) return;
       console.log(`[voice] Starting listener for ${member?.displayName ?? userId}`);
-      const cleanup = await startListeningToUser(connection, userId, member, targetLang, (reason) => {
+      const cleanup = await startListeningToUser(connection, guild.id, userId, member, targetLang, outputChannel, (reason) => {
         if (cleanups[userId]) {
           delete cleanups[userId];
           void publishSystemStatus(reason === "cleanup" ? "listener-end" : "listener-failed");
@@ -667,7 +1253,7 @@ async function startVoiceListening(connection, guild, targetLang, voiceChannel =
     }
   };
 
-  if (voiceChannel?.members?.size) {
+  if (preferredBackend === "deepgram" && voiceChannel?.members?.size) {
     for (const member of voiceChannel.members.values()) {
       if (member?.user?.bot) continue;
       await startListenerForUser(member.id);
@@ -714,12 +1300,12 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     void publishSystemStatus("listener-end");
   }
 });
-
 async function startVoiceListenSession(guild, requesterId, targetLang, replyChannel, autoMode = false) {
-  if (!DEEPGRAM_API_KEY) {
-    await replyChannel.send("❌ `DEEPGRAM_API_KEY` is not set on the bot. Add it to Fly.io secrets.");
+  if (!hasAnyVoiceBackend()) {
+    await replyChannel.send("No voice STT backend is configured on the bot yet. Set `DEEPGRAM_API_KEY` or `LOCAL_STT_WORKER_URL`.");
     return;
   }
+
 
   const member = guild.members.cache.get(requesterId) ?? await guild.members.fetch(requesterId).catch(() => null);
   const voiceChannel = member?.voice?.channel;
@@ -781,7 +1367,8 @@ async function startVoiceListenSession(guild, requesterId, targetLang, replyChan
     }
 
     const effectiveTargetLang = autoMode ? VC_AUTO_LANG : targetLang;
-    const voiceSession = await startVoiceListening(connection, guild, effectiveTargetLang, voiceChannel);
+    const voiceSession = await startVoiceListening(connection, guild, effectiveTargetLang, voiceChannel, replyChannel);
+    vcTranscripts.set(guild.id, { channel: replyChannel, lines: [] });
     activeListeners.set(guild.id, {
       connection,
       cleanups: voiceSession.cleanups,
@@ -789,19 +1376,43 @@ async function startVoiceListenSession(guild, requesterId, targetLang, replyChan
       guildName: guild.name,
       voiceChannelId: voiceChannel.id,
       voiceChannelName: voiceChannel.name,
+      outputChannelId: replyChannel?.id ?? null,
+      outputChannelName: replyChannel?.name ?? "Current channel",
       requesterId,
       targetLang: effectiveTargetLang,
       startedAt: new Date().toISOString(),
       connectionState: connection.state.status,
     });
+    void sendLog({
+      guild,
+      eventId: "voice",
+      color: 0x22c55e,
+      title: "Voice Translation Started",
+      fields: [
+        { name: "Channel", value: voiceChannel.name, inline: true },
+        { name: "Requested by", value: member?.user ? userTag(member.user) : `<@${requesterId}>`, inline: true },
+        { name: "Mode", value: autoMode ? "Auto EN ↔ ES" : String(targetLang || VC_TARGET_LANG), inline: true },
+      ],
+    });
     void publishSystemStatus("voice-listen-start");
 
     const LANG_NAMES = { en: "🇺🇸 English", es: "🇪🇸 Spanish", pt: "🇵🇹 Portuguese", fr: "🇫🇷 French", de: "🇩🇪 German", ru: "🇷🇺 Russian", zh: "🇨🇳 Chinese", ja: "🇯🇵 Japanese" };
     await replyChannel.send(
-      `🎤 Now listening in **${voiceChannel.name}** — translating to **${autoMode ? "Auto EN ↔ ES" : (LANG_NAMES[targetLang] ?? targetLang)}**. Results post to Staff-Voice.\nRun \`/vcstop\` to stop.`
+      `🎤 Now listening in **${voiceChannel.name}** — translating to **${autoMode ? "Auto EN ↔ ES" : (LANG_NAMES[targetLang] ?? targetLang)}**. Results post in **${replyChannel?.name ?? "this channel"}**${STAFF_VOICE_WEBHOOK ? " and Staff-Voice" : ""}.\nRun \`/vcstop\` to stop.`
     );
   } catch (error) {
     console.error("[bot] /vclisten join error:", error);
+    void sendLog({
+      guild,
+      eventId: "errors",
+      color: 0xef4444,
+      title: "Voice Translation Failed",
+      description: error?.message ?? "Unknown voice join error",
+      fields: [
+        { name: "Channel", value: voiceChannel.name, inline: true },
+        { name: "Requested by", value: member?.user ? userTag(member.user) : `<@${requesterId}>`, inline: true },
+      ],
+    });
     await replyChannel.send(`❌ Failed to join voice channel: ${error?.message ?? "Unknown error"}`);
   }
 }
@@ -968,7 +1579,8 @@ async function speakInVoiceChannel(interaction, text) {
 
 client.once("ready", async () => {
   console.log(`[bot] Logged in as ${client.user.tag}`);
-  console.log(`[bot] Relaying to: ${SITE_URL}/api/discord/ingest`);
+  console.log(`[bot] SITE_URL: ${SITE_URL}`);
+  console.log(`[bot] GROQ_API_KEY present: ${Boolean(GROQ_API_KEY)}`);
 
   // Register slash commands
   await registerSlashCommands();
@@ -1098,8 +1710,8 @@ async function relayMessage(msg) {
       }
 
       if (payload?.action === "nhtranslate_speak" && payload.guildId && payload.userId && payload.translated) {
-        if (!isPremiumGuild(payload.guildId)) {
-          await replyChannel.send("NewHope Translate Premium is required for voice-channel translated speech.");
+        if (!(await canUsePremiumFeature(payload.guildId, "spokenVoice"))) {
+          await replyChannel.send("VoxBridge Premium is required for voice-channel translated speech.");
           await msg.delete().catch(() => {});
           return;
         }
@@ -1113,6 +1725,14 @@ async function relayMessage(msg) {
       if (payload?.action === "vcstop" && payload.guildId) {
         stopVoiceSession(msg.guild.id);
         await replyChannel.send("🔇 Stopped listening and left the voice channel.");
+        await msg.delete().catch(() => {});
+        return;
+      }
+
+      if (payload?.action === "autotext_sync" && payload.guildId && payload.translation && typeof payload.translation === "object") {
+        setGuildConfigOverride(payload.guildId, {
+          translation: payload.translation,
+        });
         await msg.delete().catch(() => {});
         return;
       }
@@ -1176,6 +1796,122 @@ async function relayMessage(msg) {
   } catch (e) {
     console.error("[bot] Fetch error:", e.message);
   }
+
+  // AI Response logic
+  const config = await getGuildConfig(msg.guildId);
+  if (config.ai?.enabled && Array.isArray(config.ai.channelIds) && config.ai.channelIds.includes(msg.channelId)) {
+    // Maintain history for this channel
+    if (!aiChannelHistory.has(msg.channelId)) {
+      aiChannelHistory.set(msg.channelId, []);
+    }
+    const history = aiChannelHistory.get(msg.channelId);
+    
+    // Get server info
+    const guild = msg.guild;
+    const owner = await guild?.fetchOwner().catch(() => null);
+    const serverName = guild?.name || "this server";
+    const memberCount = guild?.memberCount || "many";
+    const isOwner = msg.author.id === guild?.ownerId;
+    const authorRoles = msg.member?.roles.cache
+      .filter(r => r.name !== "@everyone")
+      .map(r => r.name)
+      .join(", ") || "Member";
+    
+    const authorLabel = isOwner ? `(Your Creator) ${msg.author.username}` : `(Role: ${authorRoles}) ${msg.author.username}`;
+
+    let toneInstruction = "Be helpful and polite.";
+    if (config.ai.tone === "funny") toneInstruction = "Be funny, crack jokes, and use a humorous personality.";
+    if (config.ai.tone === "brat") toneInstruction = "Be a brat. Use a sassy, high-attitude, and slightly annoying but funny personality. Use 'omg', 'ugh', and 'whatever' type of vibe.";
+    if (config.ai.tone === "professional") toneInstruction = "Be extremely professional, concise, and formal.";
+    
+    let bilingualInstruction = "";
+    if (config.ai.bilingual) {
+      bilingualInstruction = " You MUST provide your response in BOTH English and Spanish. Detect the user's language, and provide a translation for the other language. Format it clearly with a divider or on new lines.";
+    }
+
+    const isMentioned = msg.mentions.has(client.user.id);
+    let chance = 0.15;
+    if (config.ai.frequency === "most") chance = 0.50;
+    if (config.ai.frequency === "sometimes") chance = 0.20;
+    if (config.ai.frequency === "rarely") chance = 0.05;
+    const randomChance = Math.random() < chance;
+    
+    // Replace bot mention ID with name so AI understands it's being addressed
+    const botMentionRegex = new RegExp(`<@!?${client.user.id}>`, "g");
+    const cleanContentForAi = fullContent.replace(botMentionRegex, "@NEWHOPE");
+
+    // Add current message to history BEFORE processing response
+    const safeName = msg.author.username.replace(/[^a-zA-Z0-9_-]/g, "_");
+    history.push({ 
+      role: "user", 
+      name: safeName, 
+      content: `[User: ${authorLabel}] ${cleanContentForAi}` 
+    });
+    if (history.length > 20) history.shift(); 
+
+    if (GROQ_API_KEY && (isMentioned || randomChance)) {
+      console.log(`[bot] AI responding in #${channelName} (tone: ${config.ai.tone}, mentioned: ${isMentioned})`);
+      
+      // Show typing indicator
+      try { await msg.channel.sendTyping(); } catch(e){}
+
+      void (async () => {
+        try {
+          const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "llama-3.1-8b-instant",
+              messages: [
+                { 
+                  role: "system", 
+                  content: `You are VOXBRIDGE, the official AI assistant of this community.
+Your Identity: You are helpful, slightly witty, and deeply integrated into this Discord server.
+Your Creator: Buzzworthy. ONLY mention him if someone explicitly asks about your creation or who made you.
+Server: ${serverName} | Owner: ${owner?.user.username || "Buzzworthy"}.
+
+Tone: ${toneInstruction}
+
+${config.ai.bilingual ? "BILINGUAL MODE ENABLED:\nYou MUST provide your response in BOTH English and Spanish for every single reply.\nUse this EXACT format:\n\n🇺🇸 [English Response]\n\n🇪🇸 [Spanish Response]\n\nDo not use 'English:' or 'Spanish:' labels. Just use the flags." : "Language: Reply in the same language as the user (English or Spanish)."}
+
+STRICT RULES:
+1. NEVER mention you are an AI, a bot, a language model, or that you have limitations.
+2. NEVER hallucinate other users' messages in your output. Output ONLY your own response.
+3. NEVER start your response with your name or any labels like "Assistant:".
+4. Keep it concise, friendly, and social.
+5. If a user refers to you, you know they are talking to NEWHOPE.` 
+                },
+                ...history
+              ],
+              temperature: 0.8
+            })
+          });
+          const aiData = await aiRes.json();
+          const reply = aiData.choices?.[0]?.message?.content;
+          if (reply) {
+            // Broad cleaning of common labels
+            let cleanReply = reply.replace(/^(NEWHOPE|Assistant|AI|System|English|Spanish|ESPANOL|ENGLISH|Respuesta):\s*/i, "").trim();
+            // Remove user hallucination prefixes
+            cleanReply = cleanReply.replace(/^@?[a-zA-Z0-9_]+:\s*/i, "").trim();
+            
+            await msg.reply(cleanReply);
+            
+            // Add bot's own reply to history
+            history.push({ role: "assistant", content: cleanReply });
+            if (history.length > 15) history.shift();
+          }
+        } catch (err) {
+          console.error("[bot] AI conversation error:", err.message);
+        }
+      })();
+    }
+  }
+
+  await maybeAutoTranslateTextMessage(msg);
+
 }
 
 // ── Slash command handler ─────────────────────────────────────────────────
@@ -1184,31 +1920,249 @@ client.on("interactionCreate", async (interaction) => {
 
   console.log(`[bot] Interaction: /${interaction.commandName} from ${interaction.user?.tag ?? interaction.user?.id}`);
 
+  void logBotActivity("bot_command", `Used /${interaction.commandName}`, interaction.user, {
+    command: interaction.commandName,
+    guildId: interaction.guildId,
+    channelId: interaction.channelId
+  });
+  void sendLog({
+    guild: interaction.guild,
+    eventId: "commands",
+    color: 0x5865f2,
+    title: "Slash Command Used",
+    thumbnail: avatarOf(interaction.user),
+    fields: [
+      { name: "User", value: userTag(interaction.user), inline: true },
+      { name: "Command", value: `/${interaction.commandName}`, inline: true },
+      { name: "Channel", value: interaction.channelId ? `<#${interaction.channelId}>` : "Unknown", inline: true },
+    ],
+  });
+
   try {
-    if (interaction.commandName === "vclisten" || interaction.commandName === "vcauto" || interaction.commandName === "vcpermcheck") {
+    if (interaction.commandName === "vclisten" || interaction.commandName === "vcauto" || interaction.commandName === "vcpermcheck" || interaction.commandName === "autotext") {
       await interaction.deferReply({ ephemeral: true });
     } else if (interaction.commandName === "nhtranslate") {
       await interaction.deferReply({ ephemeral: false });
     }
 
-    if (interaction.commandName === "nhpremium") {
-      return interaction.reply(premiumUpgradePayload("NewHope Translate Premium"));
+    if (interaction.commandName === "vclisten" || interaction.commandName === "vcauto" || interaction.commandName === "nhtranslate") {
+      const config = await getGuildConfig(interaction.guildId);
+      if (config.botNickname && interaction.guild) syncBotNickname(interaction.guild, config.botNickname);
+      if (!config.translation?.enabled) {
+        return interaction.editReply({
+          content: "❌ Translation features are currently disabled for this server. An admin can enable them via the dashboard or by typing `/autotext mode:on`.",
+        });
+      }
     }
 
-    // ── /vclisten ──
+    if (interaction.commandName === "nhnotes") {
+      await interaction.deferReply({ ephemeral: false });
+      if (!GROQ_API_KEY) return interaction.editReply("❌ AI Summarization is not configured.");
+      try {
+        const channel = interaction.channel || await client.channels.fetch(interaction.channelId);
+        if (!channel || !channel.messages) {
+          return interaction.editReply("❌ Could not access message history in this channel. Please ensure the bot has 'Read Message History' permissions.");
+        }
+
+        const messages = await channel.messages.fetch({ limit: 50 });
+        const transcript = messages
+          .reverse()
+          .map((m) => `${m.author.username}: ${m.content}`)
+          .filter(Boolean)
+          .join("\n");
+          
+        if (transcript.length < 20) return interaction.editReply("Not enough chat history to summarize.");
+
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              { role: "system", content: "You are a helpful AI assistant. Summarize the following chat conversation into a brief, easy-to-read bulleted list of key takeaways. Do not include extra conversational filler." },
+              { role: "user", content: transcript.slice(-12000) }
+            ],
+            temperature: 0.5
+          })
+        });
+        
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error("[bot] Groq API error:", res.status, errData);
+          return interaction.editReply(`❌ AI Summarization failed (Groq API Error: ${res.status}). ${errData.error?.message || ""}`);
+        }
+
+        const data = await res.json();
+        const summary = data.choices?.[0]?.message?.content || "Could not generate a summary.";
+        
+        const embed = new EmbedBuilder()
+          .setColor(0x5865f2)
+          .setTitle("📝 Channel Conversation Notes")
+          .setDescription(summary)
+          .setFooter({ text: "Powered by Groq & Llama 3" });
+          
+        return interaction.editReply({ content: null, embeds: [embed] });
+      } catch (err) {
+        console.error("[bot] nhnotes local error:", err);
+        return interaction.editReply(`❌ Error generating summary: ${err.message}`);
+      }
+    }
+
+    if (interaction.commandName === "nhai") {
+      await interaction.deferReply({ ephemeral: true });
+      const mode = interaction.options.getString("mode");
+      const tone = interaction.options.getString("tone");
+      const frequency = interaction.options.getString("frequency");
+      const targetChannel = interaction.options.getChannel("channel");
+      const bilingual = interaction.options.getBoolean("bilingual");
+      
+      const guildId = interaction.guildId;
+      const channelId = targetChannel?.id || interaction.channelId;
+
+      const config = await getGuildConfig(guildId);
+      const enabled = mode === "on";
+      
+      let aiChannels = Array.isArray(config.ai?.channelIds) ? [...config.ai.channelIds] : [];
+      if (enabled) {
+        if (!aiChannels.includes(channelId)) aiChannels.push(channelId);
+      } else {
+        aiChannels = aiChannels.filter(id => id !== channelId);
+      }
+
+      const nextAi = {
+        enabled: aiChannels.length > 0,
+        tone: tone || config.ai?.tone || "default",
+        frequency: frequency || config.ai?.frequency || "sometimes",
+        bilingual: bilingual !== null ? bilingual : (config.ai?.bilingual ?? false),
+        channelIds: aiChannels
+      };
+
+      setGuildConfigOverride(guildId, { ai: nextAi });
+
+      // Sync to DB
+      try {
+        await fetch(`${SITE_URL}/api/bot/guild-config`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ 
+            secret: INGEST_SECRET, 
+            guildId, 
+            settings: { ai: nextAi } 
+          }),
+        });
+      } catch (err) {
+        console.error("[bot] Failed to sync AI config to DB:", err.message);
+      }
+
+      return interaction.editReply({
+        content: `✅ AI Conversation updated ${targetChannel ? `for <#${channelId}>` : "for this channel"}.\nMode: **${enabled ? "Enabled" : "Disabled"}** | Tone: **${nextAi.tone}** | Frequency: **${nextAi.frequency}** | Bilingual: **${nextAi.bilingual ? "Yes" : "No"}**`,
+      });
+    }
+
+
+
+
+    if (interaction.commandName === "autotext") {
+      const memberPerms = interaction.memberPermissions;
+      const canManage =
+        memberPerms?.has(PermissionsBitField.Flags.ManageGuild) ||
+        memberPerms?.has(PermissionsBitField.Flags.Administrator);
+      if (!canManage) {
+        return interaction.editReply({ content: "❌ You need `Manage Server` or `Administrator` to change auto text translation." });
+      }
+
+      const mode = interaction.options.getString("mode", true);
+      const language = (interaction.options.getString("language") || "auto").toLowerCase();
+      const channel = interaction.options.getChannel("channel");
+      const botMessages = interaction.options.getString("bot_messages");
+      const enabled = mode === "on";
+      const existingConfig = await getGuildConfig(interaction.guildId);
+      const existingChannelIds = Array.isArray(existingConfig.translation?.channelIds)
+        ? existingConfig.translation.channelIds.filter(Boolean)
+        : [];
+      const includeBotMessages =
+        botMessages === "on"
+          ? true
+          : botMessages === "off"
+            ? false
+            : Boolean(existingConfig.translation?.includeBotMessages);
+      let channelIds = existingChannelIds;
+
+      if (channel?.id) {
+        if (enabled) {
+          channelIds = Array.from(new Set([...existingChannelIds, channel.id]));
+        } else {
+          channelIds = existingChannelIds.filter((id) => id !== channel.id);
+        }
+      } else if (!enabled) {
+        channelIds = [];
+      }
+
+      const patch = {
+        translation: {
+          enabled,
+          targetLang: language,
+          channelIds,
+          includeBotMessages,
+        },
+      };
+
+      setGuildConfigOverride(interaction.guildId, patch);
+
+      let persisted = true;
+      let persistError = "";
+      try {
+        await updateGuildConfigFromBot(interaction.guildId, patch);
+      } catch (error) {
+        persisted = false;
+        persistError = error?.message || "Config sync failed";
+        console.error("[bot] autotext config sync failed:", persistError);
+      }
+
+      void sendLog({
+        guild: interaction.guild,
+        eventId: "commands",
+        color: enabled ? 0x22c55e : 0x64748b,
+        title: "Auto Text Translation Updated",
+        fields: [
+          { name: "Admin", value: userTag(interaction.user), inline: true },
+          { name: "Mode", value: enabled ? "Enabled" : "Disabled", inline: true },
+          { name: "Language", value: language, inline: true },
+          { name: "Scope", value: channel?.id ? `<#${channel.id}>` : (channelIds.length ? `${channelIds.length} selected channels` : "All text channels"), inline: true },
+          { name: "Bot messages", value: includeBotMessages ? "Included" : "Ignored", inline: true },
+          { name: "Saved", value: persisted ? "Panel and bot synced" : "Bot live now, panel sync failed", inline: false },
+        ],
+      });
+
+      const statusLine = persisted
+        ? "Saved to the dashboard and applied live."
+        : `Applied live on the bot, but website sync failed: ${persistError}`;
+      return interaction.editReply({
+        content: `✅ Auto text translation is now **${enabled ? "enabled" : "disabled"}** for **${interaction.guild?.name || "this server"}**.\nTarget language: **${language}**\nScope: **${channel?.name ? `#${channel.name}` : (channelIds.length ? `${channelIds.length} selected channels` : "all text channels")}**\nBot and webhook messages: **${includeBotMessages ? "included" : "ignored"}**\n${statusLine}`,
+      });
+    }
+
+    if (interaction.commandName === "nhpremium") {
+      return interaction.reply(premiumUpgradePayload("VoxBridge Premium", interaction.guildId));
+    }
+
+    // /vclisten
   if (interaction.commandName === "vclisten" || interaction.commandName === "vcauto") {
-    if (!isPremiumGuild(interaction.guildId)) {
-      const payload = premiumUpgradePayload("live voice translation");
+    if (!(await canUsePremiumFeature(interaction.guildId, "liveVoice"))) {
+      const payload = premiumUpgradePayload("live voice translation", interaction.guildId);
       return interaction.editReply({ embeds: payload.embeds, components: payload.components });
     }
 
     const member = interaction.member;
     const voiceChannel = member?.voice?.channel;
     if (!voiceChannel) {
-      return interaction.editReply({ content: "❌ You must be in a voice channel first!" });
+      return interaction.editReply({ content: "You must be in a voice channel first!" });
     }
-    if (!DEEPGRAM_API_KEY) {
-      return interaction.editReply({ content: "❌ `DEEPGRAM_API_KEY` is not set on the bot. Add it to Fly.io secrets." });
+    if (!hasAnyVoiceBackend()) {
+      return interaction.editReply({ content: "No voice STT backend is configured on the bot yet. Set `DEEPGRAM_API_KEY` or `LOCAL_STT_WORKER_URL`." });
     }
 
     const targetLang = interaction.commandName === "vcauto"
@@ -1226,16 +2180,16 @@ client.on("interactionCreate", async (interaction) => {
 
     if (!perms) {
       return interaction.editReply({
-        content: "? I cannot inspect my permissions in that voice channel right now. Please make sure the bot can see the channel and try again.",
+        content: "I cannot inspect my permissions in that voice channel right now. Please make sure the bot can see the channel and try again.",
       });
     }
 
     const missingPerms = perms.missing(requiredPerms);
     if (missingPerms.length > 0) {
       return interaction.editReply({
-        content: `? I am missing permissions in **${voiceChannel.name}**: ${missingPerms.map((perm) => `\`${perm}\``).join(", ")}.
-I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
+        content: `I am missing permissions in **${voiceChannel.name}**: ${missingPerms.join(", ")}.\nI need View Channel, Connect, and Speak to listen there.`, 
       });
+
     }
     stopVoiceSession(guildId);
 
@@ -1248,7 +2202,7 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
         selfMute: false,
       });
 
-      const voiceSession = await startVoiceListening(connection, interaction.guild, targetLang, voiceChannel);
+      const voiceSession = await startVoiceListening(connection, interaction.guild, targetLang, voiceChannel, interaction.channel);
       activeListeners.set(guildId, {
         connection,
         cleanups: voiceSession.cleanups,
@@ -1256,6 +2210,8 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
         guildName: interaction.guild.name,
         voiceChannelId: voiceChannel.id,
         voiceChannelName: voiceChannel.name,
+        outputChannelId: interaction.channelId ?? null,
+        outputChannelName: interaction.channel?.name ?? "Current channel",
         requesterId: interaction.user.id,
         targetLang,
         startedAt: new Date().toISOString(),
@@ -1263,16 +2219,16 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
       });
       void publishSystemStatus("voice-listen-start");
 
-      const LANG_NAMES = { en: "🇺🇸 English", es: "🇪🇸 Spanish", pt: "🇵🇹 Portuguese", fr: "🇫🇷 French", de: "🇩🇪 German", ru: "🇷🇺 Russian", zh: "🇨🇳 Chinese", ja: "🇯🇵 Japanese" };
+      const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", fr: "French", de: "German", ru: "Russian", zh: "Chinese", ja: "Japanese" };
       const startedLabel = interaction.commandName === "vcauto" ? "Now auto-translating" : "Now listening";
       return interaction.editReply({
-        content: `🎤 ${startedLabel} in **${voiceChannel.name}** — translating to **${targetLang === VC_AUTO_LANG ? "Auto EN ↔ ES" : (LANG_NAMES[targetLang] ?? targetLang)}**. Results post to Staff-Voice.\nRun \`/vcstop\` to stop.`
+        content: `Voice translation started in **${voiceChannel.name}** and will post in **${interaction.channel?.name ?? "this channel"}**${STAFF_VOICE_WEBHOOK ? " and Staff-Voice" : ""}.\nRun /vcstop to stop.`
       });
-      } catch (e) {
-        console.error("[bot] /vclisten join error:", e);
-        return interaction.editReply({ content: `❌ Failed to join voice channel: ${e.message}` });
-      }
+    } catch (e) {
+      console.error("[bot] /vclisten join error:", e);
+      return interaction.editReply({ content: `Failed to join voice channel: ${e.message}` });
     }
+  }
 
     // -- /vcpermcheck --
   if (interaction.commandName === "vcpermcheck") {
@@ -1330,6 +2286,10 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
     }
 
     if (interaction.commandName !== "nhtranslate") return;
+    if (!(await canUsePremiumFeature(interaction.guildId, "textTranslate"))) {
+      const payload = premiumUpgradePayload("text translation", interaction.guildId);
+      return interaction.editReply({ embeds: payload.embeds, components: payload.components });
+    }
 
   const text = interaction.options.getString("text", true);
   const targetLang = (interaction.options.getString("to") ?? TRANSLATE_TARGET).toLowerCase().trim();
@@ -1353,13 +2313,13 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
         { name: "📝 Original",          value: text.slice(0, 1024) },
         { name: `🌐 → ${targetName}`,   value: (translated ?? "*(no result)*").slice(0, 1024) },
       )
-      .setFooter({ text: "NewHopeGGN Translate • Powered by MyMemory", iconURL: BOT_AVATAR })
+      .setFooter({ text: "VoxBridge Translate • Powered by MyMemory", iconURL: BOT_AVATAR })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
 
     if (shouldSpeak) {
-      if (!isPremiumGuild(interaction.guildId)) {
+      if (!(await canUsePremiumFeature(interaction.guildId, "spokenVoice"))) {
         const payload = premiumUpgradePayload("voice-channel translated speech");
         return interaction.followUp({ embeds: payload.embeds, components: payload.components, ephemeral: true });
       }
@@ -1380,7 +2340,7 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            username: "NewHopeGGN Translate",
+            username: "VoxBridge Translate",
             avatar_url: BOT_AVATAR,
             embeds: [{
               color: 0x5865f2,
@@ -1393,7 +2353,7 @@ I need \`View Channel\`, \`Connect\`, and \`Speak\` to listen there.`,
                 { name: `🌐 → ${targetName}`, value: (translated ?? "*(no result)*").slice(0, 1024) },
                 { name: "Channel",            value: `<#${interaction.channelId}>`, inline: true },
               ],
-              footer: { text: "NewHopeGGN Translate • Staff Voice Log", icon_url: BOT_AVATAR },
+              footer: { text: "VoxBridge Translate • Staff Voice Log", icon_url: BOT_AVATAR },
               timestamp: new Date().toISOString(),
             }],
           }),
@@ -1445,6 +2405,8 @@ client.on("messageUpdate", (oldMsg, newMsg) => {
   if (newMsg.author?.bot) return;
 
   void sendLog({
+    guild: newMsg.guild,
+    eventId: "commands",
     color: 0xf59e0b,
     title: "✏️  Message Edited",
     thumbnail: avatarOf(newMsg.author),
@@ -1469,6 +2431,8 @@ client.on("messageDelete", async (msg) => {
     : null;
 
   void sendLog({
+    guild: msg.guild,
+    eventId: "commands",
     color: 0xef4444,
     title: "🗑️  Message Deleted",
     thumbnail: avatarOf(msg.author),
@@ -1488,6 +2452,8 @@ client.on("messageDeleteBulk", async (messages, channel) => {
     : null;
 
   void sendLog({
+    guild: channel.guild,
+    eventId: "commands",
     color: 0xef4444,
     title: "🗑️  Bulk Messages Deleted",
     fields: [
@@ -1501,11 +2467,13 @@ client.on("messageDeleteBulk", async (messages, channel) => {
 // ── Ban ────────────────────────────────────────────────────────────────────
 client.on("guildCreate", async (guild) => {
   const owner = await guild.fetchOwner().catch(() => null);
-  const premium = isPremiumGuild(guild.id);
+  const premium = await canUsePremiumFeature(guild.id, "liveVoice");
 
   void sendLog({
+    guild,
+    eventId: "errors",
     color: premium ? 0x22c55e : 0x5865f2,
-    title: "NewHope Translate Added to Server",
+    title: "VoxBridge Added to Server",
     description: premium
       ? "A premium-enabled Discord server added the bot."
       : "A new Discord server added the bot. Voice premium features remain locked until this guild is allowlisted.",
@@ -1519,23 +2487,26 @@ client.on("guildCreate", async (guild) => {
       { name: "Created", value: guild.createdAt ? guild.createdAt.toUTCString() : "Unknown", inline: false },
       { name: "Next Step", value: `Use \`PREMIUM_GUILD_IDS=${guild.id}\` to unlock paid voice features for this server.` },
     ],
-    footer: "NewHopeGGN Bot Install Log",
+    footer: "VoxBridge Bot Install Log",
   });
 });
 
-client.on("guildDelete", (guild) => {
+client.on("guildDelete", async (guild) => {
+  const premium = await canUsePremiumFeature(guild.id, "liveVoice");
   void sendLog({
+    guild,
+    eventId: "errors",
     color: 0xef4444,
-    title: "NewHope Translate Removed from Server",
+    title: "VoxBridge Removed from Server",
     description: "The bot was removed from a Discord server or lost access to it.",
     thumbnail: guildIconOf(guild),
     fields: [
       { name: "Server", value: guild.name || "Unknown", inline: true },
       { name: "Guild ID", value: guild.id, inline: true },
-      { name: "Premium Access", value: isPremiumGuild(guild.id) ? "Was enabled" : "Was locked", inline: true },
+      { name: "Premium Access", value: premium ? "Was enabled" : "Was locked", inline: true },
       { name: "Members", value: `${guild.memberCount ?? "Unknown"}`, inline: true },
     ],
-    footer: "NewHopeGGN Bot Install Log",
+    footer: "VoxBridge Bot Install Log",
   });
 });
 
@@ -1543,6 +2514,8 @@ client.on("guildBanAdd", async (ban) => {
   const mod = await getAuditMod(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id);
 
   void sendLog({
+    guild: ban.guild,
+    eventId: "bans",
     color: 0xdc2626,
     title: "🔨  Member Banned",
     thumbnail: avatarOf(ban.user),
@@ -1560,6 +2533,8 @@ client.on("guildBanRemove", async (ban) => {
   const mod = await getAuditMod(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id);
 
   void sendLog({
+    guild: ban.guild,
+    eventId: "bans",
     color: 0x22c55e,
     title: "✅  Member Unbanned",
     thumbnail: avatarOf(ban.user),
@@ -1576,6 +2551,8 @@ client.on("guildMemberAdd", (member) => {
   const accountAge = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
 
   void sendLog({
+    guild: member.guild,
+    eventId: "joins",
     color: 0x3b82f6,
     title: "📥  Member Joined",
     thumbnail: avatarOf(member.user),
@@ -1600,6 +2577,8 @@ client.on("guildMemberRemove", async (member) => {
     .join(", ") || "None";
 
   void sendLog({
+    guild: member.guild,
+    eventId: "leaves",
     color: mod ? 0xf97316 : 0x64748b,
     title: mod ? "👢  Member Kicked" : "📤  Member Left",
     thumbnail: avatarOf(member.user),
@@ -1636,6 +2615,8 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
            ?? await getAuditMod(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id);
 
   void sendLog({
+    guild: newMember.guild,
+    eventId: "commands",
     color: 0xa855f7,
     title: "🔧  Member Updated",
     thumbnail: avatarOf(newMember.user),
@@ -1658,6 +2639,8 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
   if (isTimedOut) {
     const until = new Date(newMember.communicationDisabledUntilTimestamp);
     void sendLog({
+      guild: newMember.guild,
+      eventId: "commands",
       color: 0xf97316,
       title: "🔇  Member Timed Out",
       thumbnail: avatarOf(newMember.user),
@@ -1669,6 +2652,8 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
     });
   } else {
     void sendLog({
+      guild: newMember.guild,
+      eventId: "commands",
       color: 0x22c55e,
       title: "🔊  Timeout Removed",
       thumbnail: avatarOf(newMember.user),
@@ -1700,4 +2685,6 @@ client.login(BOT_TOKEN).catch((err) => {
   console.error("[bot] Login failed:", err.message);
   process.exit(1);
 });
+
+
 

@@ -122,7 +122,12 @@ export async function GET(req: Request) {
           footer: { text: "NewHopeGGN Admin Panel" },
           timestamp: now,
         }],
-      }, { webhookUrl: env.discordWebhookUrlForPage("staff-page") });
+      }, {
+        webhookUrl:
+          env.discordWebhookUrlForPage("login-audits") ||
+          env.discordWebhookUrlForPage("staff-audits") ||
+          env.discordWebhookUrlForPage("staff-page"),
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
       console.error("Admin login webhook failed", msg);

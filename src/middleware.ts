@@ -66,6 +66,7 @@ export async function middleware(req: NextRequest) {
     (pathname === "/admin" || pathname.startsWith("/api/admin")) &&
     pathname !== "/api/admin/login" &&
     pathname !== "/api/admin/bot-status" &&
+    !(pathname === "/api/admin/wipe-timer" && req.method === "GET") &&
     !isAdminAuthed
   ) {
     if (pathname.startsWith("/api/admin")) {

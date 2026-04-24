@@ -191,6 +191,7 @@ export default function CommunityClient() {
   const [messages, setMessages] = useState<DiscordMessage[]>([]);
   const [msgLoading, setMsgLoading] = useState(true);
   const [noBotYet, setNoBotYet] = useState(false);
+  const [messagesRefreshedAt, setMessagesRefreshedAt] = useState<string | null>(null);
   const msgBottomRef = useRef<HTMLDivElement>(null);
   const lastMsgCount = useRef(0);
   const isFirstLoad = useRef(true);
@@ -217,7 +218,7 @@ export default function CommunityClient() {
   }
 
   async function loadChannels() {
-    const res = await fetch("/api/discord/messages?channels=1").catch(() => null);
+    const res = await fetch(`/api/discord/messages?channels=1&t=${Date.now()}`, { cache: "no-store" }).catch(() => null);
     if (!res?.ok) return;
     const data = await res.json().catch(() => null);
     const chs: string[] = data?.channels ?? [];
@@ -233,12 +234,13 @@ export default function CommunityClient() {
 
   async function loadMessages(channel: string | null, isRefresh = false) {
     const url = channel
-      ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=40`
-      : `/api/discord/messages?limit=40`;
-    const res = await fetch(url).catch(() => null);
+      ? `/api/discord/messages?channel=${encodeURIComponent(channel)}&limit=40&t=${Date.now()}`
+      : `/api/discord/messages?limit=40&t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" }).catch(() => null);
     if (!res?.ok) { if (!isRefresh) setMsgLoading(false); return; }
     const data = await res.json().catch(() => null);
     const msgs: DiscordMessage[] = data?.messages ?? [];
+    setMessagesRefreshedAt(data?.refreshedAt ?? new Date().toISOString());
     const prevCount = lastMsgCount.current;
     lastMsgCount.current = msgs.length;
     setMessages(msgs);
@@ -264,9 +266,13 @@ export default function CommunityClient() {
     const wt = window.setInterval(() => void loadWidget(), 60000);
     const ft = window.setInterval(() => void loadFeed(), 60000);
     const mt = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
       void loadMessages(activeChannelRef.current, true);
-    }, 25000);
-    const ct = window.setInterval(() => void loadChannels(), 120000);
+    }, 10000);
+    const ct = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadChannels();
+    }, 30000);
     return () => {
       window.clearInterval(wt);
       window.clearInterval(ft);
@@ -465,7 +471,9 @@ export default function CommunityClient() {
                 muted
                 loop
                 playsInline
-                className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none"
+                preload="metadata"
+                poster="/raidzone-bg.png"
+                className="absolute inset-0 hidden h-full w-full object-cover opacity-10 pointer-events-none lg:block"
                 src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
               />
               {/* Dark overlay so text stays readable */}
@@ -479,7 +487,9 @@ export default function CommunityClient() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#5865F2] animate-pulse" />
-                  <span className="text-[10px] text-[#5865F2] font-semibold">LIVE</span>
+                  <span className="text-[10px] text-[#5865F2] font-semibold">
+                    {messagesRefreshedAt ? `LIVE · ${timeAgo(messagesRefreshedAt)}` : "LIVE"}
+                  </span>
                 </div>
               </div>
 

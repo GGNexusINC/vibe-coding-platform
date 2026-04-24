@@ -14,8 +14,6 @@ async function canAccessTicket(ticketId: string, channelId: string) {
   const [user, admin] = await Promise.all([getSession(), getAdminSession()]);
   if (admin?.discord_id) return { ok: true, user, admin };
 
-  if (!user?.discord_id) return { ok: false, user, admin };
-
   const supabase = getSupabase();
   if (!supabase) return { ok: false, user, admin };
 
@@ -25,10 +23,11 @@ async function canAccessTicket(ticketId: string, channelId: string) {
     .eq("id", ticketId)
     .single();
 
-  const ownsTicket = ticket?.guest_email === `discord:${user.discord_id}`;
+  const ownsTicket = Boolean(user?.discord_id && ticket?.guest_email === `discord:${user.discord_id}`);
   const channelMatches = Boolean(ticket?.discord_channel_id && ticket.discord_channel_id === channelId);
+  const ownsGuestTicket = Boolean(channelMatches && !ticket?.guest_email && !user?.discord_id);
 
-  return { ok: Boolean(ownsTicket && channelMatches), user, admin };
+  return { ok: Boolean((ownsTicket || ownsGuestTicket) && channelMatches), user, admin };
 }
 
 function normalizeMessage(msg: {

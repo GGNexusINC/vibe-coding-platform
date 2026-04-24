@@ -28,6 +28,39 @@ export async function POST(req: Request) {
   const user = await getSession();
 
   try {
+    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, sbKey, {
+      auth: { persistSession: false },
+    });
+
+    if (user?.discord_id) {
+      const recentCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: existingTicket } = await supabase
+        .from("tickets")
+        .select("id, discord_channel_id")
+        .eq("guest_email", `discord:${user.discord_id}`)
+        .eq("subject", subject)
+        .eq("message", message)
+        .eq("status", "open")
+        .gte("created_at", recentCutoff)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingTicket?.id) {
+        return NextResponse.json({
+          ok: true,
+          ticketId: existingTicket.id,
+          ticketCreated: Boolean(existingTicket.discord_channel_id),
+          channelId: existingTicket.discord_channel_id,
+          reused: true,
+          message: existingTicket.discord_channel_id
+            ? "Your ticket is already open. Live chat is ready below."
+            : "Your ticket is already open. Staff will review it shortly.",
+        });
+      }
+    }
+
     await logActivity({
       type: "support_ticket",
       username: user?.username,
@@ -60,10 +93,6 @@ export async function POST(req: Request) {
     }
 
     const ticketId = randomUUID();
-    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, sbKey, {
-      auth: { persistSession: false },
-    });
 
     const { error: dbError } = await supabase.from("tickets").insert({
       id: ticketId,
@@ -79,8 +108,21 @@ export async function POST(req: Request) {
       console.error("[ticket] Failed to save ticket:", JSON.stringify(dbError));
     }
 
+    const serverAuditWebhookUrl = env.discordWebhookUrlForPage("server-audit");
     const supportWebhookUrl = env.discordWebhookUrlForPage("support");
-    if (supportWebhookUrl) {
+    if (serverAuditWebhookUrl) {
+      await sendTicketToWebhook(
+        serverAuditWebhookUrl,
+        {
+          username: user?.username ?? "Guest",
+          discord_id: user?.discord_id,
+          avatar_url: user?.avatar_url ?? undefined,
+        },
+        subject,
+        message,
+        ticketChannelId,
+      );
+    } else if (supportWebhookUrl && !ticketChannelId) {
       await sendTicketToWebhook(
         supportWebhookUrl,
         {

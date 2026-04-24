@@ -308,15 +308,37 @@ export function StoreClient({ user }: { user: User | null }) {
                 <p className="mt-2 text-sm leading-7 text-slate-300">{product.summary}</p>
 
                 <div className="mt-5 grid gap-3">
-                  {product.bullets.map((item) => (
-                    <div
-                      key={item}
-                      className="flex items-start gap-3 rounded-[1.15rem] border border-white/8 bg-slate-950/45 px-4 py-3 text-sm text-slate-200"
-                    >
-                      <span className="mt-1.5 h-2 w-2 rounded-full bg-cyan-300" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
+                  {product.bullets.map((item) => {
+                    const lItem = item.toLowerCase();
+                    let bgClass = "bg-slate-950/45 border-white/8";
+                    let dotClass = "bg-cyan-300";
+                    if (lItem.includes("stone")) {
+                      bgClass = "bg-stone-900/80 border-stone-500/30 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')]";
+                      dotClass = "bg-stone-400";
+                    } else if (lItem.includes("wood")) {
+                      bgClass = "bg-amber-950/80 border-amber-700/50 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]";
+                      dotClass = "bg-amber-500";
+                    } else if (lItem.includes("steel") || lItem.includes("metal")) {
+                      bgClass = "bg-slate-800/80 border-slate-400/40 bg-[linear-gradient(135deg,rgba(148,163,184,0.1),rgba(71,85,105,0.3))]";
+                      dotClass = "bg-slate-300";
+                    } else if (lItem.includes("tungsten")) {
+                      bgClass = "bg-cyan-950/80 border-cyan-700/50 bg-[linear-gradient(135deg,rgba(8,145,178,0.15),rgba(22,78,99,0.4))]";
+                      dotClass = "bg-cyan-400";
+                    } else if (lItem.includes("rifle") || lItem.includes("shotgun") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14")) {
+                      bgClass = "bg-rose-950/60 border-rose-800/40 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]";
+                      dotClass = "bg-rose-400";
+                    }
+
+                    return (
+                      <div
+                        key={item}
+                        className={`flex items-start gap-3 rounded-[1.15rem] border px-4 py-3 text-sm text-slate-100 shadow-inner transition-transform hover:scale-[1.02] ${bgClass}`}
+                      >
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full shadow-[0_0_8px_currentColor] ${dotClass}`} />
+                        <span className="font-medium drop-shadow-md">{item}</span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {product.addons?.length ? (

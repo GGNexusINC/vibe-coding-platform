@@ -93,7 +93,8 @@ export async function sendTicketMessage(
     avatar_url?: string;
   },
   subject: string,
-  message: string
+  message: string,
+  itemImageUrl?: string | null
 ): Promise<boolean> {
   if (!BOT_TOKEN) return false;
 
@@ -102,6 +103,7 @@ export async function sendTicketMessage(
       title: "🎫 New Support Ticket",
       color: 0x22d3ee, // Cyan
       thumbnail: { url: NEWHOPE_LOGO_URL },
+      image: itemImageUrl ? { url: itemImageUrl } : undefined,
       fields: [
         { name: "User", value: `<@${user.discord_id || "unknown"}> (${user.username})`, inline: true },
         { name: "Subject", value: subject, inline: true },
@@ -156,6 +158,79 @@ export async function sendTicketMessage(
   }
 }
 
+export async function sendTicketPresenceStatus(
+  channelId: string,
+  input: {
+    state: "active" | "closed";
+    side: "user" | "staff";
+    username: string;
+    ticketId: string;
+    messageId?: string | null;
+  },
+): Promise<string | null> {
+  if (!BOT_TOKEN) return null;
+
+  const isActive = input.state === "active";
+  const sideLabel = input.side === "staff" ? "Staff console" : "User support page";
+  const statusLabel = isActive ? "ONLINE - live window open" : "OFFLINE - window closed or hidden";
+
+  try {
+    const embed = {
+      title: isActive ? "Live Support Signal Online" : "Live Support Signal Offline",
+      color: isActive ? 0x22c55e : 0xf59e0b,
+      thumbnail: { url: NEWHOPE_LOGO_URL },
+      fields: [
+        { name: "Window", value: sideLabel, inline: true },
+        { name: "Status", value: statusLabel, inline: true },
+        { name: "Viewer", value: input.username || "Guest", inline: true },
+        { name: "Ticket", value: input.ticketId, inline: false },
+      ],
+      timestamp: new Date().toISOString(),
+      footer: { text: "NewHopeGGN Live Ticket Presence", icon_url: NEWHOPE_LOGO_URL },
+    };
+
+    const payload = {
+      content: isActive
+        ? `LIVE WINDOW ONLINE: ${sideLabel} is active.`
+        : `LIVE WINDOW OFFLINE: ${sideLabel} closed or left the page.`,
+      embeds: [embed],
+    };
+    const endpoint = input.messageId
+      ? `https://discord.com/api/v10/channels/${channelId}/messages/${input.messageId}`
+      : `https://discord.com/api/v10/channels/${channelId}/messages`;
+    let res = await fetch(endpoint, {
+      method: input.messageId ? "PATCH" : "POST",
+      headers: {
+        "Authorization": `Bot ${BOT_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok && input.messageId && (res.status === 404 || res.status === 403)) {
+      res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bot ${BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (!res.ok) {
+      console.error("[discord-bot] Failed to send ticket presence:", res.status);
+      return null;
+    }
+
+    const message = await res.json().catch(() => ({}));
+    return typeof message?.id === "string" ? message.id : input.messageId ?? null;
+  } catch (e) {
+    console.error("[discord-bot] Error sending ticket presence:", e);
+    return null;
+  }
+}
+
 /**
  * Send message to logs webhook as backup
  */
@@ -168,13 +243,15 @@ export async function sendTicketToWebhook(
   },
   subject: string,
   message: string,
-  channelId?: string
+  channelId?: string,
+  itemImageUrl?: string | null
 ): Promise<boolean> {
   try {
     const embed = {
       title: "🎫 Support Ticket Submitted",
       color: 0x22d3ee,
       thumbnail: { url: NEWHOPE_LOGO_URL },
+      image: itemImageUrl ? { url: itemImageUrl } : undefined,
       fields: [
         { name: "User", value: user.username, inline: true },
         { name: "Subject", value: subject, inline: true },

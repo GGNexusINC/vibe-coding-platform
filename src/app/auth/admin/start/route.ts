@@ -7,7 +7,8 @@ export async function GET(req: Request) {
 
   try {
     const clientId = requireEnv("DISCORD_CLIENT_ID");
-    const redirectUri = `${origin}/auth/admin/callback`;
+    const appOrigin = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://newhopeggn.vercel.app").replace(/\/$/, "");
+    const redirectUri = `${appOrigin}/auth/admin/callback`;
 
     const authUrl = new URL("https://discord.com/api/oauth2/authorize");
     authUrl.searchParams.set("client_id", clientId);

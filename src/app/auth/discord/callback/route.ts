@@ -48,6 +48,7 @@ export async function GET(req: Request) {
       global_name: u.global_name,
       discriminator: u.discriminator ?? null,
       discord_profile: u as unknown as Record<string, unknown>,
+      access_token: token.access_token,
     });
 
     try {

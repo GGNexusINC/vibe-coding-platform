@@ -17,9 +17,10 @@ interface TicketChatProps {
   channelId: string;
   userId?: string;
   onClose?: () => void;
+  presenceSide?: "user" | "staff";
 }
 
-export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatProps) {
+export function TicketChat({ ticketId, channelId, userId, onClose, presenceSide = "user" }: TicketChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,50 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
       setLoading(false);
     }
   }, [ticketId, channelId, userId]);
+
+  const sendPresence = useCallback(async (state: "active" | "closed" = "active") => {
+    await fetch(`/api/support/ticket/${ticketId}/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelId, state, side: presenceSide }),
+    }).catch(() => null);
+  }, [ticketId, channelId, presenceSide]);
+
+  const sendClosedPresence = useCallback(() => {
+    const payload = JSON.stringify({ channelId, state: "closed", side: presenceSide });
+    const url = `/api/support/ticket/${ticketId}/presence`;
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+      return;
+    }
+    void fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => null);
+  }, [ticketId, channelId, presenceSide]);
+
+  useEffect(() => {
+    void sendPresence();
+    const interval = setInterval(sendPresence, 15000);
+    const onFocus = () => void sendPresence();
+    const onPageHide = () => sendClosedPresence();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") sendClosedPresence();
+      else void sendPresence();
+    };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      sendClosedPresence();
+    };
+  }, [sendPresence, sendClosedPresence]);
 
   // Poll for new messages every 5 seconds
   useEffect(() => { 
@@ -112,6 +157,7 @@ export function TicketChat({ ticketId, channelId, userId, onClose }: TicketChatP
     
     setClosing(true);
     try {
+      sendClosedPresence();
       const res = await fetch(`/api/support/ticket/${ticketId}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -68,14 +71,20 @@ export async function GET(req: Request) {
     const unique = [...new Set((data ?? []).map((r: { channel_name: string }) => r.channel_name))]
       .filter(isPublicCommunityChannel);
 
-    return NextResponse.json({ ok: true, channels: unique });
+    return NextResponse.json(
+      { ok: true, channels: unique, refreshedAt: new Date().toISOString() },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   }
 
   const channel = searchParams.get("channel");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
 
   if (channel && !isPublicCommunityChannel(channel)) {
-    return NextResponse.json({ ok: true, messages: [] });
+    return NextResponse.json(
+      { ok: true, messages: [], refreshedAt: new Date().toISOString() },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   }
 
   let query = sb
@@ -89,12 +98,20 @@ export async function GET(req: Request) {
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ ok: false, messages: [] });
+  if (error) {
+    return NextResponse.json(
+      { ok: false, messages: [], refreshedAt: new Date().toISOString() },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
 
   const messages = (data ?? [])
     .filter((message: { channel_name?: string | null }) => isPublicCommunityChannel(message.channel_name))
     .slice(0, limit)
     .reverse();
 
-  return NextResponse.json({ ok: true, messages });
+  return NextResponse.json(
+    { ok: true, messages, refreshedAt: new Date().toISOString() },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
