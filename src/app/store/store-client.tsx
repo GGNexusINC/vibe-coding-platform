@@ -324,20 +324,26 @@ export function StoreClient({ user }: { user: User | null }) {
                     let bgClass = "bg-slate-950/45 border-white/8";
                     let dotClass = "bg-cyan-300";
                     if (lItem.includes("stone")) {
-                      bgClass = "bg-stone-900/80 border-stone-500/30 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')]";
+                      bgClass = "bg-stone-900/90 border-stone-500/40 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] mix-blend-luminosity";
                       dotClass = "bg-stone-400";
                     } else if (lItem.includes("wood")) {
-                      bgClass = "bg-amber-950/80 border-amber-700/50 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]";
+                      bgClass = "bg-amber-950/90 border-amber-600/50 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]";
                       dotClass = "bg-amber-500";
                     } else if (lItem.includes("steel") || lItem.includes("metal")) {
-                      bgClass = "bg-slate-800/80 border-slate-400/40 bg-[linear-gradient(135deg,rgba(148,163,184,0.1),rgba(71,85,105,0.3))]";
+                      bgClass = "bg-slate-800/90 border-slate-300/50 bg-[url('https://www.transparenttextures.com/patterns/brushed-alumina.png')] mix-blend-overlay";
                       dotClass = "bg-slate-300";
                     } else if (lItem.includes("tungsten")) {
-                      bgClass = "bg-cyan-950/80 border-cyan-700/50 bg-[linear-gradient(135deg,rgba(8,145,178,0.15),rgba(22,78,99,0.4))]";
+                      bgClass = "bg-cyan-950/90 border-cyan-400/50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-color-dodge";
                       dotClass = "bg-cyan-400";
                     } else if (lItem.includes("rifle") || lItem.includes("shotgun") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14")) {
-                      bgClass = "bg-rose-950/60 border-rose-800/40 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]";
+                      bgClass = "bg-rose-950/90 border-rose-500/50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]";
                       dotClass = "bg-rose-400";
+                    } else if (lItem.includes("pulse") || lItem.includes("generator") || lItem.includes("biomass")) {
+                      bgClass = "bg-indigo-950/90 border-indigo-500/50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]";
+                      dotClass = "bg-indigo-400";
+                    } else if (lItem.includes("blueprint") || lItem.includes("ticket")) {
+                      bgClass = "bg-emerald-950/90 border-emerald-500/50 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]";
+                      dotClass = "bg-emerald-400";
                     }
 
                     return (

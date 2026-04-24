@@ -1011,6 +1011,19 @@ export function AdminPanelClient() {
   useEffect(() => {
     if (!isAuthed) return;
 
+    fetch("/api/admin/bot-premium", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ok && data.entitlements) {
+          setGuilds(data.entitlements.map((e: any) => ({
+            id: e.guildId,
+            name: e.guildName || e.guildId,
+            icon: null
+          })));
+        }
+      })
+      .catch(() => {});
+
     const statsTimer = window.setInterval(() => {
       void loadStats();
     }, 15000);
