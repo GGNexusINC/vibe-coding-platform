@@ -637,7 +637,6 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
 export function AdminPanelClient() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null; }[]>([]);
 
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [statsError, setStatsError] = useState("");
@@ -1010,13 +1009,6 @@ export function AdminPanelClient() {
 
   useEffect(() => {
     if (!isAuthed) return;
-
-    fetch("/api/bot/guilds", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.ok) setGuilds(data.guilds ?? []);
-      })
-      .catch(() => {});
 
     const statsTimer = window.setInterval(() => {
       void loadStats();
@@ -1895,7 +1887,7 @@ export function AdminPanelClient() {
     { id: "members"   as const, label: "Members",    icon: "◉" },
     { id: "roster"    as const, label: "Roster",     icon: "◈", badge: pendingAdmins },
     { id: "broadcast" as const, label: "Broadcast",  icon: "◎" },
-    { id: "bot"       as const, label: "Bot Control",icon: "🤖" },
+    { id: "bot"       as const, label: "Master Bot Control",icon: "🤖" },
   ] as const;
 
   const featureTabs = [
@@ -2139,6 +2131,74 @@ export function AdminPanelClient() {
                 ))}
               </div>
 
+              {/* Wipe Timer Status — live ticking */}
+              {wipeAt && (() => {
+                const ms = new Date(wipeAt).getTime() - now;
+                const past = ms <= 0;
+                const abs = Math.abs(ms);
+                const d = Math.floor(abs / 86400000);
+                const h = Math.floor((abs % 86400000) / 3600000);
+                const m = Math.floor((abs % 3600000) / 60000);
+                const s = Math.floor((abs % 60000) / 1000);
+                const parts = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+                const urgent = !past && ms < 3600000;
+                return (
+                  <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 transition-colors ${
+                    past ? "border-slate-500/30 bg-slate-800/40" :
+                    urgent ? "border-rose-500/35 bg-rose-950/40" :
+                    "border-amber-400/25 bg-amber-950/30"
+                  } ${urgent && !past ? "animate-pulse" : ""}`}>
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className={`absolute inset-x-0 top-0 h-px ${
+                        past ? "bg-slate-500/30" : urgent ? "bg-gradient-to-r from-transparent via-rose-500/60 to-transparent" : "bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"
+                      }`} />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl shrink-0 ${
+                          past ? "bg-slate-700/50" : urgent ? "bg-rose-500/15" : "bg-amber-400/10"
+                        }`}>
+                          {past ? "�" : urgent ? "��" : "⏳"}
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{wipeLabel}</div>
+                          <div className={`text-xl font-black tabular-nums leading-none ${
+                            past ? "text-slate-500" : urgent ? "text-rose-300" : "text-amber-300"
+                          }`}>
+                            {past ? "WIPED" : parts}
+                          </div>
+                          <div className="text-[10px] text-slate-600 mt-0.5">{past ? "Timer expired" : "Until wipe"}</div>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => switchTab("wipe")}
+                        className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 hover:text-white transition-all">
+                        Edit Timer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
+                  <div className="text-sm font-semibold text-white">Activity Feed</div>
+                  <div className="flex gap-1 overflow-x-auto">
+                    {["all", "login", "support_ticket", "purchase_intent"].map((t) => (
+                      <button key={t} type="button" onClick={() => setEventFilter(t)}
+                        className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${eventFilter === t ? "bg-cyan-400/15 text-cyan-300" : "text-slate-500 hover:text-slate-300"}`}>
+                        {t === "all" ? "All" : formatEventType(t)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <ActivityFeed entries={filteredRecent} />
+              </div>
+            </div>
+          )}
+
+          {/* ════ BOT CONTROL ════ */}
+          {activeTab === "bot" && (
+            <div className="grid min-w-0 max-w-full gap-4">
               <div id="bot-status" className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr] scroll-mt-24">
                 <div className="rounded-3xl border border-white/6 bg-gradient-to-b from-slate-900/90 to-slate-950/95 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
                   <div className="flex items-center justify-between gap-4 border-b border-white/6 px-5 py-4">
@@ -2437,75 +2497,7 @@ export function AdminPanelClient() {
                   </div>
                 </div>
               </div>
-              {/* Wipe Timer Status — live ticking */}
-              {wipeAt && (() => {
-                const ms = new Date(wipeAt).getTime() - now;
-                const past = ms <= 0;
-                const abs = Math.abs(ms);
-                const d = Math.floor(abs / 86400000);
-                const h = Math.floor((abs % 86400000) / 3600000);
-                const m = Math.floor((abs % 3600000) / 60000);
-                const s = Math.floor((abs % 60000) / 1000);
-                const parts = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
-                const urgent = !past && ms < 3600000;
-                return (
-                  <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 transition-colors ${
-                    past ? "border-slate-500/30 bg-slate-800/40" :
-                    urgent ? "border-rose-500/35 bg-rose-950/40" :
-                    "border-amber-400/25 bg-amber-950/30"
-                  } ${urgent && !past ? "animate-pulse" : ""}`}>
-                    <div className="absolute inset-0 pointer-events-none">
-                      <div className={`absolute inset-x-0 top-0 h-px ${
-                        past ? "bg-slate-500/30" : urgent ? "bg-gradient-to-r from-transparent via-rose-500/60 to-transparent" : "bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"
-                      }`} />
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl shrink-0 ${
-                          past ? "bg-slate-700/50" : urgent ? "bg-rose-500/15" : "bg-amber-400/10"
-                        }`}>
-                          {past ? "�" : urgent ? "��" : "⏳"}
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{wipeLabel}</div>
-                          <div className={`text-xl font-black tabular-nums leading-none ${
-                            past ? "text-slate-500" : urgent ? "text-rose-300" : "text-amber-300"
-                          }`}>
-                            {past ? "WIPED" : parts}
-                          </div>
-                          <div className="text-[10px] text-slate-600 mt-0.5">{past ? "Timer expired" : "Until wipe"}</div>
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => switchTab("wipe")}
-                        className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 hover:text-white transition-all">
-                        Edit Timer
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
 
-              <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
-                  <div className="text-sm font-semibold text-white">Activity Feed</div>
-                  <div className="flex gap-1 overflow-x-auto">
-                    {["all", "login", "support_ticket", "purchase_intent"].map((t) => (
-                      <button key={t} type="button" onClick={() => setEventFilter(t)}
-                        className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${eventFilter === t ? "bg-cyan-400/15 text-cyan-300" : "text-slate-500 hover:text-slate-300"}`}>
-                        {t === "all" ? "All" : formatEventType(t)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <ActivityFeed entries={filteredRecent} />
-              </div>
-            </div>
-          )}
-
-          {/* ════ BOT CONTROL ════ */}
-          {activeTab === "bot" && (
-            <div className="grid min-w-0 max-w-full gap-4">
-              <BotSection guilds={guilds} isAdminPanel={true} />
             </div>
           )}
 
