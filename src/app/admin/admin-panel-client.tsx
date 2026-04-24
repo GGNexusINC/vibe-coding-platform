@@ -664,7 +664,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -682,6 +682,7 @@ export function AdminPanelClient() {
   const [navScrolled, setNavScrolled] = useState(false);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const [wipeAt, setWipeAt] = useState("");
+  const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null }[]>([]);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [wipeSaving, setWipeSaving] = useState(false);
   const [wipeStatus, setWipeStatus] = useState("");
@@ -1888,6 +1889,7 @@ export function AdminPanelClient() {
     { id: "roster"    as const, label: "Roster",     icon: "◈", badge: pendingAdmins },
     { id: "broadcast" as const, label: "Broadcast",  icon: "◎" },
     { id: "bot"       as const, label: "Master Bot Control",icon: "🤖" },
+    { id: "guild-configs" as const, label: "Guild Configs", icon: "⚙️" },
   ] as const;
 
   const featureTabs = [
@@ -3022,6 +3024,14 @@ export function AdminPanelClient() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          
+          {/* ════ GUILD CONFIGS ════ */}
+          {activeTab === "guild-configs" && (
+            <div className="grid min-w-0 max-w-full gap-4">
+              <BotSection guilds={guilds} isAdminPanel={true} />
             </div>
           )}
 
