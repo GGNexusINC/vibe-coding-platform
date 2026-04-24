@@ -195,6 +195,7 @@ function formatUptime(ms?: number) {
 export function BotSection({
   guilds = [],
   initialGuildId,
+  isAdminPanel = false,
 }: {
   guilds?: Guild[];
   isAdminPanel?: boolean;
@@ -936,9 +937,44 @@ export function BotSection({
                 <p className="mt-2 text-sm leading-6 text-amber-100/80">
                   Starter ${planPrices.starter}/mo for typed translation tools. Pro Voice ${planPrices.pro_voice}/mo for live VC and spoken translation. Server Ops ${planPrices.server_ops}/mo for logs, reliability, and priority setup.
                 </p>
-                <a href="/support?topic=bot-premium" className="mt-4 inline-flex rounded-full bg-amber-300 px-5 py-2 text-xs font-black text-slate-950 transition hover:bg-amber-200">
-                  Request premium setup
-                </a>
+                {isAdminPanel ? (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="text-sm font-bold text-white">Admin Override Plan:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {["locked", "free", "starter", "pro_voice", "server_ops", "internal"].map((planId) => (
+                        <button
+                          key={planId}
+                          onClick={() => {
+                            fetch("/api/admin/bot-premium", {
+                              method: "PATCH",
+                              headers: { "content-type": "application/json" },
+                              body: JSON.stringify({ guildId: selectedGuildId, plan: planId }),
+                            }).then(r => r.json()).then(d => {
+                              if (d.ok) {
+                                setSettings(s => ({ ...s, premium: d.premium }));
+                                setNotice("Premium plan updated!");
+                                setTimeout(() => setNotice(""), 3000);
+                              } else {
+                                setNotice(d.error || "Failed to update premium.");
+                              }
+                            });
+                          }}
+                          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
+                            settings.premium?.plan === planId 
+                              ? "bg-amber-400 text-slate-900" 
+                              : "border border-amber-300/30 bg-amber-300/10 text-amber-200 hover:bg-amber-300/20"
+                          }`}
+                        >
+                          {planId.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <a href="/support?topic=bot-premium" className="mt-4 inline-flex rounded-full bg-amber-300 px-5 py-2 text-xs font-black text-slate-950 transition hover:bg-amber-200">
+                    Request premium setup
+                  </a>
+                )}
               </div>
             </div>
           )}

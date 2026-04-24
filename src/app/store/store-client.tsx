@@ -123,7 +123,7 @@ export function StoreClient({ user }: { user: User | null }) {
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-950/20 mix-blend-overlay opacity-30" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
       <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
 
       {/* Wipe status banner */}
@@ -284,6 +284,13 @@ export function StoreClient({ user }: { user: User | null }) {
           const isInsurance = product.slug === "insurance";
           const isDisabled = isInsurance && !insuranceStatus.available;
 
+          let cardBg = "bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-30";
+          if (product.slug === "construction") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] mix-blend-color-burn opacity-50";
+          if (product.slug === "defense") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50";
+          if (product.slug === "tactical") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay opacity-40";
+          if (product.slug === "clan") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20";
+          if (product.slug === "vip") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-60";
+
           return (
             <article
               key={product.slug}
@@ -291,7 +298,8 @@ export function StoreClient({ user }: { user: User | null }) {
                 isDisabled ? "opacity-50 pointer-events-none" : ""
               }`}
             >
-              <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(11,22,33,0.92),rgba(6,14,21,0.86))] bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] mix-blend-luminosity opacity-40" />
+              <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(11,22,33,0.92),rgba(6,14,21,0.86))]" />
+              <div className={`absolute inset-0 -z-10 ${cardBg}`} />
               <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
                 <div className="absolute -top-20 right-[-3rem] h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
                 <div className="absolute bottom-[-4rem] left-[-3rem] h-56 w-56 rounded-full bg-amber-300/10 blur-3xl" />
