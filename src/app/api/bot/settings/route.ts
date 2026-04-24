@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { fetchUserGuilds } from "@/lib/discord-oauth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { defaultBotPremium, getBotPremiumForGuild } from "@/lib/bot-premium";
+import { getAdminSession } from "@/lib/admin-auth";
 
 async function verifyGuildManager(guildId: string, accessToken: string) {
   const guilds = await fetchUserGuilds(accessToken);
@@ -18,9 +19,10 @@ async function verifyGuildManager(guildId: string, accessToken: string) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const guildId = searchParams.get("guildId");
+  const adminSession = await getAdminSession();
   const session = await getSession();
 
-  if (!session || !session.access_token) {
+  if (!adminSession && (!session || !session.access_token)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
@@ -28,12 +30,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Missing guildId" }, { status: 400 });
   }
 
-  // Security check: Is the user a manager of this guild?
-  try {
-    const canManage = await verifyGuildManager(guildId, session.access_token);
-    if (!canManage) {
-      return NextResponse.json({ ok: false, error: "Forbidden: You do not manage this guild" }, { status: 403 });
+  // Security check: Is the user a manager of this guild or a site admin?
+  if (!adminSession) {
+    try {
+      const canManage = await verifyGuildManager(guildId, session!.access_token as string);
+      if (!canManage) {
+        return NextResponse.json({ ok: false, error: "Forbidden: You do not manage this guild" }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ ok: false, error: "Check failed" }, { status: 500 });
     }
+  }
+
+  try {
 
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
@@ -90,9 +99,10 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   const { searchParams } = new URL(req.url);
   const guildId = searchParams.get("guildId");
+  const adminSession = await getAdminSession();
   const session = await getSession();
 
-  if (!session || !session.access_token) {
+  if (!adminSession && (!session || !session.access_token)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
@@ -100,12 +110,17 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Missing guildId" }, { status: 400 });
   }
 
-  try {
-    const canManage = await verifyGuildManager(guildId, session.access_token);
-    if (!canManage) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  if (!adminSession) {
+    try {
+      const canManage = await verifyGuildManager(guildId, session!.access_token as string);
+      if (!canManage) {
+        return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ ok: false, error: "Check failed" }, { status: 500 });
     }
-
+  }
+  try {
     const body = await req.json();
     const { premium: _ignoredPremium, ...safeBody } = body && typeof body === "object" ? body : {};
     const supabase = await createSupabaseServerClient();
