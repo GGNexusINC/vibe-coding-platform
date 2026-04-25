@@ -993,6 +993,8 @@ function CreateRaidModal({ roles, hives, initialRaidType, onClose, onCreated }: 
                   targetLocation: `${form.raidType === "defense" ? "Defend" : "Raid"} @ ${sector} [${Math.round(x)}, ${Math.round(y)}]`
                 });
               }}
+              hideSidebar
+              height="h-full"
               className="h-full min-h-[500px]" 
             />
           </div>

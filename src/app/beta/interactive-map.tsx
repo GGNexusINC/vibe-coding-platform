@@ -20,7 +20,15 @@ export interface HiveRecord {
   updated_at: string;
 }
 
-export function InteractiveMap({ hives, draft, onPick, compact, className }: { hives: HiveRecord[]; draft?: { x: number; y: number }; onPick?: (x: number, y: number) => void; compact?: boolean; className?: string }) {
+export function InteractiveMap({ hives, draft, onPick, compact, hideSidebar, height, className }: { 
+  hives: HiveRecord[]; 
+  draft?: { x: number; y: number }; 
+  onPick?: (x: number, y: number) => void; 
+  compact?: boolean; 
+  hideSidebar?: boolean;
+  height?: string;
+  className?: string 
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   
@@ -126,10 +134,10 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
   });
 
   return (
-    <div className={`flex flex-col lg:flex-row gap-6 w-full bg-slate-950 rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl relative ${compact ? 'h-[300px]' : 'h-[800px]'} ${className || ''}`}>
+    <div className={`flex flex-col lg:flex-row gap-6 w-full bg-slate-950 rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl relative ${height ? height : (compact ? 'h-[300px]' : 'h-[800px]')} ${className || ''}`}>
       
       {/* Sidebar Controls */}
-      {!compact && (
+      {(!compact && !hideSidebar) && (
       <div className="w-full lg:w-80 shrink-0 bg-slate-950/80 backdrop-blur-xl border-r border-cyan-500/20 p-6 flex flex-col z-10 shadow-[4px_0_24px_rgba(34,211,238,0.05)] relative overflow-hidden">
         {/* Cyberpunk accent lines */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />

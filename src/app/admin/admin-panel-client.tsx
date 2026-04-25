@@ -634,6 +634,134 @@ function AdminTicketChat({ ticketId, channelId, adminName }: { ticketId: string;
   );
 }
 
+const COPILOT_KNOWLEDGE = [
+  { keywords: ["webhook", "notification", "discord", "alert"], tab: "webhooks", label: "Webhook Routing", desc: "Manage where notifications are sent in Discord." },
+  { keywords: ["bot", "restart", "voice", "status", "heartbeat"], tab: "bot", label: "Bot Operations", desc: "Monitor the Discord bot status and voice connections." },
+  { keywords: ["ticket", "support", "help", "customer"], tab: "tickets", label: "Support Tickets", desc: "Respond to user help requests." },
+  { keywords: ["sale", "revenue", "money", "paypal", "transaction"], tab: "sales", label: "Revenue Tracking", desc: "View total sales and purchase history." },
+  { keywords: ["wipe", "season", "reset"], tab: "wipe", label: "Wipe Cycle", desc: "Configure server wipe timers and announcements." },
+  { keywords: ["member", "user", "active", "stats"], tab: "members", label: "Member Audit", desc: "View detailed engagement stats for every user." },
+  { keywords: ["mod", "ban", "warn", "log", "enforcement"], tab: "modlog", label: "Mod Action Log", desc: "Track bans, warnings, and pending enforcement." },
+  { keywords: ["inventory", "pack", "item", "give"], tab: "inventory", label: "Item Inventory", desc: "Manage user packs and give items manually." },
+  { keywords: ["lottery", "prize", "winner", "draw"], tab: "lottery", label: "Prize Lottery", desc: "Run giveaways and pick winners." },
+  { keywords: ["broadcast", "alert", "announcement", "hologram"], tab: "broadcast", label: "Global Broadcast", desc: "Send messages to the entire website." },
+  { keywords: ["roster", "staff", "admin", "team"], tab: "roster", label: "Admin Roster", desc: "Manage who has access to this panel." },
+  { keywords: ["beta", "testing", "raid", "hive"], tab: "beta", label: "Beta Testing", desc: "Manage raid command and beta tester access." },
+  { keywords: ["file", "upload", "asset", "image"], tab: "files", label: "File Management", desc: "Upload and manage public assets." },
+  { keywords: ["arena", "event", "tournament"], tab: "arena", label: "Arena Events", desc: "Manage PvP tournaments and voting." },
+];
+
+function AdminCopilot({ onNavigate }: { onNavigate: (tab: any) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [responses, setResponses] = useState<{ type: "bot" | "user"; text: string; action?: { label: string; tab: string } }[]>([
+    { type: "bot", text: "Hello Admin! I'm your GGN Copilot. How can I help you manage the platform today?" }
+  ]);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    const userMsg = query.trim().toLowerCase();
+    setResponses(prev => [...prev, { type: "user", text: query }]);
+    setQuery("");
+
+    // Simple keyword matching logic
+    const match = COPILOT_KNOWLEDGE.find(item => 
+      item.keywords.some(k => userMsg.includes(k)) || 
+      item.label.toLowerCase().includes(userMsg)
+    );
+
+    setTimeout(() => {
+      if (match) {
+        setResponses(prev => [...prev, { 
+          type: "bot", 
+          text: `I found that for you! You can manage ${match.label} in the corresponding section. ${match.desc}`,
+          action: { label: `Go to ${match.label}`, tab: match.tab }
+        }]);
+      } else if (userMsg.includes("hello") || userMsg.includes("hi")) {
+        setResponses(prev => [...prev, { type: "bot", text: "Systems online and ready for your command, Admin. What's our next objective?" }]);
+      } else {
+        setResponses(prev => [...prev, { type: "bot", text: "I'm not exactly sure about that one. Try asking about 'webhooks', 'sales', 'members', or 'bot status'!" }]);
+      }
+    }, 400);
+  };
+
+  return (
+    <div className="fixed bottom-10 right-10 z-[9999] group/copilot">
+      {open ? (
+        <div className="mb-4 w-85 overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_50px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-8 duration-500">
+          {/* Tactical Overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%]" />
+          
+          <div className="relative bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-indigo-500/20 p-6 border-b border-white/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative h-3 w-3">
+                  <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-50" />
+                  <div className="relative h-full w-full rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-[0.3em] text-cyan-300">GGN Sentinel</span>
+                  <span className="block text-[8px] font-bold text-cyan-500/60 tracking-widest uppercase">Systems Nominal // Local: 0x42F</span>
+                </div>
+              </div>
+              <button onClick={() => setOpen(false)} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-white/10 hover:text-white transition-all">✕</button>
+            </div>
+          </div>
+          
+          <div className="h-80 overflow-y-auto p-5 space-y-4 custom-scrollbar relative">
+            {responses.map((res, i) => (
+              <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                  res.type === "user" 
+                    ? "bg-cyan-500/90 text-white rounded-tr-none shadow-lg shadow-cyan-500/20 border border-cyan-400/30" 
+                    : "bg-slate-950/80 text-slate-200 border border-white/10 rounded-tl-none backdrop-blur-md"
+                }`}>
+                  {res.text}
+                  {res.action && (
+                    <button 
+                      onClick={() => {
+                        onNavigate(res.action?.tab);
+                        setOpen(false);
+                      }}
+                      className="mt-3 flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                      <span>⚡</span>
+                      {res.action.label}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSend} className="p-5 border-t border-white/10 bg-slate-950/80">
+            <div className="relative group">
+              <input 
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="INPUT COMMAND OR QUERY..."
+                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 text-[10px] font-bold tracking-widest text-cyan-100 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 placeholder:text-slate-600 transition-all"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-cyan-500/30">RET_</div>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      <button 
+        onClick={() => setOpen(!open)}
+        className="group relative flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-950 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 hover:scale-110 hover:rotate-3 hover:border-cyan-400 active:scale-95"
+      >
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 opacity-20 group-hover:opacity-100 blur-sm transition-opacity" />
+        <span className="relative text-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">🤖</span>
+      </button>
+    </div>
+  );
+}
+
 export function AdminPanelClient() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -5274,6 +5402,7 @@ export function AdminPanelClient() {
           })}
         </div>
       </nav>
+      {isAuthed && <AdminCopilot onNavigate={switchTab} />}
     </div>
   );
 }
