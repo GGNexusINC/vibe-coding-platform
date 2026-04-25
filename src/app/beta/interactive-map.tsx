@@ -130,76 +130,85 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
       
       {/* Sidebar Controls */}
       {!compact && (
-      <div className="w-full lg:w-80 shrink-0 bg-slate-900/50 backdrop-blur border-r border-white/5 p-6 flex flex-col z-10">
-        <div className="mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-400 border border-cyan-500/20 mb-4">
+      <div className="w-full lg:w-80 shrink-0 bg-slate-950/80 backdrop-blur-xl border-r border-cyan-500/20 p-6 flex flex-col z-10 shadow-[4px_0_24px_rgba(34,211,238,0.05)] relative overflow-hidden">
+        {/* Cyberpunk accent lines */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
+        <div className="absolute bottom-0 right-0 w-1 h-full bg-gradient-to-b from-transparent via-cyan-500 to-transparent opacity-50" />
+        
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 bg-cyan-950/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-cyan-400 border border-cyan-500/30 mb-4 shadow-[0_0_15px_rgba(34,211,238,0.15)] [clip-path:polygon(0_0,100%_0,95%_100%,5%_100%)]">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 bg-cyan-500 shadow-[0_0_8px_#22d3ee]"></span>
             </span>
-            Live Tactical Map
+            Neural Grid Active
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight leading-none mb-2">Sector Map</h2>
-          <p className="text-xs font-medium text-slate-400">Scroll to zoom, click and drag to pan.</p>
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight leading-none mb-2 uppercase" style={{ textShadow: "0 0 20px rgba(255,255,255,0.1)" }}>Sector Map</h2>
+          <p className="text-[10px] font-bold text-cyan-500/60 uppercase tracking-widest">Pan & Zoom to navigate</p>
         </div>
 
         <div className="space-y-4 mb-8">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Filters</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500/50 border-b border-cyan-500/10 pb-2">Display Filters</h3>
           <div className="flex flex-col gap-2">
             <button 
               onClick={() => setFilter("all")}
-              className={`text-left px-4 py-3 rounded-2xl border text-xs font-bold transition ${filter === "all" ? "bg-white/10 border-white/20 text-white" : "bg-transparent border-transparent text-slate-400 hover:bg-white/5"}`}
+              className={`text-left px-4 py-3 border text-[11px] uppercase tracking-wider font-bold transition-all ${filter === "all" ? "bg-cyan-500/10 border-cyan-500/50 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.1)] [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]" : "bg-transparent border-white/5 text-slate-500 hover:bg-white/5 hover:text-slate-300 [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]"}`}
             >
-              🌐 All Hives & Territories
+              <span className="mr-2 opacity-50">01</span> All Territories
             </button>
             <button 
               onClick={() => setFilter("high-level")}
-              className={`text-left px-4 py-3 rounded-2xl border text-xs font-bold transition ${filter === "high-level" ? "bg-orange-500/20 border-orange-500/30 text-orange-400" : "bg-transparent border-transparent text-slate-400 hover:bg-white/5"}`}
+              className={`text-left px-4 py-3 border text-[11px] uppercase tracking-wider font-bold transition-all ${filter === "high-level" ? "bg-amber-500/10 border-amber-500/50 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.1)] [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]" : "bg-transparent border-white/5 text-slate-500 hover:bg-white/5 hover:text-slate-300 [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]"}`}
             >
-              🔥 High-Level Hives (Lvl 5+)
+              <span className="mr-2 opacity-50">02</span> High-Level (Lvl 5+)
             </button>
             <button 
               onClick={() => setFilter("active")}
-              className={`text-left px-4 py-3 rounded-2xl border text-xs font-bold transition ${filter === "active" ? "bg-rose-500/20 border-rose-500/30 text-rose-400" : "bg-transparent border-transparent text-slate-400 hover:bg-white/5"}`}
+              className={`text-left px-4 py-3 border text-[11px] uppercase tracking-wider font-bold transition-all ${filter === "active" ? "bg-rose-500/10 border-rose-500/50 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)] [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]" : "bg-transparent border-white/5 text-slate-500 hover:bg-white/5 hover:text-slate-300 [clip-path:polygon(0_0,100%_0,98%_100%,0_100%)]"}`}
             >
-              ⚔️ Active Conflict Zones
+              <span className="mr-2 opacity-50">03</span> Conflict Zones
             </button>
           </div>
         </div>
 
         {selectedHive ? (
           <div className="mt-auto animate-in slide-in-from-bottom-4 duration-300">
-            <div className="rounded-2xl bg-cyan-500/5 border border-cyan-500/20 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-white">{selectedHive.name}</h3>
-                <span className="rounded-lg bg-white/10 px-2 py-1 text-xs font-bold text-slate-300">Lvl {selectedHive.level}</span>
+            <div className="bg-cyan-950/30 border border-cyan-500/30 p-5 shadow-[inset_0_0_20px_rgba(34,211,238,0.05)] relative">
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-cyan-400" />
+              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-cyan-400" />
+              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-cyan-400" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-cyan-400" />
+              
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">{selectedHive.name}</h3>
+                <span className="bg-cyan-500/20 border border-cyan-500/50 px-2 py-0.5 text-[10px] font-black text-cyan-300 tracking-widest">LVL {selectedHive.level}</span>
               </div>
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-bold uppercase tracking-wider">Coordinates</span>
-                  <span className="text-cyan-400 font-mono">{Math.round(selectedHive.map_x)}, {Math.round(selectedHive.map_y)}</span>
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <span className="text-[10px] text-cyan-500/60 font-black uppercase tracking-widest">Coordinates</span>
+                  <span className="text-cyan-400 font-mono text-xs">{Math.round(selectedHive.map_x)}<span className="text-cyan-500/50">x</span> {Math.round(selectedHive.map_y)}<span className="text-cyan-500/50">y</span></span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-bold uppercase tracking-wider">Sector</span>
-                  <span className="text-white font-medium">{selectedHive.map_label}</span>
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <span className="text-[10px] text-cyan-500/60 font-black uppercase tracking-widest">Sector</span>
+                  <span className="text-white font-bold text-xs uppercase">{selectedHive.map_label}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-bold uppercase tracking-wider">Activity</span>
-                  <span className="text-emerald-400 font-medium">{selectedHive.activity_log ? selectedHive.activity_log.length : 0} Ops</span>
+                <div className="flex justify-between items-center pb-2">
+                  <span className="text-[10px] text-cyan-500/60 font-black uppercase tracking-widest">Operations</span>
+                  <span className="text-amber-400 font-black text-xs">{selectedHive.activity_log ? selectedHive.activity_log.length : 0} Logged</span>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedHive(null)}
-                className="w-full h-10 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition"
+                className="w-full h-10 bg-white/5 hover:bg-cyan-500/20 border border-transparent hover:border-cyan-500/30 text-[10px] uppercase tracking-widest font-black text-slate-400 hover:text-cyan-300 transition-all"
               >
-                Clear Selection
+                Terminate Connection
               </button>
             </div>
           </div>
         ) : (
-          <div className="mt-auto rounded-2xl bg-white/5 border border-white/5 p-5 text-center">
-            <div className="text-2xl mb-2 opacity-50">🎯</div>
-            <p className="text-xs font-medium text-slate-400">Select a map marker to view detailed telemetry.</p>
+          <div className="mt-auto bg-slate-900/50 border border-white/5 p-6 text-center border-dashed">
+            <div className="text-cyan-500/30 text-4xl mb-3 animate-pulse">✜</div>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-500">Awaiting Target Designation</p>
           </div>
         )}
       </div>
@@ -226,8 +235,9 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
             backgroundRepeat: "no-repeat"
           }}
         >
-          {/* Overlay grid */}
-          <div className="absolute inset-0 pointer-events-none opacity-20 mix-blend-overlay [background-image:linear-gradient(rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.2)_1px,transparent_1px)] [background-size:5%_5%]" />
+          {/* Overlay grid - Cyberpunk style */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.15] mix-blend-overlay [background-image:linear-gradient(rgba(34,211,238,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.5)_1px,transparent_1px)] [background-size:100px_100px]" />
+          <div className="absolute inset-0 pointer-events-none opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)] [background-size:20px_20px]" />
           
           {/* Markers */}
           {filteredHives.map((hive) => {
@@ -238,7 +248,12 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
               <div 
                 key={hive.id} 
                 className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer" 
-                style={{ left: `${hive.map_x}%`, top: `${hive.map_y}%` }}
+                style={{ 
+                  left: `${hive.map_x}%`, 
+                  top: `${hive.map_y}%`,
+                  // Inverse scale to keep pins crisp and same size
+                  transform: `translate(-50%, -50%) scale(${1 / scale})`
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedHive(hive);
@@ -246,22 +261,25 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
               >
                 {/* Ping animation for selected or high-level */}
                 {(isSelected || isHighLevel) && (
-                  <div className={`absolute -inset-2 rounded-full animate-ping opacity-75 ${isSelected ? 'bg-cyan-400' : 'bg-orange-500'}`} />
+                  <div className={`absolute -inset-4 rounded-full animate-ping opacity-60 ${isSelected ? 'bg-cyan-400' : 'bg-amber-500'}`} style={{ animationDuration: '2s' }} />
                 )}
                 
-                {/* Map Pin */}
-                <div className={`relative h-5 w-5 rounded-full border-[3px] shadow-2xl transition-all duration-300 ${
+                {/* Cyberpunk Map Pin */}
+                <div className={`relative flex items-center justify-center transition-all duration-300 ${
                   isSelected 
-                    ? 'border-white bg-cyan-400 scale-125 shadow-cyan-500/50' 
+                    ? 'scale-125 z-20' 
                     : isHighLevel 
-                      ? 'border-white bg-orange-500 hover:scale-110 shadow-orange-500/50' 
-                      : 'border-white/80 bg-slate-800 hover:scale-110 hover:bg-slate-600'
-                }`} />
+                      ? 'hover:scale-110 z-10' 
+                      : 'opacity-80 hover:opacity-100'
+                }`}>
+                  <div className={`absolute inset-0 rotate-45 border ${isSelected ? 'border-cyan-400 bg-cyan-400/20 shadow-[0_0_15px_#22d3ee]' : isHighLevel ? 'border-amber-500 bg-amber-500/20 shadow-[0_0_10px_#f59e0b]' : 'border-slate-400 bg-slate-900/50'} w-6 h-6 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2`} />
+                  <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-cyan-300 shadow-[0_0_10px_#67e8f9]' : isHighLevel ? 'bg-amber-300 shadow-[0_0_10px_#fcd34d]' : 'bg-slate-300'}`} />
+                </div>
 
                 {/* Tooltip on hover */}
                 {!isSelected && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-50">
-                    <div className="rounded-xl border border-white/20 bg-slate-950/90 px-3 py-1.5 text-[10px] font-black text-white whitespace-nowrap shadow-2xl backdrop-blur">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-50">
+                    <div className="bg-slate-950/90 border border-cyan-500/30 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-cyan-300 whitespace-nowrap shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
                       {hive.name}
                     </div>
                   </div>
@@ -272,40 +290,50 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
 
           {/* Draft Selection Marker */}
           {draft && (
-            <div className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ left: `${draft.x}%`, top: `${draft.y}%` }}>
-              <div className="h-6 w-6 animate-ping rounded-full bg-orange-500/40" />
-              <div className="absolute inset-0 rounded-full border-2 border-white bg-orange-500 shadow-[0_0_30px_rgba(249,115,22,1)]" />
+            <div className="absolute pointer-events-none z-30" style={{ 
+              left: `${draft.x}%`, 
+              top: `${draft.y}%`,
+              transform: `translate(-50%, -50%) scale(${1 / scale})`
+            }}>
+              <div className="absolute -inset-6 rounded-full animate-ping border border-red-500/50 opacity-100" style={{ animationDuration: '1.5s' }} />
+              <div className="relative w-8 h-8 flex items-center justify-center">
+                <div className="absolute inset-0 border-2 border-red-500 [clip-path:polygon(0_20%,20%_0,80%_0,100%_20%,100%_80%,80%_100%,20%_100%,0_80%)] shadow-[0_0_20px_rgba(239,68,68,0.6)]" />
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+              </div>
             </div>
           )}
         </div>
 
         {/* Controls Overlay */}
-        <div className="absolute bottom-6 right-6 flex flex-col gap-2">
+        <div className="absolute bottom-6 right-6 flex flex-col gap-3">
           {onPick && (
-            <div className="absolute bottom-full right-0 mb-4 rounded-xl bg-slate-950/80 px-4 py-2 border border-white/10 backdrop-blur w-48 text-right shadow-2xl pointer-events-none">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Targeting Active</span>
-              <div className="text-xs font-bold text-slate-300">Click map to set coordinates</div>
+            <div className="absolute bottom-full right-0 mb-4 bg-slate-950/90 border border-red-500/30 px-5 py-3 w-56 text-right shadow-[0_0_30px_rgba(239,68,68,0.15)] pointer-events-none [clip-path:polygon(0_0,100%_0,100%_100%,10%_100%,0_85%)]">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 flex items-center justify-end gap-2 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Targeting Sys Online
+              </span>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click sector to lock coords</div>
             </div>
           )}
           <button 
             onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }}
-            className="h-10 w-10 rounded-xl bg-slate-900/80 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition shadow-2xl"
-            title="Reset View"
+            className="h-10 w-10 bg-cyan-950/80 backdrop-blur border border-cyan-500/30 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition shadow-[0_0_15px_rgba(34,211,238,0.1)] [clip-path:polygon(0_0,100%_0,100%_80%,80%_100%,0_100%)]"
+            title="Recalibrate"
           >
             ⛶
           </button>
-          <div className="flex rounded-xl bg-slate-900/80 backdrop-blur border border-white/10 shadow-2xl overflow-hidden">
+          <div className="flex flex-col bg-cyan-950/80 backdrop-blur border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.1)] [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_80%)]">
             <button 
               onClick={() => setScale(s => Math.min(5, s + 0.5))}
-              className="h-10 w-10 flex items-center justify-center text-white hover:bg-white/10 transition border-r border-white/10"
+              className="h-10 w-10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition border-b border-cyan-500/20 text-lg font-light"
             >
               +
             </button>
             <button 
               onClick={() => setScale(s => Math.max(1, s - 0.5))}
-              className="h-10 w-10 flex items-center justify-center text-white hover:bg-white/10 transition"
+              className="h-10 w-10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition text-lg font-light"
             >
-              -
+              −
             </button>
           </div>
         </div>

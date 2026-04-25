@@ -76,7 +76,47 @@ export async function POST(req: Request) {
         embeds: [embed],
       },
       { webhookUrl: salesWebhookUrl }
-    );
+    ).catch(() => {});
+
+    // Add to User Inventory (Automated Fulfillment) if we know the user
+    if (userId && packSlug) {
+      const { createClient } = await import("@supabase/supabase-js");
+      const { getCurrentWipeCycle } = await import("@/lib/reward-inventory");
+      
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      );
+
+      // Give the actual pack
+      const { error: invError } = await supabase.from("user_inventory").insert({
+        user_id: userId,
+        item_type: "pack",
+        item_slug: packSlug,
+        item_name: packName,
+        wipe_cycle: getCurrentWipeCycle(),
+        status: "available",
+        metadata: {
+          transaction_id: resource.id,
+          price: amount,
+          payer_email: buyerEmail,
+          purchase_date: new Date().toISOString(),
+        },
+      });
+
+      if (!invError) {
+        // Log to package logs
+        await supabase.from("package_logs").insert({
+          user_id: userId,
+          action: "user_purchased",
+          item_name: packName,
+          item_type: "pack",
+          details: `Purchased via PayPal Webhook ($${amount}). Txn: ${resource.id}`,
+          action_at: new Date().toISOString(),
+        });
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
