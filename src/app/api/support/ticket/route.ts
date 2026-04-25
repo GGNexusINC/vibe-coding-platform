@@ -110,7 +110,7 @@ export async function POST(req: Request) {
 
     const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
     const serverAuditWebhookUrl = await getDynamicWebhookUrl("server-audit");
-    const supportWebhookUrl = await getDynamicWebhookUrl("tickets") || "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki";
+    const supportWebhookUrl = await getDynamicWebhookUrl("tickets") || "";
 
     const webhookPayload = {
       username: user?.username ?? "Guest",

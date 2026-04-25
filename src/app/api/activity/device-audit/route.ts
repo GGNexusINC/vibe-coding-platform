@@ -100,7 +100,7 @@ export async function POST(req: Request) {
   const securityWebhook = await getDynamicWebhookUrl("device-audit");
   const targetWebhooks = [
     STAFF_WEBHOOK,
-    securityWebhook || "https://discord.com/api/webhooks/1496704287840014456/UPwHcV0erMTuPBkzWR2Ld0JwSpuU21Hury8nAM_q08ojNEaTvacYkyV5rdMpO4NgMNMA"
+    securityWebhook || ""
   ].filter(Boolean);
 
   for (const webhookUrl of targetWebhooks) {

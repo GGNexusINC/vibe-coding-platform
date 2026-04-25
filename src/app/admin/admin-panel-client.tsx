@@ -5384,7 +5384,7 @@ function WebhooksManager() {
                   type="text"
                   value={webhooks[item.slug] || ""}
                   onChange={(e) => setWebhooks({ ...webhooks, [item.slug]: e.target.value })}
-                  placeholder="https://discord.com/api/webhooks/..."
+                  placeholder=""
                   className="flex-1 rounded-xl border border-white/8 bg-slate-950/50 px-4 py-2.5 text-sm font-mono text-cyan-200 outline-none transition focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50"
                 />
                 <button

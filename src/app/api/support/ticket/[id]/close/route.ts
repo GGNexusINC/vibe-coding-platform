@@ -44,7 +44,7 @@ export async function POST(
   const supportWebhooks = [
     dynamicSupportWebhook,
     env.discordWebhookUrlForPage("support"),
-    "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki"
+    ""
   ].filter(Boolean);
 
   for (const webhookUrl of supportWebhooks) {

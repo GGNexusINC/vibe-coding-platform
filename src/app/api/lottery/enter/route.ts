@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
   const webhookUrl = await getDynamicWebhookUrl("script-hook");
-  const communityWebhookUrl = await getDynamicWebhookUrl("lottery-entries") || "https://discord.com/api/webhooks/1495516351219892504/tMhiHw58fFrdt4TdMfP8MjdiqFlTLiR31P9rbOhXA7k3tAP1hFK3Z7uK_jDMq_15kCwj";
+  const communityWebhookUrl = await getDynamicWebhookUrl("lottery-entries") || "";
   
   if (webhookUrl || communityWebhookUrl) {
     const payload = {
