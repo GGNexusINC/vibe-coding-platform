@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { clearSession, getSession } from "@/lib/session";
-import { sendDiscordWebhook } from "@/lib/discord";
 import { getRecentActivities, logActivity } from "@/lib/activity-log";
 import {
   clientAuditDiscordFields,
@@ -8,6 +7,8 @@ import {
   requestInfoDiscordFields,
   requestInfoMetadata,
 } from "@/lib/request-inspector";
+import { getDynamicWebhookUrl } from "@/lib/webhooks";
+import { brandDiscordWebhookPayload } from "@/lib/discord";
 
 export async function POST(req: Request) {
   const url = new URL(req.url);
@@ -39,26 +40,33 @@ export async function POST(req: Request) {
           origin,
         }),
       });
-      await sendDiscordWebhook({
-        username: "NewHopeGGN Logs",
-        embeds: [{
-          title: "Member Signed Out",
-          color: 0xf59e0b,
-          description: `Session ended <t:${Math.floor(Date.now() / 1000)}:R>.`,
-          fields: [
-            { name: "Member", value: `<@${user.discord_id}> (${user.username})`, inline: true },
-            { name: "Discord ID", value: `\`${user.discord_id}\``, inline: true },
-            { name: "Route", value: "`/auth/sign-out`", inline: true },
-            { name: "Origin", value: `\`${origin}\``, inline: true },
-            { name: "UTC Time", value: `\`${now}\``, inline: true },
-            ...clientAuditDiscordFields(latestClientAudit),
-            ...requestInfoDiscordFields(requestInfo),
-          ],
-          thumbnail: user.avatar_url ? { url: user.avatar_url } : undefined,
-          footer: { text: "NewHopeGGN Logout Audit" },
-          timestamp: now,
-        }],
-      });
+
+      const webhookUrl = await getDynamicWebhookUrl("login-audits");
+      if (webhookUrl) {
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(brandDiscordWebhookPayload({
+            username: "NewHopeGGN Logs",
+            embeds: [{
+              title: "🚪 Member Signed Out",
+              color: 0xf59e0b,
+              description: `Session ended <t:${Math.floor(Date.now() / 1000)}:R>.`,
+              fields: [
+                { name: "Member", value: `<@${user.discord_id}> (${user.username})`, inline: true },
+                { name: "Discord ID", value: `\`${user.discord_id}\``, inline: true },
+                { name: "Route", value: "`/auth/sign-out`", inline: true },
+                { name: "Origin", value: `\`${origin}\``, inline: true },
+                ...clientAuditDiscordFields(latestClientAudit),
+                ...requestInfoDiscordFields(requestInfo),
+              ],
+              thumbnail: user.avatar_url ? { url: user.avatar_url } : undefined,
+              footer: { text: "NewHopeGGN Logout Audit" },
+              timestamp: now,
+            }],
+          })),
+        }).catch(e => console.error("Logout webhook POST failed", e));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
       console.error("Logout webhook failed", msg);
@@ -67,3 +75,4 @@ export async function POST(req: Request) {
 
   return NextResponse.redirect(`${origin}/`, { status: 303 });
 }
+

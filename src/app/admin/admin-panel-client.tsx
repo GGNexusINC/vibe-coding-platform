@@ -5361,6 +5361,7 @@ function WebhooksManager() {
     { slug: "staff-audits", name: "Staff Audits", desc: "Internal logs for admin actions." },
     { slug: "store-sales", name: "Store Sales", desc: "Automated logs for successful PayPal purchases." },
       { slug: "store-attempts", name: "Store Checkout Attempts", desc: "Logs when users click buy to initiate the checkout process." },
+      { slug: "login-audits", name: "Login Audits", desc: "Logs when users sign in or sign out of the dashboard." },
     { slug: "ban-page", name: "Ban Logs", desc: "Enforcement notifications." },
   ];
 

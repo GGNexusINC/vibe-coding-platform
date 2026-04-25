@@ -4,7 +4,6 @@ import {
   fetchDiscordUser,
   getDiscordAvatarUrl,
 } from "@/lib/discord-oauth";
-import { sendDiscordWebhook } from "@/lib/discord";
 import { setSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity-log";
 import {
@@ -12,6 +11,8 @@ import {
   requestInfoDiscordFields,
   requestInfoMetadata,
 } from "@/lib/request-inspector";
+import { getDynamicWebhookUrl } from "@/lib/webhooks";
+import { brandDiscordWebhookPayload } from "@/lib/discord";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -66,25 +67,32 @@ export async function GET(req: Request) {
           origin,
         }),
       });
-      await sendDiscordWebhook({
-        username: "NewHopeGGN Logs",
-        embeds: [{
-          title: "Member Signed In",
-          color: 0x22c55e,
-          description: `Session started <t:${Math.floor(Date.now() / 1000)}:R>.`,
-          fields: [
-            { name: "Member", value: `<@${u.id}> (${username})`, inline: true },
-            { name: "Discord ID", value: `\`${u.id}\``, inline: true },
-            { name: "Next Route", value: `\`${next}\``, inline: true },
-            { name: "Origin", value: `\`${origin}\``, inline: true },
-            { name: "UTC Time", value: `\`${now}\``, inline: true },
-            ...requestInfoDiscordFields(requestInfo),
-          ],
-          thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
-          footer: { text: "NewHopeGGN Login Audit" },
-          timestamp: now,
-        }],
-      });
+
+      const webhookUrl = await getDynamicWebhookUrl("login-audits");
+      if (webhookUrl) {
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(brandDiscordWebhookPayload({
+            username: "NewHopeGGN Logs",
+            embeds: [{
+              title: "✅ Member Signed In",
+              color: 0x22c55e,
+              description: `Session started <t:${Math.floor(Date.now() / 1000)}:R>.`,
+              fields: [
+                { name: "Member", value: `<@${u.id}> (${username})`, inline: true },
+                { name: "Discord ID", value: `\`${u.id}\``, inline: true },
+                { name: "Next Route", value: `\`${next}\``, inline: true },
+                { name: "Origin", value: `\`${origin}\``, inline: true },
+                ...requestInfoDiscordFields(requestInfo),
+              ],
+              thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+              footer: { text: "NewHopeGGN Login Audit" },
+              timestamp: now,
+            }],
+          })),
+        }).catch(e => console.error("Login webhook POST failed", e));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
       console.error("Login webhook failed", msg);
@@ -98,3 +106,4 @@ export async function GET(req: Request) {
     );
   }
 }
+
