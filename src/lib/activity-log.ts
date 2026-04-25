@@ -8,6 +8,7 @@ type ActivityType =
   | "ticket_presence"
   | "bot_status"
   | "purchase_intent"
+  | "purchase_success"
   | "admin_broadcast";
 
 export type ActivityLogEntry = {

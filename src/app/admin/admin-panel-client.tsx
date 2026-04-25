@@ -664,7 +664,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta" | "webhooks">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -1004,6 +1004,7 @@ export function AdminPanelClient() {
     else if (saved === "sales") void loadSales();
     else if (saved === "files") void loadAdminFiles();
     else if (saved === "tickets") void loadTickets();
+    else if (saved === "webhooks") void loadWebhooks();
 
     return () => { window.clearTimeout(timer); window.clearInterval(tick); };
   }, []);
@@ -1271,7 +1272,7 @@ export function AdminPanelClient() {
     setPackageLogsLoading(true);
     
     const params = new URLSearchParams();
-    params.set("limit", "50");
+    params.set("limit", "100");
     params.set("offset", String(offset));
     if (packageLogsFilter !== "all") params.set("action", packageLogsFilter);
     if (packageLogsUserFilter) params.set("user_id", packageLogsUserFilter);
@@ -1846,6 +1847,10 @@ export function AdminPanelClient() {
     }
   }
 
+  const loadWebhooks = useCallback(async () => {
+    // Handled by child component
+  }, []);
+
   async function handleModerate(e: React.FormEvent) {
     e.preventDefault();
     if (!modTargetId.trim()) return;
@@ -1917,10 +1922,12 @@ export function AdminPanelClient() {
     { id: "tickets"   as const, label: "Tickets",    icon: "🎫", badge: openTickets },
     { id: "modlog"    as const, label: "Mod Log",    icon: "⚑" },
     { id: "sales"     as const, label: "Sales",      icon: "💰" },
+    { id: "webhooks"  as const, label: "Webhooks",   icon: "🔗" },
     { id: "files"     as const, label: "Files",      icon: "📁" },
   ] as const;
 
   const systemTabs = [
+
     { id: "beta"      as const, label: "Beta Testers", icon: "🧪", badge: pendingBetaRequests },
   ] as const;
 
@@ -1948,6 +1955,7 @@ export function AdminPanelClient() {
       void loadPackageLogs();
     }
     if (id === "tickets") void loadTickets();
+    if (id === "webhooks") void loadWebhooks();
     if (id === "sales") void loadSales();
     if (id === "files") void loadAdminFiles();
     if (id === "beta") void loadBetaRequests();
@@ -3974,6 +3982,7 @@ export function AdminPanelClient() {
                   <option value="available">Available</option>
                   <option value="used">Used</option>
                   <option value="saved">Saved</option>
+                  <option value="expired">Expired/Claim Window Passed</option>
                   <option value="insurance">Insurance Only</option>
                 </select>
               </div>
@@ -4147,7 +4156,7 @@ export function AdminPanelClient() {
                   ) : packageLogs.length === 0 ? (
                     <div className="px-5 py-8 text-center text-slate-500">No logs found</div>
                   ) : (
-                    <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                    <div className="divide-y divide-white/5 max-h-[600px] overflow-y-auto custom-scrollbar">
                       {packageLogs.map((log) => (
                         <div key={log.id} className="px-5 py-3 grid grid-cols-[1fr_1fr_1.5fr_1fr_1.2fr] gap-4 items-center text-sm">
                           <div className="text-xs text-slate-500">
@@ -4990,6 +4999,16 @@ export function AdminPanelClient() {
           )}
 
           {/* ════ SALES LEADERBOARD ════ */}
+          {activeTab === "webhooks" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold tracking-tight text-white mb-2">Discord Webhooks</h2>
+                <p className="text-slate-400">Manage where logs and notifications are sent across the platform.</p>
+              </div>
+              <WebhooksManager />
+            </div>
+          )}
+
           {activeTab === "sales" && (
             <div className="grid gap-5">
               <div className="flex items-center justify-between">
@@ -5255,6 +5274,154 @@ export function AdminPanelClient() {
           })}
         </div>
       </nav>
+    </div>
+  );
+}
+
+function WebhooksManager() {
+  const [webhooks, setWebhooks] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
+
+  useEffect(() => {
+    void loadWebhooks();
+  }, []);
+
+  const loadWebhooks = async () => {
+    try {
+      const res = await fetch("/api/admin/webhooks");
+      const data = await res.json();
+      if (data.ok) setWebhooks(data.webhooks);
+    } catch (e) {
+      console.error("Failed to load webhooks:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveWebhooks = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/webhooks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhooks }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert("Webhooks updated successfully!");
+      } else {
+        alert("Failed to update: " + data.error);
+      }
+    } catch (e) {
+      alert("Error saving webhooks.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testWebhook = async (slug: string) => {
+    setTesting(slug);
+    try {
+      const url = webhooks[slug];
+      if (!url) {
+        alert("Please set a URL first!");
+        return;
+      }
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: "🔗 **Webhook Test**: Connection verified from Admin Panel.",
+          username: "NewHopeGGN System",
+          embeds: [{
+            title: "Connection Test Successful",
+            description: `This webhook is now dynamically linked to **${slug}**.`,
+            color: 0x0ea5e9,
+            timestamp: new Date().toISOString()
+          }]
+        }),
+      });
+      if (res.ok) alert("Test notification sent!");
+      else alert("Test failed: " + res.status);
+    } catch (e) {
+      alert("Error testing webhook.");
+    } finally {
+      setTesting(null);
+    }
+  };
+
+  const SLUGS = [
+    { slug: "tickets", name: "Support Tickets", desc: "Notifications when a ticket is created/closed." },
+    { slug: "lottery-winners", name: "Lottery Winners", desc: "Public announcement when a winner is drawn." },
+    { slug: "lottery-entries", name: "Lottery Entries", desc: "Log when users enter the lottery." },
+    { slug: "device-audit", name: "Device Audit", desc: "Security logs for hardware/browser fingerprinting." },
+    { slug: "general-chat", name: "General Chat", desc: "Main server updates and announcements." },
+    { slug: "staff-audits", name: "Staff Audits", desc: "Internal logs for admin actions." },
+    { slug: "store-sales", name: "Store Sales", desc: "Automated logs for successful PayPal purchases." },
+    { slug: "ban-page", name: "Ban Logs", desc: "Enforcement notifications." },
+  ];
+
+  if (loading) return <div className="py-20 text-center text-slate-500">Loading webhooks...</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        {SLUGS.map((item) => (
+          <div key={item.slug} className="group relative rounded-2xl border border-white/8 bg-slate-900/40 p-5 transition-all hover:bg-slate-900/60">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  {item.name}
+                  <span className="text-[10px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-slate-500 uppercase tracking-tighter">{item.slug}</span>
+                </h3>
+                <p className="text-xs text-slate-500">{item.desc}</p>
+              </div>
+              
+              <div className="flex flex-1 items-center gap-2 max-w-2xl">
+                <input
+                  type="text"
+                  value={webhooks[item.slug] || ""}
+                  onChange={(e) => setWebhooks({ ...webhooks, [item.slug]: e.target.value })}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="flex-1 rounded-xl border border-white/8 bg-slate-950/50 px-4 py-2.5 text-sm font-mono text-cyan-200 outline-none transition focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50"
+                />
+                <button
+                  onClick={() => testWebhook(item.slug)}
+                  disabled={testing === item.slug}
+                  className="shrink-0 rounded-xl bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                >
+                  {testing === item.slug ? "⌛" : "Test"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="sticky bottom-20 md:bottom-6 flex justify-end">
+        <button
+          onClick={saveWebhooks}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-4 text-sm font-black text-white shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:shadow-cyan-500/30 active:scale-[0.98] disabled:opacity-50"
+        >
+          {saving ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              SAVING...
+            </>
+          ) : (
+            <>
+              <span className="text-lg">💾</span>
+              SAVE WEBHOOK CONFIGURATION
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

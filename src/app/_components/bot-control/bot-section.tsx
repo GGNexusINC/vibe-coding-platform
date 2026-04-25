@@ -207,6 +207,7 @@ export function BotSection({
   const [activePanel, setActivePanel] = useState<"overview" | "translation" | "voice" | "logs" | "ai" | "premium">("overview");
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [notice, setNotice] = useState("");
   const [guildChannels, setGuildChannels] = useState<{ id: string; name: string; type: number }[]>([]);
   const [loadingChannels, setLoadingChannels] = useState(false);
@@ -293,24 +294,48 @@ export function BotSection({
     });
   }
 
-  async function saveSettings() {
+  async function saveSettings(customSettings?: BotSettings) {
     if (!selectedGuildId) return;
+    const settingsToSave = customSettings || settings;
     setSaving(true);
     setNotice("");
+    setSaveSuccess(false);
     try {
       const res = await fetch(`/api/bot/settings?guildId=${selectedGuildId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(settingsToSave),
       });
       const data = await res.json().catch(() => null);
-      setNotice(res.ok && data?.ok ? "Settings saved. Your bot panel is updated." : data?.error || "Could not save settings.");
+      if (res.ok && data?.ok) {
+        setNotice("Settings saved. Your bot panel is updated.");
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+      } else {
+        setNotice(data?.error || "Could not save settings.");
+      }
     } catch {
       setNotice("Network error while saving settings.");
     } finally {
       setSaving(false);
     }
   }
+
+  const handleToggle = (path: string, value: any) => {
+    setSettings(prev => {
+      const newSettings = { ...prev };
+      const parts = path.split('.');
+      let current: any = newSettings;
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+      
+      // Auto-save
+      void saveSettings(newSettings);
+      return newSettings;
+    });
+  };
 
   if (!guilds.length) {
     return (
@@ -372,12 +397,12 @@ export function BotSection({
             <button
               id="save-button"
               type="button"
-              onClick={saveSettings}
+              onClick={() => saveSettings()}
               disabled={!canConfigure || saving}
-              className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-full bg-orange-600 px-8 font-black text-white transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50"
+              className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-full px-8 font-black text-white transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50 ${saveSuccess ? "bg-emerald-600" : "bg-orange-600"}`}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-amber-600 opacity-0 transition-opacity group-hover:opacity-100" />
-              <span className="relative">{saving ? "Deploying..." : "Save Settings"}</span>
+              <div className={`absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 ${saveSuccess ? "bg-emerald-500" : "bg-gradient-to-r from-orange-600 to-amber-600"}`} />
+              <span className="relative">{saving ? "Deploying..." : saveSuccess ? "✓ Applied" : "Save Changes"}</span>
             </button>
           </div>
         </div>
@@ -572,7 +597,7 @@ export function BotSection({
                         <span className="text-xs text-slate-500">Allow /nhtranslate, /vcauto, and /vclisten to function.</span>
                       </div>
                       <button
-                        onClick={() => setSettings({ ...settings, translation: { ...settings.translation, enabled: !settings.translation.enabled } })}
+                        onClick={() => handleToggle('translation.enabled', !settings.translation.enabled)}
                         className={`relative h-7 w-12 rounded-full transition-colors duration-300 ${settings.translation.enabled ? "bg-orange-600" : "bg-slate-800"}`}
                       >
                         <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-lg transition-all duration-300 ${settings.translation.enabled ? "left-6" : "left-1"}`} />
@@ -587,7 +612,7 @@ export function BotSection({
                         <span className="text-xs text-slate-500">Translate automated messages from other bots and webhooks.</span>
                       </div>
                       <button
-                        onClick={() => setSettings({ ...settings, translation: { ...settings.translation, includeBotMessages: !settings.translation.includeBotMessages } })}
+                        onClick={() => handleToggle('translation.includeBotMessages', !settings.translation.includeBotMessages)}
                         className={`relative h-7 w-12 rounded-full transition-colors duration-300 ${settings.translation.includeBotMessages ? "bg-orange-600" : "bg-slate-800"}`}
                       >
                         <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-lg transition-all duration-300 ${settings.translation.includeBotMessages ? "left-6" : "left-1"}`} />
@@ -721,7 +746,7 @@ export function BotSection({
                   <input
                     type="checkbox"
                     checked={settings.logging.enabled}
-                    onChange={(event) => setSettings({ ...settings, logging: { ...settings.logging, enabled: event.target.checked } })}
+                    onChange={(event) => handleToggle('logging.enabled', event.target.checked)}
                     className="h-5 w-5 accent-orange-600"
                   />
                   Logs enabled
@@ -827,7 +852,7 @@ export function BotSection({
                       <input
                         type="checkbox"
                         checked={settings.ai.bilingual}
-                        onChange={(event) => setSettings({ ...settings, ai: { ...settings.ai, bilingual: event.target.checked } })}
+                        onChange={(event) => handleToggle('ai.bilingual', event.target.checked)}
                         className="peer sr-only"
                       />
                       <div className="peer h-6 w-11 rounded-full bg-slate-800 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-orange-600 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
@@ -849,15 +874,10 @@ export function BotSection({
                                   checked={settings.ai.channelIds.includes(channel.id)}
                                   onChange={(e) => {
                                     const checked = e.target.checked;
-                                    setSettings(s => ({
-                                      ...s,
-                                      ai: {
-                                        ...s.ai,
-                                        channelIds: checked 
-                                          ? [...s.ai.channelIds, channel.id]
-                                          : s.ai.channelIds.filter(id => id !== channel.id)
-                                      }
-                                    }));
+                                    const newChannels = checked 
+                                      ? [...settings.ai.channelIds, channel.id]
+                                      : settings.ai.channelIds.filter(id => id !== channel.id);
+                                    handleToggle('ai.channelIds', newChannels);
                                   }}
                                   className="h-4 w-4 accent-indigo-600"
                                 />

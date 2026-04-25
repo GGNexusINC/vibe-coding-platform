@@ -39,24 +39,35 @@ export async function POST(
 
   const ts = Math.floor(Date.now() / 1000);
   const closedBy = isAdmin ? (admin?.username ?? "Admin") : (user?.username ?? "Ticket owner");
-  await sendDiscordWebhook(
-    {
-      username: "NewHopeGGN Support",
-      embeds: [{
-        title: "Ticket Closed",
-        color: 0x64748b,
-        fields: [
-          { name: "Subject", value: ticketRow?.subject ?? "Unknown", inline: true },
-          { name: "User", value: ticketRow?.guest_username ?? "Guest", inline: true },
-          { name: "Closed By", value: closedBy, inline: true },
-          { name: "Time", value: `<t:${ts}:F>`, inline: false },
-        ],
-        footer: { text: `Ticket ID: ${ticketId}` },
-        timestamp: new Date().toISOString(),
-      }],
-    },
-    { webhookUrl: env.discordWebhookUrlForPage("tickets") || env.discordWebhookUrlForPage("support") },
-  ).catch(() => {});
+  const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
+  const dynamicSupportWebhook = await getDynamicWebhookUrl("tickets");
+  const supportWebhooks = [
+    dynamicSupportWebhook,
+    env.discordWebhookUrlForPage("support"),
+    "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki"
+  ].filter(Boolean);
+
+  for (const webhookUrl of supportWebhooks) {
+    if (!webhookUrl) continue;
+    await sendDiscordWebhook(
+      {
+        username: "NewHopeGGN Support",
+        embeds: [{
+          title: "Ticket Closed",
+          color: 0x64748b,
+          fields: [
+            { name: "Subject", value: ticketRow?.subject ?? "Unknown", inline: true },
+            { name: "User", value: ticketRow?.guest_username ?? "Guest", inline: true },
+            { name: "Closed By", value: closedBy, inline: true },
+            { name: "Time", value: `<t:${ts}:F>`, inline: false },
+          ],
+          footer: { text: `Ticket ID: ${ticketId}` },
+          timestamp: new Date().toISOString(),
+        }],
+      },
+      { webhookUrl },
+    ).catch(() => {});
+  }
 
   // Only admins can delete Discord channels
   if (!isAdmin || !channelId || !botToken) {

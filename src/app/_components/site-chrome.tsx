@@ -8,8 +8,7 @@ import { MainNav } from "@/app/_components/main-nav";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideChrome =
-    pathname.startsWith("/bot") || pathname.startsWith("/dashboard");
+  const hideChrome = pathname.startsWith("/bot");
 
   return (
     <div className="relative z-10 min-h-screen flex flex-col">

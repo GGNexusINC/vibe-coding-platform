@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { InteractiveMap } from "./interactive-map";
 
 interface RaidParticipant {
   id: string;
@@ -241,14 +242,17 @@ export function RaidDashboard({ user }: RaidDashboardProps) {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+      <div className="flex h-96 items-center justify-center">
+        <div className="relative h-12 w-12">
+          <div className="absolute inset-0 rounded-full border-4 border-white/5" />
+          <div className="absolute inset-0 rounded-full border-4 border-t-cyan-500 animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8 pb-20">
       <HiveCommandCenter
         hives={hives}
         loading={hivesLoading}
@@ -259,106 +263,152 @@ export function RaidDashboard({ user }: RaidDashboardProps) {
         pendingHiveAction={pendingHiveAction}
       />
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-4 shadow-2xl shadow-black/20">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">Beta Operations</p>
-            <h2 className="text-2xl font-black text-white">Raid Switch</h2>
-            <p className="text-sm text-slate-400">Create raid, counter-raid, and hive-defense teams that survive refreshes.</p>
-          </div>
-          <button
-            onClick={() => void fetchRaids()}
-            className="rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800"
-          >
-            Refresh
-          </button>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-3">
-          {Object.entries(raidTypeLabels).map(([id, info]) => (
+      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-[2.5rem] border border-white/5 bg-slate-900/30 p-8 backdrop-blur-xl">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400 mb-1">Beta Operations</p>
+              <h2 className="text-3xl font-black text-white tracking-tight">Raid Switch</h2>
+              <p className="text-sm font-medium text-slate-500">Create raid, counter-raid, and hive-defense teams.</p>
+            </div>
             <button
-              key={id}
-              type="button"
-              onClick={() => openCreate(id as "normal" | "counter" | "defense")}
-              className="rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-left transition hover:-translate-y-0.5 hover:border-amber-400/40 hover:bg-slate-900"
+              onClick={() => void fetchRaids()}
+              className="h-11 rounded-2xl border border-white/10 bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-900"
             >
-              <span className={`block text-[10px] font-black uppercase tracking-[0.22em] ${info.color}`}>{info.icon}</span>
-              <span className="mt-1 block text-base font-black text-white">{info.label}</span>
-              <span className="mt-1 block text-xs text-slate-500">{info.copy}</span>
+              Refresh
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {actionError && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200">
-          {actionError}
-        </div>
-      )}
+          <div className="grid gap-3 sm:grid-cols-3 mb-10">
+            {Object.entries(raidTypeLabels).map(([id, info]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => openCreate(id as "normal" | "counter" | "defense")}
+                className="group relative overflow-hidden rounded-2xl border border-white/5 bg-slate-950 p-6 text-left transition hover:scale-[1.02] hover:border-white/20 active:scale-[0.98]"
+              >
+                <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${info.color} mb-2`}>{info.icon}</div>
+                <div className="text-lg font-black text-white mb-1">{info.label}</div>
+                <div className="text-xs font-medium text-slate-500 line-clamp-1">{info.copy}</div>
+              </button>
+            ))}
+          </div>
 
-      {raids.length === 0 ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-xs font-black tracking-widest text-cyan-200">CLEAR</div>
-          <h3 className="text-lg font-bold text-white">No Active Teams</h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">Create a raid or hive defense team above. Members will see a clear Join button and role picker.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {raids.map((raid) => {
-            const inRaid = isInRaid(raid);
-            const participantCount = raid.raid_participants.filter((participant) => participant.status === "joined" || participant.status === "confirmed").length;
-            const typeInfo = raidTypeLabels[raid.raid_type] || raidTypeLabels.normal;
+          {actionError && (
+            <div className="mb-8 rounded-2xl border border-rose-500/20 bg-rose-500/5 px-5 py-4 text-sm font-bold text-rose-300">
+              {actionError}
+            </div>
+          )}
 
-            return (
-              <article key={raid.id} className={`rounded-3xl border p-4 ${inRaid ? "border-amber-400/40 bg-amber-500/10" : "border-slate-800 bg-slate-900/60"}`}>
-                <button type="button" onClick={() => setSelectedRaid(raid)} className="block w-full text-left">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-[10px] font-black tracking-widest text-slate-200">{typeInfo.icon}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-xs font-black uppercase ${typeInfo.color}`}>{typeInfo.label}</span>
-                        <span className="text-xs text-slate-500">{new Date(raid.created_at).toLocaleTimeString()}</span>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300">{raid.status}</span>
-                        {inRaid && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-200">Joined</span>}
+          {raids.length === 0 ? (
+            <div className="rounded-[2rem] border border-white/5 bg-slate-950/50 p-12 text-center">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-[10px] font-black tracking-[0.3em] text-slate-500">CLEAR</div>
+              <h3 className="text-xl font-black text-white mb-2">No Active Teams</h3>
+              <p className="text-sm font-medium text-slate-500 max-w-sm mx-auto leading-relaxed">
+                Create a raid or hive defense team above. Members will see a clear Join button and role picker.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {raids.map((raid) => {
+                const inRaid = isInRaid(raid);
+                const participantCount = raid.raid_participants.filter((p) => p.status === "joined" || p.status === "confirmed").length;
+                const typeInfo = raidTypeLabels[raid.raid_type] || raidTypeLabels.normal;
+
+                return (
+                  <article key={raid.id} className={`group relative rounded-[2rem] border p-1 transition-all ${inRaid ? "border-amber-400/30 bg-amber-500/10" : "border-white/5 bg-slate-950/50 hover:bg-slate-950"}`}>
+                    <div className="p-6">
+                      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-[10px] font-black tracking-[0.2em] text-white">
+                          {typeInfo.icon}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${typeInfo.color}`}>{typeInfo.label}</span>
+                            <span className="h-1 w-1 rounded-full bg-white/20" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">{new Date(raid.created_at).toLocaleTimeString()}</span>
+                            {inRaid && <span className="rounded-full bg-amber-400/20 px-3 py-1 text-[8px] font-black uppercase tracking-[0.1em] text-amber-300">Active Duty</span>}
+                          </div>
+                          <h3 className="text-2xl font-black text-white tracking-tight mb-2 truncate">{raid.target_location}</h3>
+                          {raid.description && <p className="text-sm font-medium text-slate-500 mb-6 line-clamp-2 leading-relaxed">{raid.description}</p>}
+                          
+                          <div className="flex flex-wrap items-center gap-6">
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Squad</div>
+                              <div className="text-sm font-black text-white">{participantCount} <span className="text-slate-500">/ {raid.team_size}</span></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Commander</div>
+                              <div className="text-sm font-black text-white truncate max-w-[120px]">{raid.creator_username}</div>
+                            </div>
+                            {raid.enemy_count && (
+                              <div className="flex items-center gap-2">
+                                <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Intel</div>
+                                <div className="text-sm font-black text-rose-400">{raid.enemy_count} Contact</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <h3 className="mt-1 break-words text-lg font-black text-white">{raid.target_location}</h3>
-                      {raid.description && <p className="mt-1 line-clamp-2 text-sm text-slate-400">{raid.description}</p>}
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                        <span className="rounded-lg bg-slate-950 px-2.5 py-1 text-slate-300">{participantCount}/{raid.team_size} members</span>
-                        {raid.enemy_count ? <span className="rounded-lg bg-red-500/10 px-2.5 py-1 text-red-200">{raid.enemy_count} enemies</span> : null}
-                        <span className="rounded-lg bg-slate-950 px-2.5 py-1 text-slate-400">Leader: {raid.creator_username}</span>
+
+                      <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-white/5 pt-6">
+                        <div className="flex flex-wrap gap-2">
+                          {raid.raid_participants.slice(0, 5).map((p) => (
+                            <div key={p.id} className="h-8 rounded-xl border border-white/10 bg-slate-900 px-3 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                              <span className="text-[10px] font-bold text-slate-300 truncate max-w-[80px]">{p.username}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => setSelectedRaid(raid)}
+                          className={`h-11 px-6 rounded-xl text-sm font-black transition-all ${inRaid ? "bg-amber-400 text-amber-950" : "bg-white text-slate-950 hover:bg-slate-200"}`}
+                        >
+                          {inRaid ? "Manage Station" : "Join Operation"}
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </button>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div className="flex flex-wrap gap-2">
-                    {raid.raid_participants.slice(0, 6).map((participant) => (
-                      <span key={participant.id} className="rounded-full border border-white/10 bg-slate-950 px-2.5 py-1 text-xs text-slate-300">
-                        {participant.username} · {getRoleLabel(participant.role)}
-                      </span>
-                    ))}
+        <aside className="space-y-6">
+          <div className="rounded-[2.5rem] border border-white/5 bg-slate-900/30 p-8 backdrop-blur-xl">
+            <h3 className="text-sm font-black uppercase tracking-[0.3em] text-slate-500 mb-6">Tactical Comms</h3>
+            <div className="space-y-4">
+              <a href="https://discord.gg/hopeggn" target="_blank" className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950 p-5 group transition hover:border-indigo-500/40">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl">💬</div>
+                  <div>
+                    <div className="text-sm font-black text-white group-hover:text-indigo-400 transition">Raid Discord</div>
+                    <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Live Voice Channels</div>
                   </div>
-                  {inRaid ? (
-                    <button type="button" onClick={() => setSelectedRaid(raid)} className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-200">
-                      Manage My Role
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => joinRaid(raid).catch((err) => setActionError(err instanceof Error ? err.message : "Failed to join raid"))}
-                      className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-black text-white"
-                    >
-                      Join Team
-                    </button>
-                  )}
                 </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+                <div className="text-slate-700 group-hover:translate-x-1 transition-transform">→</div>
+              </a>
+              <div className="rounded-2xl border border-white/5 bg-slate-950 p-6">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">Operational Guidelines</div>
+                <ul className="space-y-3">
+                  {[
+                    "Always mark active when joining raid",
+                    "Update enemy counts in real-time",
+                    "Keep comms focused during defense",
+                    "Log off station when mission ends"
+                  ].map((rule) => (
+                    <li key={rule} className="flex items-start gap-3 text-xs font-bold text-slate-400">
+                      <span className="h-1 w-1 rounded-full bg-cyan-500 mt-1.5 flex-shrink-0" />
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {showCreateModal && (
         <CreateRaidModal
@@ -367,7 +417,7 @@ export function RaidDashboard({ user }: RaidDashboardProps) {
           onClose={() => setShowCreateModal(false)}
           onCreated={(createdRaid) => {
             setShowCreateModal(false);
-            if (createdRaid) setRaids((current) => [createdRaid, ...current.filter((raid) => raid.id !== createdRaid.id)]);
+            if (createdRaid) setRaids((current) => [createdRaid, ...current.filter((r) => r.id !== createdRaid.id)]);
             window.setTimeout(() => void fetchRaids(), 350);
           }}
         />
@@ -427,104 +477,93 @@ function HiveCommandCenter({ hives, loading, user, onCreateHive, onActivity, onC
   const featuredHive = myHives[0] || hives[0] || null;
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_32%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-4 shadow-2xl shadow-cyan-950/20 sm:p-5">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">Once Human Hive Command</p>
-          <h2 className="text-3xl font-black text-white">Build your hive, mark the map, earn rewards.</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Hives gain XP when members stay active, defend, support allies, and launch raid alerts. Higher level hives unlock free store pack rewards.
+    <section className="relative overflow-hidden rounded-[3rem] border border-white/5 bg-slate-900/30 p-10 backdrop-blur-3xl shadow-2xl">
+      <div className="absolute -left-[10%] top-[-20%] h-[50%] w-[50%] rounded-full bg-cyan-500/10 blur-[100px] pointer-events-none" />
+      <div className="absolute -right-[10%] bottom-[-20%] h-[50%] w-[50%] rounded-full bg-orange-500/10 blur-[100px] pointer-events-none" />
+      
+      <div className="relative mb-12 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-3 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-cyan-300 mb-6">
+            Hive Management Protocol
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-white leading-none tracking-tight mb-6">
+            Establish Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Stronghold</span>.
+          </h2>
+          <p className="text-lg font-medium text-slate-400 leading-relaxed">
+            Hives gain XP when members stay active, defend, and launch raid alerts. Higher level hives unlock exclusive NewHope rewards and automatic store packs.
           </p>
         </div>
-        <button type="button" onClick={onCreateHive} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-500/20">
-          Create Hive
+        <button 
+          onClick={onCreateHive} 
+          className="h-16 px-10 rounded-[1.5rem] bg-gradient-to-r from-cyan-500 to-blue-600 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Initialize Hive
         </button>
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-sm text-slate-400">Loading hives...</div>
+        <div className="h-64 flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest animate-pulse">Syncing Hive Clusters...</div>
       ) : hives.length === 0 ? (
-        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-6 text-center">
-          <h3 className="text-xl font-black text-white">No hives yet</h3>
-          <p className="mt-2 text-sm text-slate-400">Create the first NewHopeGGN hive and pin your territory on the map.</p>
-          <button type="button" onClick={onCreateHive} className="mt-4 rounded-xl bg-cyan-500 px-5 py-2 text-sm font-black text-white">Create First Hive</button>
+        <div className="rounded-[2.5rem] border border-white/5 bg-slate-950/50 p-16 text-center">
+          <h3 className="text-3xl font-black text-white mb-4">No Hives Established</h3>
+          <p className="text-slate-500 font-medium max-w-md mx-auto mb-10">Be the first to plant a flag. Mark your territory on the RaidZone map and start earning XP.</p>
+          <button onClick={onCreateHive} className="h-14 px-8 rounded-2xl bg-white text-sm font-black text-slate-950 uppercase tracking-widest">Deploy Hive v1.0</button>
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-3 sm:p-4">
-            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-300">RaidZone Hive Map</h3>
-                <p className="mt-1 text-xs text-slate-500">Use the Once Human RaidZone map for exact callouts, then pin your hive here for NewHope coordination.</p>
+        <div className="grid gap-8 xl:grid-cols-[1.3fr_0.7fr]">
+          <div className="space-y-6">
+            <div className="rounded-[2.5rem] border border-white/5 bg-slate-950/70 p-8">
+              <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-[0.3em] text-slate-400">RaidZone Hive Map</h3>
+                  <p className="mt-1 text-xs font-medium text-slate-600 uppercase tracking-tight">Syncing Live Global Coordinates</p>
+                </div>
+                <div className="flex items-center gap-3">
+                   <div className="flex -space-x-2">
+                     {hives.slice(0, 3).map((h) => (
+                       <div key={h.id} className="h-8 w-8 rounded-full border-2 border-slate-950 bg-cyan-500/20 flex items-center justify-center text-[10px] font-black text-cyan-300 backdrop-blur-sm">
+                         {h.name[0]}
+                       </div>
+                     ))}
+                   </div>
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">{hives.length} ACTIVE PINS</span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-[10px] font-black text-cyan-200">{hives.length} pins</span>
-                <a href={RAIDZONE_MAP_URL} target="_blank" rel="noreferrer" className="rounded-full border border-cyan-300/40 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100 hover:bg-cyan-300/20">
-                  Open RaidZone
-                </a>
-              </div>
+              <InteractiveMap hives={hives} compact className="rounded-[1.5rem] mt-6" />
             </div>
-            <HiveMap hives={hives} />
           </div>
 
-          <div className="space-y-3">
-            <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-4">
-              <h3 className="text-sm font-black uppercase tracking-[0.18em] text-amber-200">Hive Leaderboard</h3>
-              <div className="mt-3 space-y-2">
-                {hives.slice(0, 5).map((hive, index) => (
-                  <div key={hive.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-slate-950/70 p-3">
-                    <span className="text-sm font-black text-amber-200">#{index + 1}</span>
-                    <div className="min-w-0">
-                      <p className="break-words text-sm font-black text-white">{hive.name}</p>
-                      <p className="text-xs text-slate-500">{hive.members.length} members · {hive.map_label}</p>
+          <div className="space-y-6">
+            <div className="rounded-[2.5rem] border border-amber-500/20 bg-amber-500/5 p-8">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-amber-500 mb-6">Hive Rankings</h3>
+              <div className="space-y-3">
+                {hives.slice(0, 3).map((hive, index) => (
+                  <div key={hive.id} className="flex items-center gap-4 rounded-2xl bg-slate-950/80 p-4 border border-white/5 group hover:border-amber-500/30 transition">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-sm font-black text-amber-500">#{index + 1}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-black text-white truncate">{hive.name}</div>
+                      <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{hive.members.length} Squad · {hive.map_label}</div>
                     </div>
-                    <span className="rounded-xl bg-amber-400/10 px-2 py-1 text-xs font-black text-amber-200">Lv {hive.level}</span>
+                    <div className="text-xs font-black text-amber-400">LVL {hive.level}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {featuredHive && (
-              <HiveActionCard hive={featuredHive} user={user} isMine={myHives.some((hive) => hive.id === featuredHive.id)} onActivity={onActivity} onCreateRaid={onCreateRaid} pendingHiveAction={pendingHiveAction} />
+              <HiveActionCard 
+                hive={featuredHive} 
+                user={user} 
+                isMine={myHives.some((h) => h.id === featuredHive.id)} 
+                onActivity={onActivity} 
+                onCreateRaid={onCreateRaid} 
+                pendingHiveAction={pendingHiveAction} 
+              />
             )}
           </div>
         </div>
       )}
     </section>
-  );
-}
-
-function HiveMap({ hives, draft, onPick }: { hives: HiveRecord[]; draft?: { x: number; y: number }; onPick?: (x: number, y: number) => void }) {
-  return (
-    <div
-      role={onPick ? "button" : undefined}
-      tabIndex={onPick ? 0 : undefined}
-      onClick={(event) => {
-        if (!onPick) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        onPick(((event.clientX - rect.left) / rect.width) * 100, ((event.clientY - rect.top) / rect.height) * 100);
-      }}
-      className="relative aspect-square min-h-[260px] overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950 bg-contain bg-center bg-no-repeat shadow-inner shadow-cyan-950/40"
-      style={{ backgroundImage: "url('/once-human-raidzone-full-map.jpg')" }}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_22%,rgba(34,211,238,0.1),transparent_22%),linear-gradient(135deg,rgba(2,6,23,0.14),rgba(15,23,42,0.34))]" />
-      <div className="absolute inset-0 pointer-events-none opacity-10 [background-image:linear-gradient(rgba(255,255,255,.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.1)_1px,transparent_1px)] [background-size:8%_8%]" />
-      <a href={RAIDZONE_MAP_URL} target="_blank" rel="noreferrer" className="absolute right-3 top-3 rounded-full border border-cyan-300/40 bg-slate-950/75 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100 shadow-2xl backdrop-blur hover:bg-cyan-300/20">
-        Open live map
-      </a>
-      {hives.map((hive) => (
-        <div key={hive.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${hive.map_x}%`, top: `${hive.map_y}%` }}>
-          <div className="h-5 w-5 rounded-full border-2 border-white bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.9)]" />
-          <div className="mt-1 max-w-[9rem] rounded-lg border border-cyan-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-black text-white shadow-xl backdrop-blur">{hive.name}</div>
-        </div>
-      ))}
-      {draft && (
-        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${draft.x}%`, top: `${draft.y}%` }}>
-          <div className="h-5 w-5 animate-pulse rounded-full border-2 border-white bg-amber-400 shadow-[0_0_22px_rgba(251,191,36,0.9)]" />
-        </div>
-      )}
-      {onPick && <div className="absolute bottom-3 left-3 rounded-xl bg-slate-950/80 px-3 py-2 text-xs font-bold text-slate-300">Tap the map to set your hive location</div>}
-    </div>
   );
 }
 
@@ -542,43 +581,59 @@ function HiveActionCard({ hive, user, isMine, onActivity, onCreateRaid, pendingH
   const checkinLocked = !!checkinAvailableAt && checkinAvailableAt.getTime() > Date.now();
   const checkinPending = pendingHiveAction === `${hive.id}:checkin`;
   const checkinLabel = checkinPending
-    ? "Recording activity..."
+    ? "Recording..."
     : checkinLocked
-      ? `Active marked until ${checkinAvailableAt?.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+      ? `Cooldown: ${checkinAvailableAt?.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
       : "Mark Active +15 XP";
+
   return (
-    <div className="rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-4 shadow-2xl shadow-cyan-950/20">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{isMine ? "Your Hive" : "Featured Hive"}</p>
-          <h3 className="break-words text-xl font-black text-white">{hive.name}</h3>
-          <p className="text-xs text-slate-500">Owner: {hive.owner_username}</p>
+    <div className="rounded-[2.5rem] border border-cyan-500/20 bg-cyan-500/5 p-8 shadow-2xl shadow-cyan-950/20">
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400 mb-2">{isMine ? "Your Stronghold" : "Selected Target"}</div>
+          <h3 className="text-2xl font-black text-white leading-none tracking-tight mb-2 truncate max-w-[180px]">{hive.name}</h3>
+          <div className="text-[10px] font-bold text-slate-500 uppercase">Commanded by {hive.owner_username}</div>
         </div>
-        <span className="rounded-2xl bg-cyan-400/10 px-3 py-2 text-sm font-black text-cyan-100">Lv {hive.level}</span>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-xl font-black text-cyan-400 shadow-lg shadow-cyan-500/10">
+          {hive.level}
+        </div>
       </div>
-      <div className="mt-4">
-        <div className="mb-1 flex justify-between text-xs font-bold text-slate-400">
-          <span>Hive XP</span>
-          <span>{hive.xp}/{hive.next_reward_xp}</span>
+
+      <div className="mb-10">
+        <div className="flex justify-between items-end mb-3 font-black uppercase tracking-widest">
+          <span className="text-[10px] text-slate-500">Evolution Progress</span>
+          <span className="text-xs text-white">{hive.xp} <span className="text-slate-600">/ {hive.next_reward_xp}</span></span>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-slate-800">
-          <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" style={{ width: `${progress}%` }} />
+        <div className="h-4 rounded-full bg-slate-950 p-1 border border-white/5 overflow-hidden">
+          <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-all duration-500 shadow-[0_0_15px_rgba(34,211,238,0.5)]" style={{ width: `${progress}%` }} />
         </div>
-        <p className="mt-2 text-xs text-amber-200">Next reward: free beta store pack at full bar.</p>
+        <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-amber-500">Reward: FREE BETA STORE PACK @ 100%</p>
       </div>
-      <div className="mt-4 grid gap-2">
+
+      <div className="grid gap-3">
         <button
-          type="button"
           onClick={() => onActivity(hive.id, "checkin")}
           disabled={checkinLocked || checkinPending}
-          className="rounded-xl border border-emerald-300/20 bg-emerald-500/20 px-3 py-3 text-sm font-black text-emerald-200 shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-400/25 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
+          className="h-14 rounded-2xl bg-emerald-500 text-xs font-black uppercase tracking-[0.2em] text-emerald-950 shadow-xl shadow-emerald-500/20 transition hover:scale-[1.02] disabled:opacity-50 disabled:grayscale disabled:scale-100"
         >
           {checkinLabel}
         </button>
-        <button type="button" onClick={() => onCreateRaid(hive, "defense")} className="rounded-xl border border-red-300/20 bg-red-500/20 px-3 py-3 text-sm font-black text-red-200 shadow-lg shadow-red-950/20 transition hover:-translate-y-0.5 hover:bg-red-400/25">Open Defense Console</button>
-        <button type="button" onClick={() => onCreateRaid(hive, "normal")} className="rounded-xl border border-amber-300/20 bg-amber-500/20 px-3 py-3 text-sm font-black text-amber-200 shadow-lg shadow-amber-950/20 transition hover:-translate-y-0.5 hover:bg-amber-400/25">Open Raid Console</button>
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            onClick={() => onCreateRaid(hive, "defense")} 
+            className="h-14 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-[10px] font-black uppercase tracking-[0.2em] text-rose-400 hover:bg-rose-500/20 transition"
+          >
+            Defend
+          </button>
+          <button 
+            onClick={() => onCreateRaid(hive, "normal")} 
+            className="h-14 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-[10px] font-black uppercase tracking-[0.2em] text-amber-400 hover:bg-amber-500/20 transition"
+          >
+            Raid
+          </button>
+        </div>
       </div>
-      <p className="mt-3 text-[11px] font-bold text-slate-500">Activity XP is protected by server cooldowns, so refresh-spam will not farm hive levels.</p>
+      <p className="mt-6 text-[10px] font-bold text-slate-600 text-center uppercase tracking-tight">Anti-Cheat System Active · Refreshes are logged</p>
     </div>
   );
 }
@@ -779,7 +834,7 @@ function CreateHiveModal({ onClose, onCreated }: { onClose: () => void; onCreate
               {loading ? "Creating..." : "Create Hive"}
             </button>
           </div>
-          <HiveMap hives={[]} draft={{ x: form.mapX, y: form.mapY }} onPick={(x, y) => setForm({ ...form, mapX: x, mapY: y })} />
+          <InteractiveMap hives={[]} draft={{ x: form.mapX, y: form.mapY }} onPick={(x, y) => setForm({ ...form, mapX: x, mapY: y })} compact className="rounded-2xl" />
         </form>
       </div>
     </div>

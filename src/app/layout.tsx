@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
-  applicationName: "VoxBridge",
+  applicationName: "NewHopeGGN",
   keywords: ["Once Human", "server", "community", "wipe packs", "VIP", "Discord"],
   openGraph: {
     title: "NewHopeGGN | Once Human Community",

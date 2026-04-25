@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "404 — Page Not Found | VoxBridge",
+  title: "404 — Page Not Found | NewHopeGGN",
 };
 
 export default function NotFound() {
@@ -47,7 +47,7 @@ export default function NotFound() {
       </div>
 
       <div className="mt-8 font-mono text-[10px] uppercase tracking-[0.3em] text-stone-600">
-        VoxBridge · Once Human Community
+        NewHopeGGN · Once Human Community
       </div>
     </div>
   );

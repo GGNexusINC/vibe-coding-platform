@@ -108,32 +108,38 @@ export async function POST(req: Request) {
       console.error("[ticket] Failed to save ticket:", JSON.stringify(dbError));
     }
 
-    const serverAuditWebhookUrl = env.discordWebhookUrlForPage("server-audit");
-    const supportWebhookUrl = env.discordWebhookUrlForPage("support");
+    const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
+    const serverAuditWebhookUrl = await getDynamicWebhookUrl("server-audit");
+    const supportWebhookUrl = await getDynamicWebhookUrl("tickets") || "https://discord.com/api/webhooks/1495725476491296779/-s0Ra1f5rse294pNpQdgG2DKiv0ebXjF2IMJHco6asFR50cDpqsPUBHagU8ydfEy1Vki";
+
+    const webhookPayload = {
+      username: user?.username ?? "Guest",
+      discord_id: user?.discord_id,
+      avatar_url: user?.avatar_url ?? undefined,
+    };
+
+    // 1. Always log to Server Audit if configured
     if (serverAuditWebhookUrl) {
       await sendTicketToWebhook(
         serverAuditWebhookUrl,
-        {
-          username: user?.username ?? "Guest",
-          discord_id: user?.discord_id,
-          avatar_url: user?.avatar_url ?? undefined,
-        },
+        webhookPayload,
         subject,
         message,
         ticketChannelId,
-      );
-    } else if (supportWebhookUrl && !ticketChannelId) {
+      ).catch(() => null);
+    }
+
+    // 2. Log to Support channel only if:
+    //    a) We didn't create a private Discord channel (fallback)
+    //    b) AND we didn't already send to the exact same URL via serverAudit (to avoid double-posting)
+    if (supportWebhookUrl && !ticketChannelId && supportWebhookUrl !== serverAuditWebhookUrl) {
       await sendTicketToWebhook(
         supportWebhookUrl,
-        {
-          username: user?.username ?? "Guest",
-          discord_id: user?.discord_id,
-          avatar_url: user?.avatar_url ?? undefined,
-        },
+        webhookPayload,
         subject,
         message,
         ticketChannelId,
-      );
+      ).catch(() => null);
     }
 
     return NextResponse.json({

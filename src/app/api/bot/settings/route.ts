@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { fetchUserGuilds } from "@/lib/discord-oauth";
@@ -44,12 +46,27 @@ export async function GET(req: Request) {
 
   try {
 
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("bot_settings")
-      .select("*")
-      .eq("guild_id", guildId)
-      .single();
+    let data, error;
+    if (adminSession) {
+      const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+      const adminSupabase = createSupabaseAdminClient();
+      const res = await adminSupabase
+        .from("bot_settings")
+        .select("*")
+        .eq("guild_id", guildId)
+        .single();
+      data = res.data;
+      error = res.error;
+    } else {
+      const supabase = await createSupabaseServerClient();
+      const res = await supabase
+        .from("bot_settings")
+        .select("*")
+        .eq("guild_id", guildId)
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error && error.code !== "PGRST116") { // PGRST116 is 'no rows'
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -131,39 +148,38 @@ export async function PATCH(req: Request) {
     const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
     const adminSupabase = createSupabaseAdminClient();
 
-    const { data: existing } = await supabase
+    const { data: existing } = await adminSupabase
       .from("bot_settings")
       .select("settings")
       .eq("guild_id", guildId)
       .maybeSingle();
 
-    const existingSettings = existing?.settings && typeof existing.settings === "object" ? existing.settings : {};
+    const existingSettings = (existing?.settings && typeof existing.settings === "object" ? existing.settings : {}) as Record<string, any>;
+    const bodySettings = (safeBody && typeof safeBody === "object" ? safeBody : {}) as Record<string, any>;
+
+    const nextSettings = {
+      ...existingSettings,
+      ...bodySettings,
+      translation: {
+        ...(existingSettings.translation || {}),
+        ...(bodySettings.translation || {}),
+      },
+      ai: {
+        ...(existingSettings.ai || {}),
+        ...(bodySettings.ai || {}),
+      },
+      logging: {
+        ...(existingSettings.logging || {}),
+        ...(bodySettings.logging || {}),
+      },
+      premium: existingSettings.premium || defaultBotPremium("free"),
+    };
 
     const { error } = await adminSupabase
       .from("bot_settings")
       .upsert({ 
         guild_id: guildId, 
-        settings: {
-          ...existingSettings,
-          ...safeBody,
-          translation: {
-            ...(existingSettings as Record<string, unknown>).translation && typeof (existingSettings as Record<string, unknown>).translation === "object"
-              ? ((existingSettings as Record<string, unknown>).translation as Record<string, unknown>)
-              : {},
-            ...(safeBody && typeof safeBody === "object" && "translation" in safeBody && typeof (safeBody as Record<string, unknown>).translation === "object"
-              ? ((safeBody as Record<string, unknown>).translation as Record<string, unknown>)
-              : {}),
-          },
-          ai: {
-            ...((existingSettings as Record<string, unknown>).ai && typeof (existingSettings as Record<string, unknown>).ai === "object"
-              ? ((existingSettings as Record<string, unknown>).ai as Record<string, unknown>)
-              : {}),
-            ...(safeBody && typeof safeBody === "object" && "ai" in safeBody && typeof (safeBody as Record<string, unknown>).ai === "object"
-              ? ((safeBody as Record<string, unknown>).ai as Record<string, unknown>)
-              : {}),
-          },
-          premium: (existingSettings as Record<string, unknown>).premium || defaultBotPremium("free"),
-        },
+        settings: nextSettings,
         updated_at: new Date().toISOString()
       }, { onConflict: "guild_id" });
 

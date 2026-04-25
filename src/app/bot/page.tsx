@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "VoxBridge | Premium Discord Translation",
+  title: "NewHopeGGN | Premium Discord Translation",
   description:
     "Premium Discord voice translation for communities that need live multilingual support, voice-channel translation, and admin-grade logs.",
   robots: {
@@ -127,7 +127,7 @@ export default function BotPremiumPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500"></span>
             </span>
-            VoxBridge Engine
+            NewHopeGGN Engine
           </div>
           <h1 className="mt-8 max-w-4xl bg-gradient-to-br from-white via-slate-200 to-slate-500 bg-clip-text text-5xl font-black leading-[1.05] tracking-tight text-transparent sm:text-7xl lg:text-8xl">
             Shatter the <br />
@@ -173,7 +173,7 @@ export default function BotPremiumPage() {
                       <div className="h-3 w-3 rounded-full bg-emerald-500/50" />
                     </div>
                     <div className="h-px w-24 bg-gradient-to-r from-white/10 to-transparent" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">System.Console // VOXBRIDGE</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">System.Console // NEWHOPEGGN</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -219,7 +219,7 @@ export default function BotPremiumPage() {
                 </div>
                 <h3 className="mt-6 text-2xl font-black text-white">Bot Onboarding</h3>
                 <p className="mt-4 text-sm leading-relaxed text-indigo-100/70 font-medium">
-                  Quickly deploy VoxBridge to your guild. Use <code className="text-white">/vcpermcheck</code> after inviting to ensure zero-latency voice relay.
+                  Quickly deploy NewHopeGGN to your guild. Use <code className="text-white">/vcpermcheck</code> after inviting to ensure zero-latency voice relay.
                 </p>
                 <div className="mt-8 flex flex-col gap-3">
                   <a href={addToServerUrl} className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-indigo-900 transition-transform hover:scale-[1.02] active:scale-95">
@@ -330,7 +330,7 @@ export default function BotPremiumPage() {
             <div className="max-w-2xl">
               <h2 className="text-3xl font-black text-amber-100 tracking-tight">Security & Access Policy</h2>
               <p className="mt-6 text-lg leading-relaxed text-amber-100/70 font-medium">
-                VoxBridge provides open public translation modules, but voice-channel synthesis and staff logging remain restricted to authorized clusters. 
+                NewHopeGGN provides open public translation modules, but voice-channel synthesis and staff logging remain restricted to authorized clusters. 
                 Contact our operations team for custom allowlisting and enterprise deployment.
               </p>
             </div>

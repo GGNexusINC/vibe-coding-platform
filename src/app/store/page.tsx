@@ -3,11 +3,11 @@ import { getSession } from "@/lib/session";
 import { StoreClient } from "./store-client";
 
 export const metadata: Metadata = {
-  title: "Store | VoxBridge",
-  description: "Browse and purchase VoxBridge wipe packs, VIP perks, and rare rewards for the Once Human community server.",
-  keywords: ["store", "shop", "wipe packs", "VIP", "Once Human", "VoxBridge"],
+  title: "Store | NewHopeGGN",
+  description: "Browse and purchase NewHopeGGN wipe packs, VIP perks, and rare rewards for the Once Human community server.",
+  keywords: ["store", "shop", "wipe packs", "VIP", "Once Human", "NewHopeGGN"],
   openGraph: {
-    title: "Store | VoxBridge",
+    title: "Store | NewHopeGGN",
     description: "Buy wipe packs for Once Human. Construction, Defense, PvP, and Clan packages with VIP perks.",
     url: "https://newhopeggn.vercel.app/store",
     type: "website",

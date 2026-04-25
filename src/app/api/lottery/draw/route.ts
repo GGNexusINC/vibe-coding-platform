@@ -71,34 +71,44 @@ export async function POST(req: Request) {
     }
   }
 
-  const webhookUrl = env.discordWebhookUrlForPage("general-chat");
-  if (webhookUrl) {
-    await sendDiscordWebhook(
-      {
-        username: "NewHopeGGN Lottery",
-        content: "**Lottery winner drawn.**",
-        embeds: [
-          {
-            title: "Lottery Winner",
-            description: `Congratulations to **${winner.username}**.\n\nPrize: **${winner.prize}**`,
-            color: 0xfacc15,
-            fields: [
-              { name: "Claim Window", value: "48 hours", inline: true },
-              { name: "Choice", value: "Use it to open a ticket or save it in inventory", inline: true },
-              { name: "Draw Rule", value: "One winner per draw - randomly selected by system", inline: true },
-              { name: "Winner", value: winner.username, inline: true },
-              { name: "Discord ID", value: `\`${winner.discordId}\``, inline: true },
-              { name: "Prize", value: winner.prize, inline: false },
-              { name: "Drawn At", value: `<t:${Math.floor(new Date(now).getTime() / 1000)}:F>`, inline: false },
-            ],
-            thumbnail: winner.avatarUrl ? { url: winner.avatarUrl } : undefined,
-            footer: { text: "NewHopeGGN Lottery System - rewards claim within 48 hours" },
-            timestamp: now,
-          },
-        ],
-      },
-      { webhookUrl },
-    ).catch(() => null);
+  // Fetch dynamic webhooks from DB
+  const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
+  const communityWebhookUrl = await getDynamicWebhookUrl("lottery-entries") || "https://discord.com/api/webhooks/1495516351219892504/tMhiHw58fFrdt4TdMfP8MjdiqFlTLiR31P9rbOhXA7k3tAP1hFK3Z7uK_jDMq_15kCwj";
+  const winnerAnnouncementWebhookUrl = await getDynamicWebhookUrl("lottery-winners") || "https://discord.com/api/webhooks/1494545044621754368/ozdRWCpgTAYD8JHHvNLtoPwAZQRCnIy0KRrgQcallOkrnpmaKHSPQs6F5erFj-H2xVCM";
+
+  const targetWebhooks = [
+    communityWebhookUrl,
+    winnerAnnouncementWebhookUrl
+  ].filter(Boolean);
+
+  if (targetWebhooks.length > 0) {
+    const payload = {
+      username: "NewHopeGGN Lottery",
+      content: "**Lottery winner drawn.**",
+      embeds: [
+        {
+          title: "Lottery Winner",
+          description: `Congratulations to **${winner.username}**.\n\nPrize: **${winner.prize}**`,
+          color: 0xfacc15,
+          fields: [
+            { name: "Claim Window", value: "48 hours", inline: true },
+            { name: "Choice", value: "Use it to open a ticket or save it in inventory", inline: true },
+            { name: "Draw Rule", value: "One winner per draw - randomly selected by system", inline: true },
+            { name: "Winner", value: winner.username, inline: true },
+            { name: "Discord ID", value: `\`${winner.discordId}\``, inline: true },
+            { name: "Prize", value: winner.prize, inline: false },
+            { name: "Drawn At", value: `<t:${Math.floor(new Date(now).getTime() / 1000)}:F>`, inline: false },
+          ],
+          thumbnail: winner.avatarUrl ? { url: winner.avatarUrl } : undefined,
+          footer: { text: "NewHopeGGN Lottery System - rewards claim within 48 hours" },
+          timestamp: now,
+        },
+      ],
+    };
+
+    for (const webhookUrl of targetWebhooks) {
+      await sendDiscordWebhook(payload, { webhookUrl }).catch(() => null);
+    }
   }
 
   if (clearAfter) await clearLotteryEntries();

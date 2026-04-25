@@ -123,13 +123,13 @@ export async function cleanupExpiredRewardItems(sb: SupabaseClient, userId?: str
 
   const expiredAt = new Date().toISOString();
 
-  const { error: deleteError } = await sb
+  const { error: updateError } = await sb
     .from("user_inventory")
-    .delete()
+    .update({ status: "expired" })
     .in("id", expiredIds);
 
-  if (deleteError) {
-    return { expired: 0, error: deleteError.message };
+  if (updateError) {
+    return { expired: 0, error: updateError.message };
   }
 
   return { expired: expiredIds.length, expiredAt };

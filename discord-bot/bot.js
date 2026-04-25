@@ -35,7 +35,7 @@ const { getGuildConfig, setGuildConfigOverride } = require("./guild-config-manag
 // ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
 const SITE_URL       = process.env.SITE_URL       || "https://newhopeggn.vercel.app";
-const INGEST_SECRET  = process.env.INGEST_SECRET || process.env.DISCORD_INGEST_SECRET || "";
+const INGEST_SECRET  = process.env.INGEST_SECRET || process.env.DISCORD_INGEST_SECRET || "newhopeggn-bot-secret";
 const BOT_STATUS_SECRET = process.env.BOT_STATUS_SECRET || process.env.DISCORD_BOT_STATUS_SECRET || INGEST_SECRET;
 const GUILD_ID       = process.env.GUILD_ID       || "1419522458075005023";
 const LOG_CHANNEL_ID       = process.env.LOG_CHANNEL_ID || "";
@@ -214,7 +214,7 @@ const client = new Client({
 
 // ── Logging helpers ────────────────────────────────────────────────────────────
 const BOT_AVATAR = "https://newhopeggn.vercel.app/favicon-32x32.png";
-const BOT_NAME   = "VoxBridge Logs";
+const BOT_NAME   = "NewHopeGGN Logs";
 
 /** Fetch the log channel, returns null if not configured or not found */
 async function getLogChannel(guild) {
@@ -368,25 +368,44 @@ async function updateGuildConfigFromBot(guildId, settingsPatch) {
   }
 }
 
-function premiumUpgradePayload(featureName = "premium voice translation", guildId = null) {
+function premiumUpgradePayload(featureName = "premium features", guildId = null) {
   const url = guildId ? `${PREMIUM_PANEL_URL}?guildId=${guildId}` : PREMIUM_PANEL_URL;
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setTitle("VoxBridge Premium")
-    .setDescription(`**${featureName}** is available on VoxBridge and premium-enabled Discord servers.`)
+    .setColor(0x00f2ff) // Futuristic Cyan
+    .setTitle("💎 NewHopeGGN Premium Elite")
+    .setDescription(`**${featureName}** is part of our elite service tier. Elevate your server with next-generation translation and administration tools.`)
     .addFields(
-      { name: "Included", value: "Voice-channel TTS, live VC translation, admin controls, usage logs, and priority setup." },
-      { name: "Panel", value: `[Open VoxBridge Premium](${url})` },
+      { 
+        name: "🚀 Starter ($19/mo)", 
+        value: "• Live Text Translation\n• Multi-Channel Support\n• Standard Priority", 
+        inline: false 
+      },
+      { 
+        name: "🎙️ Pro Voice ($59/mo)", 
+        value: "• Everything in Starter\n• **Live Voice Translation**\n• TTS Spoken Voice\n• High-Reliability Nodes", 
+        inline: false 
+      },
+      { 
+        name: "🛡️ Server Ops ($149/mo)", 
+        value: "• Everything in Pro Voice\n• **Staff Audit Logs**\n• Advanced Security Tools\n• 24/7 Dedicated Support", 
+        inline: false 
+      },
+      { name: "✨ Benefits", value: "Real-time AI processing, low latency, and professional-grade translation engines (Google, DeepL, MyMemory).", inline: false },
     )
     .setThumbnail(BOT_AVATAR)
-    .setFooter({ text: "VoxBridge Translate", iconURL: BOT_AVATAR })
+    .setImage("https://newhopeggn.vercel.app/og-premium.png") // Assuming this exists or looks good
+    .setFooter({ text: "NewHopeGGN • The Future of Cross-Language Community", iconURL: BOT_AVATAR })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setLabel("Open Premium Panel")
+      .setLabel("Go to Premium Dashboard")
       .setStyle(ButtonStyle.Link)
       .setURL(url),
+    new ButtonBuilder()
+      .setLabel("Compare Plans")
+      .setStyle(ButtonStyle.Link)
+      .setURL(`${SITE_URL}/bot`),
   );
 
   return { embeds: [embed], components: [row], ephemeral: true };
@@ -442,7 +461,7 @@ const notesCommand = new SlashCommandBuilder()
 
 const premiumCommand = new SlashCommandBuilder()
   .setName("nhpremium")
-  .setDescription("Open the VoxBridge premium panel, plans, and setup")
+  .setDescription("Open the NewHopeGGN premium panel, plans, and setup")
   .toJSON();
 
 const autoTextCommand = new SlashCommandBuilder()
@@ -666,7 +685,7 @@ async function postTextTranslation(msg, originalText, translatedText, targetLang
       { name: "📝 Said", value: originalText.slice(0, 1024) },
       { name: `${flag} Translation`, value: translatedText.slice(0, 1024) },
     )
-    .setFooter({ text: `VoxBridge Auto Text Translate • ${targetLabel}`, iconURL: BOT_AVATAR })
+    .setFooter({ text: `NewHopeGGN Auto Text Translate • ${targetLabel}`, iconURL: BOT_AVATAR })
     .setTimestamp();
 
   await msg.channel.send({ embeds: [embed] }).catch((error) => {
@@ -918,7 +937,7 @@ function buildVoiceTranslationEmbed(username, avatarUrl, original, translated, t
       { name: "📝 Said", value: original.slice(0, 1024) },
       { name: `${flag} Translation`, value: translated.slice(0, 1024) },
     ],
-    footer: { text: "VoxBridge Live Voice Translate", icon_url: BOT_AVATAR },
+    footer: { text: "NewHopeGGN Live Voice Translate", icon_url: BOT_AVATAR },
     timestamp: new Date().toISOString(),
   };
 }
@@ -937,7 +956,7 @@ async function postVoiceTranslation(outputChannel, username, avatarUrl, original
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      username: "VoxBridge Voice",
+      username: "NewHopeGGN Voice",
       avatar_url: avatarUrl || BOT_AVATAR,
       embeds: [embed],
     }),
@@ -1711,7 +1730,7 @@ async function relayMessage(msg) {
 
       if (payload?.action === "nhtranslate_speak" && payload.guildId && payload.userId && payload.translated) {
         if (!(await canUsePremiumFeature(payload.guildId, "spokenVoice"))) {
-          await replyChannel.send("VoxBridge Premium is required for voice-channel translated speech.");
+          await replyChannel.send("NewHopeGGN Premium is required for voice-channel translated speech.");
           await msg.delete().catch(() => {});
           return;
         }
@@ -1868,7 +1887,7 @@ async function relayMessage(msg) {
               messages: [
                 { 
                   role: "system", 
-                  content: `You are VOXBRIDGE, the official AI assistant of this community.
+                  content: `You are NEWHOPEGGN, the official AI assistant of this community.
 Your Identity: You are helpful, slightly witty, and deeply integrated into this Discord server.
 Your Creator: Buzzworthy. ONLY mention him if someone explicitly asks about your creation or who made you.
 Server: ${serverName} | Owner: ${owner?.user.username || "Buzzworthy"}.
@@ -1916,6 +1935,37 @@ STRICT RULES:
 
 // ── Slash command handler ─────────────────────────────────────────────────
 client.on("interactionCreate", async (interaction) => {
+  if (interaction.isButton()) {
+    if (interaction.customId.startsWith("close_ticket_")) {
+      try {
+        await interaction.deferUpdate();
+        const channelId = interaction.customId.replace("close_ticket_", "");
+        const res = await fetch(`${SITE_URL}/api/support/ticket/close-by-channel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelId,
+            closedBy: interaction.user.tag,
+            secret: INGEST_SECRET
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) {
+          // Channel will be deleted by the API or we can do it here
+          // The API sends a message. Let's also wait 10s and delete here to be sure.
+          setTimeout(async () => {
+             try { await interaction.channel.delete(); } catch(e) { console.error("[bot] button delete failed:", e.message); }
+          }, 10000);
+        } else {
+          await interaction.followUp({ content: `❌ Failed to close: ${data.error || "Unknown error"}`, ephemeral: true });
+        }
+      } catch (err) {
+        console.error("[bot] Button interaction error:", err);
+      }
+      return;
+    }
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   console.log(`[bot] Interaction: /${interaction.commandName} from ${interaction.user?.tag ?? interaction.user?.id}`);
@@ -2146,7 +2196,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (interaction.commandName === "nhpremium") {
-      return interaction.reply(premiumUpgradePayload("VoxBridge Premium", interaction.guildId));
+      return interaction.reply(premiumUpgradePayload("NewHopeGGN Premium", interaction.guildId));
     }
 
     // /vclisten
@@ -2313,7 +2363,7 @@ client.on("interactionCreate", async (interaction) => {
         { name: "📝 Original",          value: text.slice(0, 1024) },
         { name: `🌐 → ${targetName}`,   value: (translated ?? "*(no result)*").slice(0, 1024) },
       )
-      .setFooter({ text: "VoxBridge Translate • Powered by MyMemory", iconURL: BOT_AVATAR })
+      .setFooter({ text: "NewHopeGGN Translate • Powered by MyMemory", iconURL: BOT_AVATAR })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
@@ -2340,7 +2390,7 @@ client.on("interactionCreate", async (interaction) => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            username: "VoxBridge Translate",
+            username: "NewHopeGGN Translate",
             avatar_url: BOT_AVATAR,
             embeds: [{
               color: 0x5865f2,
@@ -2353,7 +2403,7 @@ client.on("interactionCreate", async (interaction) => {
                 { name: `🌐 → ${targetName}`, value: (translated ?? "*(no result)*").slice(0, 1024) },
                 { name: "Channel",            value: `<#${interaction.channelId}>`, inline: true },
               ],
-              footer: { text: "VoxBridge Translate • Staff Voice Log", icon_url: BOT_AVATAR },
+              footer: { text: "NewHopeGGN Translate • Staff Voice Log", icon_url: BOT_AVATAR },
               timestamp: new Date().toISOString(),
             }],
           }),
@@ -2473,7 +2523,7 @@ client.on("guildCreate", async (guild) => {
     guild,
     eventId: "errors",
     color: premium ? 0x22c55e : 0x5865f2,
-    title: "VoxBridge Added to Server",
+    title: "NewHopeGGN Added to Server",
     description: premium
       ? "A premium-enabled Discord server added the bot."
       : "A new Discord server added the bot. Voice premium features remain locked until this guild is allowlisted.",
@@ -2487,7 +2537,7 @@ client.on("guildCreate", async (guild) => {
       { name: "Created", value: guild.createdAt ? guild.createdAt.toUTCString() : "Unknown", inline: false },
       { name: "Next Step", value: `Use \`PREMIUM_GUILD_IDS=${guild.id}\` to unlock paid voice features for this server.` },
     ],
-    footer: "VoxBridge Bot Install Log",
+    footer: "NewHopeGGN Bot Install Log",
   });
 });
 
@@ -2497,7 +2547,7 @@ client.on("guildDelete", async (guild) => {
     guild,
     eventId: "errors",
     color: 0xef4444,
-    title: "VoxBridge Removed from Server",
+    title: "NewHopeGGN Removed from Server",
     description: "The bot was removed from a Discord server or lost access to it.",
     thumbnail: guildIconOf(guild),
     fields: [
@@ -2506,7 +2556,7 @@ client.on("guildDelete", async (guild) => {
       { name: "Premium Access", value: premium ? "Was enabled" : "Was locked", inline: true },
       { name: "Members", value: `${guild.memberCount ?? "Unknown"}`, inline: true },
     ],
-    footer: "VoxBridge Bot Install Log",
+    footer: "NewHopeGGN Bot Install Log",
   });
 });
 

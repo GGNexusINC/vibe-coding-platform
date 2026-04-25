@@ -24,30 +24,25 @@ export function BetaPortalClient() {
   const [existingRequest, setExistingRequest] = useState<BetaRequest | null>(null);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showSignupForm, setShowSignupForm] = useState(false);
 
   useEffect(() => {
     async function checkAccess() {
       try {
-        // Check session
         const sessionRes = await fetch("/api/session");
         const sessionData = await sessionRes.json();
         
         if (!sessionData.user) {
-          setError("Please sign in to access the Beta Portal");
+          setError("Authentication required for Beta Access.");
           setLoading(false);
           return;
         }
 
         setUser(sessionData.user);
 
-        // Check beta status
         const betaRes = await fetch("/api/beta/check");
         const betaData = await betaRes.json();
-        
         setBetaStatus(betaData);
 
-        // If not a beta tester, check for existing request
         if (!betaData.isBetaTester) {
           const requestRes = await fetch("/api/beta/request");
           const requestData = await requestRes.json();
@@ -56,7 +51,7 @@ export function BetaPortalClient() {
           }
         }
       } catch (e) {
-        setError("Failed to verify beta access");
+        setError("Network sync failed. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -67,10 +62,13 @@ export function BetaPortalClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-slate-400">Checking Beta Access...</p>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="relative h-16 w-16 mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-orange-500/10" />
+            <div className="absolute inset-0 rounded-full border-4 border-t-orange-500 animate-spin" />
+          </div>
+          <p className="text-orange-400 font-black uppercase tracking-[0.3em] text-xs">Synchronizing Access...</p>
         </div>
       </div>
     );
@@ -78,11 +76,16 @@ export function BetaPortalClient() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-4xl mb-4">🔒</div>
-          <h1 className="text-xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-slate-400">{error}</p>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-[2.5rem] border border-white/5 bg-slate-900/40 p-10 text-center backdrop-blur-xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-rose-500/10 text-4xl shadow-[0_0_30px_rgba(244,63,94,0.1)]">
+            🔒
+          </div>
+          <h1 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Signal Restricted</h1>
+          <p className="text-slate-400 mb-8 font-medium leading-relaxed">{error}</p>
+          <a href="/auth/sign-in" className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-8 text-sm font-black text-slate-950 transition hover:scale-[1.02]">
+            Sign In to GGN
+          </a>
         </div>
       </div>
     );
@@ -90,98 +93,101 @@ export function BetaPortalClient() {
 
   if (!betaStatus?.isBetaTester) {
     return (
-      <div className="min-h-screen bg-slate-950">
-        <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
-          {/* Header */}
-          <div className="text-center mb-8 md:mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-sm font-bold text-amber-300 uppercase tracking-wider">Beta Access Required</span>
+      <div className="min-h-screen bg-[#020617] selection:bg-orange-500/30">
+        {/* Background FX */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute -left-[10%] top-[-10%] h-[60%] w-[60%] rounded-full bg-orange-500/5 blur-[120px]" />
+          <div className="absolute -bottom-[10%] -right-[10%] h-[60%] w-[60%] rounded-full bg-cyan-500/5 blur-[120px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        </div>
+
+        <div className="relative mx-auto max-w-5xl px-4 py-16 md:py-24">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-3 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-orange-300 mb-8 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
+              </span>
+              Operational Testing Phase
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-4">
-              Beta Tester <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Portal</span>
+            <h1 className="text-4xl md:text-7xl font-black text-white leading-none tracking-tight mb-6">
+              GGN <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">Hive Command</span>
             </h1>
-            <p className="text-slate-400 md:text-lg max-w-2xl mx-auto px-2">
-              Exclusive features for our beta testers. Join the program to access the raid system and other upcoming features.
+            <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
+              Unlock the next level of Once Human server coordination. Live raid maps, hive XP rewards, and real-time team auditing.
             </p>
           </div>
 
-          {/* Features Preview - Mobile scrollable */}
-          <div className="md:grid md:grid-cols-2 gap-6 mb-8 md:mb-12 overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0">
-            <div className="min-w-[280px] md:min-w-0 rounded-2xl border border-slate-800 bg-slate-900/50 p-6 md:mb-0">
-              <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center mb-4">
-                <span className="text-2xl">🚨</span>
+          <div className="grid gap-6 md:grid-cols-2 mb-16">
+            <div className="group rounded-[2rem] border border-white/5 bg-slate-900/30 p-8 backdrop-blur-xl transition hover:border-orange-500/30">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/10 text-3xl shadow-[0_0_20px_rgba(249,115,22,0.1)] group-hover:scale-110 transition">
+                🗺️
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Raid Alert System</h3>
-              <p className="text-slate-400 text-sm">
-                Notify your team instantly when a raid is happening. Assign roles like Miner, Builder, PvP Fighter, and more.
+              <h3 className="text-xl font-black text-white mb-3 tracking-tight">Hive Network</h3>
+              <p className="text-slate-400 font-medium leading-relaxed">
+                Pin your territory on the shared community map. Coordinate defenses, mark high-tier loot zones, and track rival movements.
               </p>
             </div>
-            <div className="min-w-[280px] md:min-w-0 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4">
-                <span className="text-2xl">👥</span>
+            <div className="group rounded-[2rem] border border-white/5 bg-slate-900/30 p-8 backdrop-blur-xl transition hover:border-cyan-500/30">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-3xl shadow-[0_0_20px_rgba(34,211,238,0.1)] group-hover:scale-110 transition">
+                💎
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Team Coordination</h3>
-              <p className="text-slate-400 text-sm">
-                Organize your raid team with specialized roles. See who's joining and what role they're playing.
+              <h3 className="text-xl font-black text-white mb-3 tracking-tight">Elite Rewards</h3>
+              <p className="text-slate-400 font-medium leading-relaxed">
+                Level up your Hive to unlock free store packs, server-wide recognition, and exclusive VIP metadata for your profile.
               </p>
             </div>
           </div>
 
-          {/* Application CTA */}
-          <BetaSignupSection 
-            existingRequest={existingRequest}
-            user={user}
-          />
+          <BetaSignupSection existingRequest={existingRequest} user={user} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Header */}
-      <div className="border-b border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+    <div className="min-h-screen bg-[#020617]">
+      <div className="border-b border-white/5 bg-slate-900/30 backdrop-blur-xl sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-5">
+              <div className="relative h-14 w-14 rounded-[1.25rem] bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-xl shadow-orange-500/20">
                 <span className="text-2xl">🧪</span>
+                <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-[#020617] bg-emerald-500 animate-pulse" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Beta Portal</h1>
-                <p className="text-sm text-slate-400">
-                  Welcome back, {user?.username}
+                <h1 className="text-2xl font-black text-white leading-none tracking-tight">Beta Portal</h1>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Welcome back, <span className="text-white">{user?.username}</span>
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase">
-                Beta Access
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 px-4 py-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Beta Clearance</span>
+              </div>
               {betaStatus.joinedAt && (
-                <span className="text-xs text-slate-500">
-                  Member since {new Date(betaStatus.joinedAt).toLocaleDateString()}
-                </span>
+                <div className="hidden lg:block text-right">
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Access Established</div>
+                  <div className="text-xs font-bold text-slate-300">{new Date(betaStatus.joinedAt).toLocaleDateString()}</div>
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-10">
         <RaidDashboard user={user} />
       </div>
     </div>
   );
 }
 
-// Beta Signup Section Component
 function BetaSignupSection({ existingRequest, user }: { existingRequest: BetaRequest | null; user: any }) {
   const [form, setForm] = useState({ reason: '', experience: '', playTime: '' });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,151 +203,128 @@ function BetaSignupSection({ existingRequest, user }: { existingRequest: BetaReq
 
       const data = await res.json();
       if (data.ok) {
-        setMessage('Application submitted! Check your DMs for updates.');
+        setMessage({ text: 'Neural scan complete. Application submitted for review.', type: 'success' });
         setForm({ reason: '', experience: '', playTime: '' });
       } else {
         if (String(data.error || '').toLowerCase().includes('already')) {
-          setMessage('You are already approved for beta access. Refreshing your portal...');
+          setMessage({ text: 'Clearance verified. Synchronizing portal...', type: 'success' });
           window.setTimeout(() => window.location.reload(), 900);
           return;
         }
-        setMessage(data.error || 'Failed to submit');
+        setMessage({ text: data.error || 'Transmission failed.', type: 'error' });
       }
     } catch (e) {
-      setMessage('Failed to submit application');
+      setMessage({ text: 'Fatal error during submission.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  // Show pending status
   if (existingRequest?.status === 'pending') {
     return (
-      <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-slate-950/60 p-8 text-center">
-        <div className="text-4xl mb-4">⏳</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Application Pending</h2>
-        <p className="text-slate-400 mb-4">
-          Your beta tester application was submitted on {new Date(existingRequest.requested_at).toLocaleDateString()}.
+      <div className="rounded-[2.5rem] border border-orange-500/20 bg-orange-500/5 p-12 text-center backdrop-blur-xl">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-orange-500/10 text-4xl animate-pulse">⏳</div>
+        <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">Signal Pending</h2>
+        <p className="text-slate-400 mb-6 font-medium leading-relaxed max-w-md mx-auto">
+          Your request was logged on {new Date(existingRequest.requested_at).toLocaleDateString()}. Admins are currently verifying your hive metrics.
         </p>
-        <p className="text-amber-400 text-sm">
-          Admins are reviewing your request. You'll receive a DM when approved.
-        </p>
+        <div className="inline-flex rounded-xl bg-orange-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">
+          Status: Review Ongoing
+        </div>
       </div>
     );
   }
 
-  // Show approved status instead of falling through to the signup form.
   if (existingRequest?.status === 'approved') {
     return (
-      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-950/30 to-slate-950/60 p-8 text-center">
-        <div className="text-4xl mb-4">✓</div>
-        <h2 className="text-2xl font-bold text-white mb-2">You Are Already a Beta Tester</h2>
-        <p className="text-slate-400 mb-5">
-          Your beta application was approved. The signup form is hidden because you already have access.
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 hover:bg-emerald-400/15"
-        >
-          Refresh Beta Portal
+      <div className="rounded-[2.5rem] border border-emerald-500/20 bg-emerald-500/5 p-12 text-center backdrop-blur-xl">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-4xl">✓</div>
+        <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">Access Verified</h2>
+        <p className="text-slate-400 mb-8 font-medium leading-relaxed">Your application was successful. Welcome to the inner hive.</p>
+        <button onClick={() => window.location.reload()} className="h-12 rounded-2xl bg-white px-8 text-sm font-black text-slate-950 transition hover:scale-[1.02]">
+          Enter Beta Portal
         </button>
       </div>
     );
   }
 
-  // Show rejected status
   if (existingRequest?.status === 'rejected') {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-gradient-to-b from-red-950/30 to-slate-950/60 p-8 text-center">
-        <div className="text-4xl mb-4">❌</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Application Not Approved</h2>
-        <p className="text-slate-400 mb-4">
-          Your previous application was not approved at this time.
-        </p>
-        <p className="text-slate-500 text-sm">
-          You can apply again in the future.
-        </p>
+      <div className="rounded-[2.5rem] border border-rose-500/20 bg-rose-500/5 p-12 text-center backdrop-blur-xl">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-rose-500/10 text-4xl">❌</div>
+        <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">Clearance Denied</h2>
+        <p className="text-slate-400 mb-4 font-medium leading-relaxed">Your profile does not currently meet the requirements for beta testing.</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-600">Re-evaluation available in 30 days</p>
       </div>
     );
   }
 
-  // Show signup form
   return (
-    <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-slate-950/60 p-8">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">Apply for Beta Access</h2>
-        <p className="text-slate-400">
-          Active members with good standing are eligible. Tell us why you want to join!
+    <div className="rounded-[3rem] border border-white/5 bg-slate-900/40 p-10 md:p-16 backdrop-blur-xl">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-black text-white mb-4 uppercase tracking-tight">Request Beta Access</h2>
+        <p className="text-slate-400 font-medium leading-relaxed max-w-lg mx-auto">
+          Hive Command is in active development. We are looking for experienced survivors to stress-test our raid and coordination systems.
         </p>
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-xl text-center ${
-          message.includes('submitted') 
-            ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
-            : 'bg-red-500/20 border border-red-500/30 text-red-400'
+        <div className={`mb-8 p-6 rounded-2xl text-center font-bold text-sm ${
+          message.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
         }`}>
-          {message}
+          {message.text}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            Why do you want to join the beta? *
-          </label>
-          <textarea
-            value={form.reason}
-            onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            placeholder="Tell us what excites you about testing new features..."
-            required
-            rows={3}
-            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-amber-500/50 focus:outline-none resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            What's your experience with Once Human?
-          </label>
-          <textarea
-            value={form.experience}
-            onChange={(e) => setForm({ ...form, experience: e.target.value })}
-            placeholder="How long have you played? What do you enjoy most?"
-            rows={2}
-            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-amber-500/50 focus:outline-none resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            How often do you play?
-          </label>
-          <select
-            value={form.playTime}
-            onChange={(e) => setForm({ ...form, playTime: e.target.value })}
-            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-amber-500/50 focus:outline-none"
-          >
-            <option value="">Select play time...</option>
-            <option value="daily">Daily (2+ hours)</option>
-            <option value="few_times_week">Few times a week</option>
-            <option value="weekends">Weekends only</option>
-            <option value="casual">Casual (occasionally)</option>
-          </select>
+      <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto">
+        <div className="grid gap-8 md:grid-cols-2">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3">Play Schedule</label>
+              <select
+                value={form.playTime}
+                onChange={(e) => setForm({ ...form, playTime: e.target.value })}
+                className="h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-5 text-sm font-bold text-white focus:border-orange-500/50 outline-none transition appearance-none"
+              >
+                <option value="">Operational Hours...</option>
+                <option value="daily">Daily (High-tier Active)</option>
+                <option value="few_times_week">Frequent (3-4x week)</option>
+                <option value="weekends">Surgical (Weekends)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3">Experience Protocol</label>
+              <textarea
+                value={form.experience}
+                onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                placeholder="Once Human history, previous hives, specialization..."
+                rows={4}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-5 py-4 text-sm font-bold text-white focus:border-orange-500/50 outline-none transition resize-none placeholder:text-slate-700"
+              />
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3">Primary Objective</label>
+              <textarea
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                placeholder="Why do you want to join the beta program?"
+                required
+                rows={9}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-5 py-4 text-sm font-bold text-white focus:border-orange-500/50 outline-none transition resize-none placeholder:text-slate-700"
+              />
+            </div>
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={loading || !form.reason.trim()}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold hover:opacity-90 transition disabled:opacity-50"
+          className="h-16 w-full rounded-[1.5rem] bg-gradient-to-r from-orange-500 to-amber-600 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-orange-500/20 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
         >
-          {loading ? 'Submitting...' : '📝 Submit Application'}
+          {loading ? 'Transmitting Data...' : 'Submit Clearance Request'}
         </button>
-
-        <p className="text-center text-xs text-slate-500">
-          Admins will review your application and you'll receive a DM with the decision.
-        </p>
       </form>
     </div>
   );

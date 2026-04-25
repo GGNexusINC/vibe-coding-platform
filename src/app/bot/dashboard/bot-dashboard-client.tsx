@@ -58,7 +58,7 @@ export function BotDashboardClient({ user }: { user: User }) {
 
   const tutorialSteps = [
     {
-      title: "Welcome to VoxBridge",
+      title: "Welcome to NewHopeGGN",
       content: "This is your advanced control center. From here, you can manage translation, AI, and logging for all your Discord servers.",
     },
     {
@@ -110,7 +110,7 @@ export function BotDashboardClient({ user }: { user: User }) {
                Management Console
             </div>
             <h1 className="mt-6 text-4xl font-black leading-none tracking-tight text-white sm:text-6xl lg:text-7xl">
-              VoxBridge <br />
+              NewHopeGGN <br />
               <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Intelligence</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 font-medium">

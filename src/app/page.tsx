@@ -467,7 +467,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
               <text x="32" y="37" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="900" fontFamily="monospace" letterSpacing="-1">NH</text>
             </svg>
             <div style={{ fontSize:"1.5rem", fontWeight:900, letterSpacing:"0.18em", textTransform:"uppercase", color:"#fff", lineHeight:1 }}>
-              Vox<span style={{ color:"#f97316" }}>Bridge</span>
+              NewHope<span style={{ color:"#f97316" }}>GGN</span>
             </div>
             <div style={{ marginTop:"0.35rem", fontSize:"0.65rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"#475569", fontFamily:"monospace" }}>
               NEXUS OS · Version 4.2.1 · Build 2026.04
@@ -557,15 +557,15 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
           <div style={{ position:"relative", userSelect:"none", transform:`translateX(${gx}) skewX(${gsk})`, transition:"transform 0.04s", maxWidth:"90vw", textAlign:"center" }}>
             <div style={{ fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", color:"#fff", lineHeight:1, whiteSpace:"nowrap",
               textShadow: isGlitching ? "5px 0 #f43f5e,-5px 0 #14b8a6,0 0 50px #f97316" : "0 0 70px rgba(249,115,22,1),0 0 140px rgba(249,115,22,0.5)" }}>
-              VOX<span style={{ color:"#f97316" }}>BRIDGE</span>
+              NEWHOPE<span style={{ color:"#f97316" }}>GGN</span>
             </div>
             {isGlitching && <>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#f43f5e", opacity:0.7, transform:"translateX(6px) translateY(-3px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
+                color:"#f43f5e", opacity:0.7, transform:"translateX(6px) translateY(-3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGGN</div>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#14b8a6", opacity:0.7, transform:"translateX(-6px) translateY(3px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
+                color:"#14b8a6", opacity:0.7, transform:"translateX(-6px) translateY(3px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGGN</div>
               <div style={{ position:"absolute", inset:0, fontSize:"clamp(2.2rem,7vw,5.5rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.06em", lineHeight:1, whiteSpace:"nowrap",
-                color:"#8338ec", opacity:0.4, transform:"translateY(4px)", mixBlendMode:"screen", pointerEvents:"none" }}>VOXBRIDGE</div>
+                color:"#8338ec", opacity:0.4, transform:"translateY(4px)", mixBlendMode:"screen", pointerEvents:"none" }}>NEWHOPEGGN</div>
             </>}
           </div>
         </div>
@@ -579,7 +579,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
           <div style={{ marginBottom:"2rem", textAlign:"center", userSelect:"none" }}>
             <div style={{ fontSize:"clamp(2rem,6vw,4rem)", fontWeight:900, textTransform:"uppercase", letterSpacing:"0.1em", lineHeight:1,
               textShadow:"0 0 80px rgba(249,115,22,1),0 0 160px rgba(249,115,22,0.6)" }}>
-              <span style={{ color:"#fed7aa" }}>VOX</span><span style={{ color:"#f97316" }}>BRIDGE</span>
+              <span style={{ color:"#fed7aa" }}>NEWHOPE</span><span style={{ color:"#f97316" }}>GGN</span>
             </div>
             <div style={{ marginTop:"0.5rem", fontFamily:"monospace", fontSize:"0.7rem", letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(94,234,212,0.8)",
               textShadow:"0 0 20px rgba(20,184,166,0.9)" }}>
@@ -651,7 +651,7 @@ function EasterEggOverlay({ onClose }: { onClose: () => void }) {
             <div style={{ marginTop:"1rem", maxWidth:"28rem", textAlign:"center", fontSize:"0.875rem", color:"#94a3b8", lineHeight:1.6 }}>
               Before the servers, before the wipes — there was a signal.<br/>
               A small group heard it first. They called it{" "}
-              <span style={{ fontWeight:"bold", color:"#fdba74", textShadow:"0 0 20px rgba(249,115,22,0.8)" }}>VoxBridge</span>.
+              <span style={{ fontWeight:"bold", color:"#fdba74", textShadow:"0 0 20px rgba(249,115,22,0.8)" }}>NewHopeGGN</span>.
             </div>
           )}
 

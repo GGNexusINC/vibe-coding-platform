@@ -11,14 +11,14 @@ const products = [
     price: 5,
     buyUrl: "https://www.paypal.com/ncp/payment/2CPNCAMCWTVUN",
     summary: "A fast-start builder bundle for serious base progression.",
-    bullets: ["5000 stone", "7000 wood", "5000 steel", "5000 tungsten"],
+    bullets: ["5000 Stone", "7000 Wood", "5000 Steel", "5000 Tungsten"],
     addons: [
-      "Advanced tables: Supplies and Armament",
-      "Storage, weapon, and armor box set",
+      "Advanced tables (Supplies and Armament)",
+      "Box set (Storage boxes, Weapon box, Armor box)",
       "3 V3 tickets",
-      "350 gasoline",
+      "350 Gasoline",
     ],
-    extra: "300 chips or deviant selector",
+    extra: "300 chips or deviant selector (your choice)",
     featured: false,
   },
   {
@@ -29,14 +29,14 @@ const products = [
     buyUrl: "https://www.paypal.com/ncp/payment/E33JYFS2JF8V2",
     summary: "Everything needed to harden a position and hold pressure.",
     bullets: [
-      "10 rifle turrets with ammo",
-      "4 shotgun turrets or 4 stun traps",
-      "6 pulse traps",
-      "20 high tungsten walls",
-      "2 high tungsten doors",
-      "2 large biomass generators",
+      "10 Rifle Turrets (2000 bullets)",
+      "4 Shotgun Turrets (400 bullets) or 4 Stun Traps (full bullets)",
+      "6 Pulse Traps",
+      "20 High Tungsten Walls",
+      "2 High Tungsten Doors",
+      "2 Large Biomass Generators",
     ],
-    extra: "300 chips or special meals",
+    extra: "300 chips or special meals (your choice)",
     featured: false,
   },
   {
@@ -47,13 +47,13 @@ const products = [
     buyUrl: "https://www.paypal.com/ncp/payment/74N3J2M7KPATS",
     summary: "The premium combat kit for players who want immediate battlefield value.",
     bullets: [
-      "MK14 or KVD with full mods and ammo",
-      "P90 or KV-SBR with full mods and ammo",
-      "Stormweaver or Refugee armor set with gas mask",
-      "20 corn soups",
-      "20 emergency supplies",
-      "2 universal repair kits",
-      "60 gasoline",
+      "MK14 (full mods + 200 bullets) or KVD (full mods + 200 bullets)",
+      "P90 (full mods + 200 bullets) or KV-SBR (full mods + 200 bullets)",
+      "Stormweaver Set + Gas Mask or Refugee Set + Gas Mask",
+      "20 Corn Soups",
+      "20 Emergency Supplies",
+      "2 Universal Repair Kits",
+      "60 Gasoline",
     ],
     extra: "300 chips or Masamune Katana",
     featured: true,
@@ -61,10 +61,10 @@ const products = [
   {
     slug: "insurance",
     badge: "Security Pick",
-    name: "Anti-Raid Insurance",
+    name: "Anti Raid Insurance",
     price: 5,
     buyUrl: "https://www.paypal.com/ncp/payment/V2L73MUBJV6EN",
-    summary: "A single-use protection option for players who value wipe resilience.",
+    summary: "Protect your base and save farming time (Single Use per wipe).",
     bullets: [
       "Base blueprint resources are returned",
       "Single use per wipe",
@@ -122,8 +122,15 @@ export function StoreClient({ user }: { user: User | null }) {
   }
 
   return (
-    <>
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
+    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950 text-slate-200">
+      {/* Hyper-futuristic background elements */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute left-[-10%] top-[-10%] h-[60%] w-[60%] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] h-[60%] w-[60%] rounded-full bg-cyan-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
+      </div>
+
       <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
 
       {/* Wipe status banner */}
@@ -137,83 +144,84 @@ export function StoreClient({ user }: { user: User | null }) {
         const pad = (n: number) => String(n).padStart(2, "0");
         const display = d > 0 ? `${pad(d)}d ${pad(h)}h ${pad(m)}m` : `${pad(h)}h ${pad(m)}m`;
         return past ? (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-rose-500/8 px-5 py-3 text-sm">
-            <span className="text-xl">⚠️</span>
+          <div className="mb-8 flex items-center gap-4 rounded-[2rem] border border-rose-500/30 bg-rose-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(244,63,94,0.2)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-2xl">⚠️</div>
             <div>
-              <span className="font-semibold text-rose-200">Wipe has occurred</span>
-              <span className="ml-2 text-rose-300/60">— new wipe timer will be set soon. Packs purchased now apply to the next wipe.</span>
+              <div className="text-lg font-black tracking-tight text-rose-100 uppercase">Wipe has occurred</div>
+              <div className="text-sm text-rose-300/80 font-medium">New wipe timer will be set soon. Packs purchased now apply to the next wipe.</div>
             </div>
           </div>
         ) : (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-500/25 bg-orange-500/8 px-5 py-3">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-xl">⏳</span>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-[2rem] border border-orange-500/30 bg-orange-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(249,115,22,0.2)]">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/20 text-2xl">⏳</div>
               <div>
-                <span className="font-semibold text-orange-200">Wipe is active</span>
-                <span className="ml-2 text-orange-300/60">— buy now to receive your pack and VIP before the wipe.</span>
+                <div className="text-lg font-black tracking-tight text-orange-100 uppercase">Wipe Status: Active</div>
+                <div className="text-sm text-orange-300/80 font-medium">Secure your pack and VIP before the next server reset.</div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-400/60">{wipeLabel} in</span>
-              <span className="font-mono text-lg font-black text-orange-200 tabular-nums">{display}</span>
+            <div className="flex flex-col items-end gap-1">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400/60">{wipeLabel} starting in</div>
+              <div className="font-mono text-3xl font-black text-orange-200 tabular-nums drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]">{display}</div>
             </div>
           </div>
         );
       })()}
 
-      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rz-surface rz-panel-border relative overflow-hidden rounded-[2rem] p-7 sm:p-9">
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.15),transparent_56%)]" />
+      <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-cyan-500/5" />
           <div className="relative">
-            <div className="rz-chip">Premium Storefront</div>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-              Store Packs
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+              Intelligence Store
+            </div>
+            <h1 className="mt-6 text-5xl font-black leading-none tracking-tight text-white sm:text-6xl">
+              Resource <br />
+              <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Deployment</span>
             </h1>
-            <p className="mt-4 max-w-3xl text-base leading-8 text-slate-300">
-              Choose a pack, sign in with Discord, and open secure checkout.
+            <p className="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-slate-400">
+              High-tier tactical resources for survival and dominance. All packs include automated Discord logging and VIP status.
             </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Price Point</div>
-                <div className="mt-2 text-3xl font-semibold text-white">$5</div>
-                <div className="mt-1 text-sm text-slate-400">Simple pack pricing across the catalog.</div>
+            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/5 bg-black/40 p-5 transition-colors hover:border-white/10">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Price Point</div>
+                <div className="mt-2 text-3xl font-black text-white">$5<span className="text-sm font-medium text-slate-500 ml-1">USD</span></div>
+                <div className="mt-2 text-xs text-slate-500 font-medium">Standardized flat pricing.</div>
               </div>
-              <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Checkout</div>
-                <div className="mt-2 text-3xl font-semibold text-white">PayPal</div>
-                <div className="mt-1 text-sm text-slate-400">Trusted external payment flow.</div>
+              <div className="rounded-2xl border border-white/5 bg-black/40 p-5 transition-colors hover:border-white/10">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Protocol</div>
+                <div className="mt-2 text-3xl font-black text-white">Secure</div>
+                <div className="mt-2 text-xs text-slate-500 font-medium">Encrypted PayPal flow.</div>
               </div>
-              <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-cyan-200/70">Perk</div>
-                <div className="mt-2 text-3xl font-semibold text-white">VIP</div>
-                <div className="mt-1 text-sm text-slate-400">Granted during the matching wipe.</div>
+              <div className="rounded-2xl border border-white/5 bg-black/40 p-5 transition-colors hover:border-white/10">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Authorization</div>
+                <div className="mt-2 text-3xl font-black text-white">Instant</div>
+                <div className="mt-2 text-xs text-slate-500 font-medium">Automated staff alerts.</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
-          <div className="rz-chip">Buyer Readiness</div>
-          <div className="mt-5 grid gap-4">
-            <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-              <div className="text-sm font-semibold text-white">1. Discord login</div>
-              <div className="mt-1 text-sm text-slate-400">
-                Sign in before buying so staff can verify identity and support status quickly.
+        <div className="rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">
+            System Requirements
+          </div>
+          <div className="mt-6 space-y-4">
+            {[
+              { id: "01", t: "Discord Integration", d: "OAuth identity verification required for delivery." },
+              { id: "02", t: "UID Syncing", d: "Packs are bound to your linked game identifier." },
+              { id: "03", t: "Staff Monitoring", d: "Every transaction generates a secure staff ticket." }
+            ].map(step => (
+              <div key={step.id} className="flex gap-4 group">
+                <span className="text-xl font-black text-white/10 group-hover:text-cyan-500/40 transition-colors">{step.id}</span>
+                <div>
+                  <div className="text-sm font-black text-slate-200 tracking-tight uppercase">{step.t}</div>
+                  <div className="text-xs text-slate-500 mt-1 font-medium">{step.d}</div>
+                </div>
               </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-              <div className="text-sm font-semibold text-white">2. UID confirmation</div>
-              <div className="mt-1 text-sm text-slate-400">
-                Link the correct in-game UID before checkout to avoid delivery issues.
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-              <div className="text-sm font-semibold text-white">3. Staff-assisted fulfillment</div>
-              <div className="mt-1 text-sm text-slate-400">
-                Purchase flow is logged to Discord so admins can track fulfillment clearly.
-              </div>
-            </div>
+            ))}
           </div>
 
           {!user ? (
@@ -279,93 +287,71 @@ export function StoreClient({ user }: { user: User | null }) {
         </div>
       )}
 
-      <section className="mt-8 grid gap-6 md:grid-cols-2">
+      <section className="mt-12 grid gap-8 md:grid-cols-2">
         {products.map((product) => {
           const isInsurance = product.slug === "insurance";
           const isDisabled = isInsurance && !insuranceStatus.available;
 
-          let cardBg = "bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-30";
-          if (product.slug === "construction") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] mix-blend-color-burn opacity-50";
-          if (product.slug === "defense") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50";
-          if (product.slug === "tactical") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay opacity-40";
-          if (product.slug === "clan") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20";
-          if (product.slug === "vip") cardBg = "bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-60";
+          let cardBg = "bg-indigo-500/5";
+          if (product.slug === "construction") cardBg = "bg-amber-500/5";
+          if (product.slug === "defense") cardBg = "bg-slate-500/5";
+          if (product.slug === "tactical") cardBg = "bg-rose-500/5";
+          if (product.slug === "clan") cardBg = "bg-indigo-500/5";
+          if (product.slug === "vip") cardBg = "bg-emerald-500/5";
 
           return (
             <article
               key={product.slug}
-              className={`rz-neon-border rz-pop-card group relative overflow-hidden rounded-[2rem] border border-white/10 p-6 ${
+              className={`group relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:border-cyan-500/50 hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.2)] ${
                 isDisabled ? "opacity-50 pointer-events-none" : ""
               }`}
             >
-              <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(11,22,33,0.92),rgba(6,14,21,0.86))]" />
               <div className={`absolute inset-0 -z-10 ${cardBg}`} />
-              <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-                <div className="absolute -top-20 right-[-3rem] h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
-                <div className="absolute bottom-[-4rem] left-[-3rem] h-56 w-56 rounded-full bg-amber-300/10 blur-3xl" />
-              </div>
-
+              
               <div className="relative">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100">
+                <div className="flex items-center justify-between">
+                  <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
                     {product.badge}
                   </div>
-                  <div className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-sm font-semibold text-amber-100">
+                  <div className="text-3xl font-black text-white tracking-tighter">
                     ${product.price}
                   </div>
                 </div>
 
-                <h2 className="mt-5 text-2xl font-semibold text-white">{product.name}</h2>
-                <p className="mt-2 text-sm leading-7 text-slate-300">{product.summary}</p>
+                <h2 className="mt-6 text-3xl font-black leading-tight text-white tracking-tight uppercase">{product.name}</h2>
+                <p className="mt-3 text-sm font-medium leading-relaxed text-slate-400">{product.summary}</p>
 
-                <div className="mt-5 grid gap-3">
+                <div className="mt-8 space-y-3">
                   {product.bullets.map((item) => {
                     const lItem = item.toLowerCase();
-                    let bgClass = "bg-slate-950/45 border-white/8";
-                    let dotClass = "bg-cyan-300";
-                    if (lItem.includes("stone")) {
-                      bgClass = "bg-stone-900/90 border-stone-500/40 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] mix-blend-luminosity";
-                      dotClass = "bg-stone-400";
-                    } else if (lItem.includes("wood")) {
-                      bgClass = "bg-amber-950/90 border-amber-600/50 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]";
-                      dotClass = "bg-amber-500";
-                    } else if (lItem.includes("steel") || lItem.includes("metal")) {
-                      bgClass = "bg-slate-800/90 border-slate-300/50 bg-[url('https://www.transparenttextures.com/patterns/brushed-alumina.png')] mix-blend-overlay";
-                      dotClass = "bg-slate-300";
-                    } else if (lItem.includes("tungsten")) {
-                      bgClass = "bg-cyan-950/90 border-cyan-400/50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-color-dodge";
-                      dotClass = "bg-cyan-400";
-                    } else if (lItem.includes("rifle") || lItem.includes("shotgun") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14")) {
-                      bgClass = "bg-rose-950/90 border-rose-500/50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]";
-                      dotClass = "bg-rose-400";
-                    } else if (lItem.includes("pulse") || lItem.includes("generator") || lItem.includes("biomass")) {
-                      bgClass = "bg-indigo-950/90 border-indigo-500/50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]";
-                      dotClass = "bg-indigo-400";
-                    } else if (lItem.includes("blueprint") || lItem.includes("ticket")) {
-                      bgClass = "bg-emerald-950/90 border-emerald-500/50 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]";
-                      dotClass = "bg-emerald-400";
-                    }
+                    let bgClass = "bg-white/5 border-white/5";
+                    let dotColor = "text-cyan-400";
+                    
+                    if (lItem.includes("stone")) { bgClass = "bg-stone-500/10 border-stone-500/20"; dotColor = "text-stone-400"; }
+                    else if (lItem.includes("wood")) { bgClass = "bg-amber-500/10 border-amber-500/20"; dotColor = "text-amber-500"; }
+                    else if (lItem.includes("steel")) { bgClass = "bg-slate-400/10 border-slate-400/20"; dotColor = "text-slate-300"; }
+                    else if (lItem.includes("tungsten")) { bgClass = "bg-cyan-400/10 border-cyan-400/20"; dotColor = "text-cyan-400"; }
+                    else if (lItem.includes("rifle") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14")) { bgClass = "bg-rose-500/10 border-rose-500/20"; dotColor = "text-rose-400"; }
+                    else if (lItem.includes("pulse") || lItem.includes("generator")) { bgClass = "bg-indigo-500/10 border-indigo-500/20"; dotColor = "text-indigo-400"; }
 
                     return (
-                      <div
-                        key={item}
-                        className={`flex items-start gap-3 rounded-[1.15rem] border px-4 py-3 text-sm text-slate-100 shadow-inner transition-transform hover:scale-[1.02] ${bgClass}`}
-                      >
-                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full shadow-[0_0_8px_currentColor] ${dotClass}`} />
-                        <span className="font-medium drop-shadow-md">{item}</span>
+                      <div key={item} className={`flex items-center gap-4 rounded-2xl border p-4 transition-all group/item ${bgClass}`}>
+                         <span className={`flex h-2 w-2 rounded-full animate-pulse shadow-[0_0_8px_currentColor] ${dotColor}`} />
+                         <span className="text-sm font-black tracking-tight text-slate-200 uppercase">{item}</span>
                       </div>
                     );
                   })}
                 </div>
 
                 {product.addons?.length ? (
-                  <div className="mt-5 rounded-[1.5rem] border border-white/8 bg-black/20 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-                      Included Add-ons
+                  <div className="mt-8 rounded-3xl border border-white/5 bg-black/40 p-6">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                      Supplemental Hardware
                     </div>
-                    <div className="mt-3 grid gap-2">
+                    <div className="mt-4 grid gap-3">
                       {product.addons.map((addon) => (
-                        <div key={addon} className="text-sm text-slate-400">
+                        <div key={addon} className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-tight">
+                          <span className="h-1 w-1 rounded-full bg-slate-600" />
                           {addon}
                         </div>
                       ))}
@@ -373,30 +359,22 @@ export function StoreClient({ user }: { user: User | null }) {
                   </div>
                 ) : null}
 
-                <div className="mt-5 rounded-[1.5rem] border border-emerald-300/18 bg-emerald-400/10 p-4 text-sm text-emerald-100">
-                  <span className="font-semibold text-white">Extra bonus:</span> {product.extra}
-                </div>
-
-                <div className="mt-6 flex items-center justify-between gap-3">
-                  <div className="text-xs uppercase tracking-[0.22em] text-slate-500">
-                    {isDisabled ? "Unavailable" : "Secure checkout"}
-                  </div>
-                  {user && !isDisabled ? (
-                    <BuyButton
-                      packName={product.name}
-                      packPrice={product.price}
-                      buyUrl={product.buyUrl}
+                <div className="mt-8 flex items-center justify-between gap-4 pt-6 border-t border-white/10">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Status</span>
+                      <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">{isDisabled ? "Protocol Locked" : "System Ready"}</span>
+                   </div>
+                   {user && !isDisabled ? (
+                    <BuyButton 
+                      packName={product.name} 
+                      packPrice={product.price} 
+                      packSlug={product.slug}
+                      buyUrl={product.buyUrl} 
+                      user={user} 
                     />
-                  ) : isDisabled ? (
-                    <span className="inline-flex h-10 items-center justify-center rounded-full border border-rose-300/25 bg-rose-300/10 px-4 text-sm font-semibold text-rose-200">
-                      Unavailable
-                    </span>
                   ) : (
-                    <a
-                      className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
-                      href="/dashboard"
-                    >
-                      Login to buy
+                    <a className="inline-flex h-12 items-center justify-center rounded-2xl bg-white/10 px-8 text-xs font-black text-white transition hover:bg-white/20 uppercase tracking-[0.1em]" href={isDisabled ? "#" : "/dashboard"}>
+                      {isDisabled ? "Locked" : "Login to Deploy"}
                     </a>
                   )}
                 </div>
@@ -405,7 +383,7 @@ export function StoreClient({ user }: { user: User | null }) {
           );
         })}
       </section>
+      </div>
     </div>
-    </>
   );
 }

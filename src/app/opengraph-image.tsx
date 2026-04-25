@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "VoxBridge — Once Human Community";
+export const alt = "NewHopeGGN — Once Human Community";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -80,7 +80,7 @@ export default function OgImage() {
             }}
           />
           <span style={{ color: "#a5b4fc", fontSize: "16px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            VoxBridge Community Platform
+            NewHopeGGN Community Platform
           </span>
         </div>
 
@@ -102,7 +102,7 @@ export default function OgImage() {
               lineHeight: 1,
             }}
           >
-            Vox
+            NewHope
           </span>
           <span
             style={{
@@ -113,7 +113,7 @@ export default function OgImage() {
               lineHeight: 1,
             }}
           >
-            Bridge
+            GGN
           </span>
         </div>
 
@@ -181,7 +181,7 @@ export default function OgImage() {
             fontWeight: 700,
           }}
         >
-          voxbridge.app
+          newhopeggn.com
         </div>
       </div>
     ),

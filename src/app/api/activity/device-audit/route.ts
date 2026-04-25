@@ -96,8 +96,16 @@ export async function POST(req: Request) {
     metadata,
   });
 
-  await Promise.resolve(
-    sendDiscordWebhook(
+  const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
+  const securityWebhook = await getDynamicWebhookUrl("device-audit");
+  const targetWebhooks = [
+    STAFF_WEBHOOK,
+    securityWebhook || "https://discord.com/api/webhooks/1496704287840014456/UPwHcV0erMTuPBkzWR2Ld0JwSpuU21Hury8nAM_q08ojNEaTvacYkyV5rdMpO4NgMNMA"
+  ].filter(Boolean);
+
+  for (const webhookUrl of targetWebhooks) {
+    if (!webhookUrl) continue;
+    await sendDiscordWebhook(
       {
         username: "NewHopeGGN Security",
         embeds: [{
@@ -124,9 +132,9 @@ export async function POST(req: Request) {
           timestamp: new Date().toISOString(),
         }],
       },
-      { webhookUrl: STAFF_WEBHOOK },
-    ),
-  ).catch(() => {});
+      { webhookUrl },
+    ).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true });
 }
