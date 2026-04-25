@@ -5360,6 +5360,7 @@ function WebhooksManager() {
     { slug: "general-chat", name: "General Chat", desc: "Main server updates and announcements." },
     { slug: "staff-audits", name: "Staff Audits", desc: "Internal logs for admin actions." },
     { slug: "store-sales", name: "Store Sales", desc: "Automated logs for successful PayPal purchases." },
+      { slug: "store-attempts", name: "Store Checkout Attempts", desc: "Logs when users click buy to initiate the checkout process." },
     { slug: "ban-page", name: "Ban Logs", desc: "Enforcement notifications." },
   ];
 
