@@ -413,6 +413,7 @@ export function RaidDashboard({ user }: RaidDashboardProps) {
       {showCreateModal && (
         <CreateRaidModal
           roles={roles}
+          hives={hives}
           initialRaidType={createMode}
           onClose={() => setShowCreateModal(false)}
           onCreated={(createdRaid) => {
@@ -841,8 +842,9 @@ function CreateHiveModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
-function CreateRaidModal({ roles, initialRaidType, onClose, onCreated }: {
+function CreateRaidModal({ roles, hives, initialRaidType, onClose, onCreated }: {
   roles: RaidRole[];
+  hives: HiveRecord[];
   initialRaidType: "normal" | "counter" | "defense";
   onClose: () => void;
   onCreated: (raid?: Raid) => void;
@@ -854,6 +856,9 @@ function CreateRaidModal({ roles, initialRaidType, onClose, onCreated }: {
     description: initialRaidType === "defense" ? "Need help defending or reinforcing a hive." : "",
     teamSize: "4",
     myRole: "leader",
+    mapX: 0,
+    mapY: 0,
+    hasPickedLocation: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -886,85 +891,128 @@ function CreateRaidModal({ roles, initialRaidType, onClose, onCreated }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-sm">
-      <div className="mx-auto my-4 w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-950 p-4 shadow-2xl sm:p-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Team Alert</p>
-            <h3 className="text-xl font-black text-white">Create Raid Team</h3>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-3 py-1 text-sm text-slate-300">Close</button>
-        </div>
-
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <QuickModeButton label="Defend my hive" onClick={() => setForm({ ...form, raidType: "defense", targetLocation: "My Hive / Base Defense", description: "Need help defending or reinforcing my hive." })} />
-            <QuickModeButton label="Join ally hive" onClick={() => setForm({ ...form, raidType: "defense", targetLocation: "Ally Hive Assist", description: "Helping another member defend their hive." })} />
-            <QuickModeButton label="Enemy raid" onClick={() => setForm({ ...form, raidType: "normal", targetLocation: "Enemy Base Raid", description: "" })} />
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-slate-300">Target / Hive</span>
-            <input
-              value={form.targetLocation}
-              onChange={(e) => setForm({ ...form, targetLocation: e.target.value })}
-              placeholder="My hive, ally hive, enemy base, sector..."
-              required
-              className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40"
-            />
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-slate-300">Type</span>
-              <select value={form.raidType} onChange={(e) => setForm({ ...form, raidType: e.target.value as "normal" | "counter" | "defense" })} className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-white">
-                <option value="normal">Raid enemy target</option>
-                <option value="counter">Counter raid response</option>
-                <option value="defense">Hive/base defense</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-slate-300">Enemy Count</span>
-              <input type="number" value={form.enemyCount} onChange={(e) => setForm({ ...form, enemyCount: e.target.value })} placeholder="Optional" className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white placeholder:text-slate-600" />
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-slate-300">Your Role</span>
-            <select value={form.myRole} onChange={(e) => setForm({ ...form, myRole: e.target.value })} className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-white">
-              {roles.map((role) => <option key={role.id} value={role.id}>{role.emoji} {role.label}</option>)}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-slate-300">Team Size</span>
-            <select value={form.teamSize} onChange={(e) => setForm({ ...form, teamSize: e.target.value })} className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-white">
-              {[2, 3, 4, 5, 6, 8, 10, 12].map((size) => <option key={size} value={size}>{size} members</option>)}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-slate-300">Details</span>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Extra intel, where to meet, what to bring..." className="w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600" />
-          </label>
-
-          {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200">{error}</div>}
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button type="button" onClick={onClose} className="h-11 rounded-xl border border-slate-700 text-sm font-bold text-slate-300">Cancel</button>
-            <button type="submit" disabled={loading || !form.targetLocation.trim()} className="h-11 rounded-xl bg-gradient-to-r from-red-500 to-orange-600 text-sm font-black text-white disabled:opacity-50">
-              {loading ? "Creating..." : "Create Team"}
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/90 p-3 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="mx-auto my-4 w-full max-w-5xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+        <div className="relative border-b border-white/5 bg-gradient-to-r from-slate-900 to-slate-950 p-6">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+          <div className="flex items-start justify-between gap-4 relative z-10">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-400 mb-1">Tactical Deployment</p>
+              <h3 className="text-3xl font-black text-white tracking-tight">Establish Command Post</h3>
+              <p className="text-sm font-medium text-slate-500">Mark the target on the map and prepare your squad for deployment.</p>
+            </div>
+            <button type="button" onClick={onClose} className="group flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white">
+              <span className="text-xl">✕</span>
             </button>
           </div>
-        </form>
+        </div>
+
+        <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={submit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <QuickModeButton 
+                label="Hive Defend" 
+                active={form.raidType === "defense"}
+                onClick={() => setForm({ ...form, raidType: "defense", targetLocation: "Hive Defense Protocol", description: "Defensive reinforcement required at designated coordinates." })} 
+              />
+              <QuickModeButton 
+                label="Raid Target" 
+                active={form.raidType === "normal"}
+                onClick={() => setForm({ ...form, raidType: "normal", targetLocation: "Offensive Raid", description: "Target base identified for extraction/destruction." })} 
+              />
+              <QuickModeButton 
+                label="Counter" 
+                active={form.raidType === "counter"}
+                onClick={() => setForm({ ...form, raidType: "counter", targetLocation: "Counter-Raid", description: "Fast response required to intercept enemy movement." })} 
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Operation Objective</span>
+                <input
+                  value={form.targetLocation}
+                  onChange={(e) => setForm({ ...form, targetLocation: e.target.value })}
+                  placeholder="Enter target or click on the map →"
+                  required
+                  className="h-14 w-full rounded-2xl border border-white/5 bg-white/[0.03] px-5 text-sm font-bold text-white outline-none transition focus:border-cyan-500/50 focus:bg-white/[0.06]"
+                />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Enemy Strength</span>
+                  <input type="number" value={form.enemyCount} onChange={(e) => setForm({ ...form, enemyCount: e.target.value })} placeholder="Intel (optional)" className="h-14 w-full rounded-2xl border border-white/5 bg-white/[0.03] px-5 text-sm font-bold text-white outline-none focus:border-rose-500/50" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Squad Capacity</span>
+                  <select value={form.teamSize} onChange={(e) => setForm({ ...form, teamSize: e.target.value })} className="h-14 w-full rounded-2xl border border-white/5 bg-white/[0.03] px-5 text-sm font-bold text-white outline-none appearance-none">
+                    {[2, 4, 6, 8, 12, 16, 24].map((size) => <option key={size} value={size}>{size} Members</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Your Designation</span>
+                <select value={form.myRole} onChange={(e) => setForm({ ...form, myRole: e.target.value })} className="h-14 w-full rounded-2xl border border-white/5 bg-white/[0.03] px-5 text-sm font-bold text-white outline-none appearance-none">
+                  {roles.map((role) => <option key={role.id} value={role.id}>{role.emoji} {role.label}</option>)}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Operational Intel</span>
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} placeholder="Describe the mission parameters..." className="w-full resize-none rounded-2xl border border-white/5 bg-white/[0.03] px-5 py-4 text-sm font-bold text-white outline-none transition focus:border-cyan-500/50 focus:bg-white/[0.06]" />
+              </label>
+            </div>
+
+            {error && <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 px-5 py-4 text-sm font-bold text-rose-300">{error}</div>}
+
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={onClose} className="h-14 flex-1 rounded-2xl border border-white/10 text-xs font-black uppercase tracking-widest text-slate-400 transition hover:bg-white/5 hover:text-white">Cancel</button>
+              <button type="submit" disabled={loading || !form.targetLocation.trim()} className="h-14 flex-[2] rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
+                {loading ? "Transmitting..." : "Initialize Alert"}
+              </button>
+            </div>
+          </form>
+
+          <div className="relative border-l border-white/5 bg-slate-900/50">
+            <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-slate-950 to-transparent p-6 pointer-events-none">
+               <div className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400">Map Localization</div>
+               <div className="mt-1 text-xs font-bold text-slate-500">Click to set target coordinates</div>
+            </div>
+            <InteractiveMap 
+              hives={hives} 
+              draft={form.hasPickedLocation ? { x: form.mapX, y: form.mapY } : undefined} 
+              onPick={(x, y) => {
+                const sector = `S-${Math.floor(x/10)}${Math.floor(y/10)}`;
+                setForm({ 
+                  ...form, 
+                  mapX: x, 
+                  mapY: y, 
+                  hasPickedLocation: true,
+                  targetLocation: `${form.raidType === "defense" ? "Defend" : "Raid"} @ ${sector} [${Math.round(x)}, ${Math.round(y)}]`
+                });
+              }}
+              className="h-full min-h-[500px]" 
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function QuickModeButton({ label, onClick }: { label: string; onClick: () => void }) {
+function QuickModeButton({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs font-black text-cyan-100">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+        active 
+          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300" 
+          : "border-white/5 bg-white/5 text-slate-500 hover:border-white/20 hover:bg-white/10 hover:text-slate-300"
+      }`}
+    >
       {label}
     </button>
   );

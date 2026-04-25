@@ -222,6 +222,21 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
       >
+        {/* Tactical HUD Overlays */}
+        <div className="absolute inset-0 pointer-events-none z-10">
+          {/* Scanline Effect */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20" />
+          
+          {/* Pulsating Tactical Border */}
+          <div className="absolute inset-0 border-2 border-cyan-500/10 shadow-[inset_0_0_40px_rgba(34,211,238,0.05)] animate-pulse" />
+          
+          {/* Corner Brackets */}
+          <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-cyan-500/40" />
+          <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-cyan-500/40" />
+          <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-cyan-500/40" />
+          <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-cyan-500/40" />
+        </div>
+
         {/* The scalable, draggable map container */}
         <div 
           ref={mapRef}
@@ -235,9 +250,8 @@ export function InteractiveMap({ hives, draft, onPick, compact, className }: { h
             backgroundRepeat: "no-repeat"
           }}
         >
-          {/* Overlay grid - Cyberpunk style */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.15] mix-blend-overlay [background-image:linear-gradient(rgba(34,211,238,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.5)_1px,transparent_1px)] [background-size:100px_100px]" />
-          <div className="absolute inset-0 pointer-events-none opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)] [background-size:20px_20px]" />
+          {/* Grid Overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:50px_50px]" />
           
           {/* Markers */}
           {filteredHives.map((hive) => {
