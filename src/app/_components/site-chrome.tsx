@@ -76,7 +76,11 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                   pathname.startsWith("/admin") ? "75% 75%" :
                   pathname.startsWith("/community") ? "50% 85%" :
                   pathname.startsWith("/about") ? "50% 15%" :
-                  "center"
+                  "center",
+                transform: 
+                  pathname.startsWith("/dashboard") || pathname.startsWith("/admin") ? "scale(1.15)" :
+                  pathname === "/" ? "scale(1)" : 
+                  "scale(1.45)" // Stronger zoom for other pages to show variety
               }}
               onError={(e) => {
                 (e.currentTarget as HTMLVideoElement).style.display = "none";
