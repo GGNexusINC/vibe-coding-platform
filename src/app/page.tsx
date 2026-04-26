@@ -726,6 +726,22 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
+      {/* Background video */}
+      <video
+        src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
+        autoPlay loop muted playsInline
+        preload="metadata"
+        poster="/raidzone-bg.png"
+        className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-15 md:block"
+        onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+      />
+      <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
+      <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,16,24,0.55),rgba(4,16,24,0.7),rgba(4,16,24,0.97))]" />
+      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-orange-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-orange-500/10 blur-3xl" />
+
       <section className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:py-24">
         {/* Language Toggle */}
         <div className="absolute top-4 right-4 flex rounded-full border border-white/10 bg-slate-950/80 p-1 backdrop-blur-sm">
