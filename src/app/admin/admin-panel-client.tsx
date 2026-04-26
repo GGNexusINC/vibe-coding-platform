@@ -651,20 +651,87 @@ const COPILOT_KNOWLEDGE = [
   { keywords: ["arena", "event", "tournament"], tab: "arena", label: "Arena Events", desc: "Manage PvP tournaments and voting." },
 ];
 
-function AdminCopilot({ onNavigate }: { onNavigate: (tab: any) => void }) {
+function AdminCopilot({ onNavigate, onAction }: { 
+  onNavigate: (tab: any) => void;
+  onAction: (type: 'warn' | 'ban', target: string, reason: string) => Promise<{ok: boolean, error?: string, message?: string}>;
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [confirming, setConfirming] = useState<{ type: 'warn' | 'ban', target: string, reason: string } | null>(null);
   const [responses, setResponses] = useState<{ type: "bot" | "user"; text: string; action?: { label: string; tab: string } }[]>([
-    { type: "bot", text: "Hello Admin! I'm your GGN Copilot. How can I help you manage the platform today?" }
+    { type: "bot", text: "Hello Admin! I'm your GGN Sentinel. I can help you navigate or even execute moderation commands. Try: 'ban [ID] [reason]'" }
   ]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
+  }, [responses]);
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     const userMsg = query.trim().toLowerCase();
     setResponses(prev => [...prev, { type: "user", text: query }]);
     setQuery("");
+
+    // Special Commands
+    if (userMsg === "clear" || userMsg === "clear chat") {
+      setResponses([{ type: "bot", text: "BUFFER CLEARED. SYSTEMS READY." }]);
+      return;
+    }
+
+    if (userMsg === "logout" || userMsg === "sign out") {
+      setResponses(prev => [...prev, { type: "bot", text: "TERMINATING SESSION..." }]);
+      setTimeout(() => {
+        window.location.href = "/auth/sign-out";
+      }, 1000);
+      return;
+    }
+
+    if (userMsg.startsWith("goto ") || userMsg.startsWith("open ")) {
+      const targetTab = userMsg.replace("goto ", "").replace("open ", "").trim();
+      const tab = COPILOT_KNOWLEDGE.find(k => k.label.toLowerCase().includes(targetTab) || k.tab.includes(targetTab));
+      if (tab) {
+        onNavigate(tab.tab);
+        setResponses(prev => [...prev, { type: "bot", text: `NAVIGATING TO: ${tab.label.toUpperCase()}` }]);
+        return;
+      }
+    }
+
+    // Confirmation Logic
+    if (confirming) {
+      if (userMsg.includes("yes") || userMsg.includes("confirm") || userMsg.includes("do it")) {
+        setResponses(prev => [...prev, { type: "bot", text: "EXECUTING COMMAND... STAND BY." }]);
+        const res = await onAction(confirming.type, confirming.target, confirming.reason);
+        if (res.ok) {
+          setResponses(prev => [...prev, { type: "bot", text: `PROTOCOL COMPLETE. ${res.message || 'Action executed successfully.'}` }]);
+        } else {
+          setResponses(prev => [...prev, { type: "bot", text: `ERROR: ${res.error || 'Execution failed.'}` }]);
+        }
+        setConfirming(null);
+        return;
+      } else {
+        setResponses(prev => [...prev, { type: "bot", text: "ACTION ABORTED." }]);
+        setConfirming(null);
+        return;
+      }
+    }
+
+    // Command Parsing (Ban/Warn)
+    const modMatch = query.match(/(ban|warn)\s+(\d{17,19})\s+(.*)/i);
+    if (modMatch) {
+      const [, type, target, reason] = modMatch;
+      setConfirming({ type: type.toLowerCase() as any, target, reason });
+      setResponses(prev => [...prev, { 
+        type: "bot", 
+        text: `⚠️ CRITICAL ACTION: Are you sure you want to ${type.toUpperCase()} user ${target} for: "${reason}"?` 
+      }]);
+      return;
+    }
 
     // Simple keyword matching logic
     const match = COPILOT_KNOWLEDGE.find(item => 
@@ -682,7 +749,7 @@ function AdminCopilot({ onNavigate }: { onNavigate: (tab: any) => void }) {
       } else if (userMsg.includes("hello") || userMsg.includes("hi")) {
         setResponses(prev => [...prev, { type: "bot", text: "Systems online and ready for your command, Admin. What's our next objective?" }]);
       } else {
-        setResponses(prev => [...prev, { type: "bot", text: "I'm not exactly sure about that one. Try asking about 'webhooks', 'sales', 'members', or 'bot status'!" }]);
+        setResponses(prev => [...prev, { type: "bot", text: "I'm not exactly sure about that one. Try: 'ban [ID] [reason]', 'goto [tab]', or 'logout'!" }]);
       }
     }, 400);
   };
@@ -710,7 +777,7 @@ function AdminCopilot({ onNavigate }: { onNavigate: (tab: any) => void }) {
             </div>
           </div>
           
-          <div className="h-80 overflow-y-auto p-5 space-y-4 custom-scrollbar relative">
+          <div ref={scrollerRef} className="h-80 overflow-y-auto p-5 space-y-4 custom-scrollbar relative scroll-smooth">
             {responses.map((res, i) => (
               <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                 <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
@@ -5402,7 +5469,22 @@ export function AdminPanelClient() {
           })}
         </div>
       </nav>
-      {isAuthed && <AdminCopilot onNavigate={switchTab} />}
+      {isAuthed && (
+        <AdminCopilot 
+          onNavigate={switchTab} 
+          onAction={async (type, target, reason) => {
+            const res = await fetch("/api/admin/moderate", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ action: type, targetDiscordId: target, reason }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) return { ok: false, error: data?.error || "Action failed" };
+            if (data.pending) return { ok: true, message: `Proposal submitted for review. (ID: ${data.pendingBanId?.slice(0, 8)})` };
+            return { ok: true, message: `Action successfully applied to ${target}.` };
+          }}
+        />
+      )}
     </div>
   );
 }
