@@ -9,8 +9,6 @@ import {
   type DiscordWebhookPayload,
 } from "@/lib/discord";
 
-import { env } from "@/lib/env";
-
 const DISCORD_API = "https://discord.com/api/v10";
 const BOT_TOKEN = env.discordBotToken();
 const GUILD_ID = env.discordGuildId();
