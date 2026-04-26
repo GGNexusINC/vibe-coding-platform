@@ -678,7 +678,7 @@ function AdminCopilot({ onNavigate, onAction }: {
     setResponses(prev => [...prev, { type: "user", text: query }]);
     setQuery("");
 
-    // Special Commands
+    // --- LOCAL COMMANDS (Instant) ---
     if (userMsg === "clear" || userMsg === "clear chat") {
       setResponses([{ type: "bot", text: "BUFFER CLEARED. SYSTEMS READY." }]);
       return;
@@ -692,17 +692,7 @@ function AdminCopilot({ onNavigate, onAction }: {
       return;
     }
 
-    if (userMsg.startsWith("goto ") || userMsg.startsWith("open ")) {
-      const targetTab = userMsg.replace("goto ", "").replace("open ", "").trim();
-      const tab = COPILOT_KNOWLEDGE.find(k => k.label.toLowerCase().includes(targetTab) || k.tab.includes(targetTab));
-      if (tab) {
-        onNavigate(tab.tab);
-        setResponses(prev => [...prev, { type: "bot", text: `NAVIGATING TO: ${tab.label.toUpperCase()}` }]);
-        return;
-      }
-    }
-
-    // Confirmation Logic
+    // --- AI COMMAND INTERFACE ---
     if (confirming) {
       if (userMsg.includes("yes") || userMsg.includes("confirm") || userMsg.includes("do it")) {
         setResponses(prev => [...prev, { type: "bot", text: "EXECUTING PROTOCOL... STAND BY." }]);
@@ -721,124 +711,49 @@ function AdminCopilot({ onNavigate, onAction }: {
       }
     }
 
-    // --- COMMAND PARSING ENGINE ---
-
-    // Moderation: ban/warn [ID] [reason]
-    const modMatch = query.match(/(ban|warn)\s+(\d{17,19})\s+(.*)/i);
-    if (modMatch) {
-      const [, type, target, reason] = modMatch;
-      setConfirming({ 
-        action: "mod", 
-        data: { action: type.toLowerCase(), targetDiscordId: target, reason },
-        display: `Execute ${type.toUpperCase()} on ${target} for: "${reason}"`
+    // Call AI Backend
+    setResponses(prev => [...prev, { type: "bot", text: "ANALYZING NEURAL INPUT..." }]);
+    
+    try {
+      const res = await fetch("/api/admin/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          prompt: query,
+          context: {
+            tabs: COPILOT_KNOWLEDGE,
+            activeTab: "dashboard" // Could be dynamic
+          }
+        })
       });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${type.toUpperCase()} user ${target}?` }]);
-      return;
-    }
+      
+      const data = await res.json();
+      // Remove "ANALYZING..." message
+      setResponses(prev => prev.filter(r => r.text !== "ANALYZING NEURAL INPUT..."));
 
-    // Broadcast: broadcast [title] | [message]
-    if (userMsg.startsWith("broadcast ")) {
-      const content = query.slice(10);
-      const [title, ...msgParts] = content.split("|");
-      const message = msgParts.join("|").trim();
-      if (!title || !message) {
-        setResponses(prev => [...prev, { type: "bot", text: "FORMAT ERROR. Use: 'broadcast Title | Message'" }]);
+      if (!data.ok) {
+        setResponses(prev => [...prev, { type: "bot", text: `AI ERROR: ${data.error || "Connection lost."}` }]);
         return;
       }
-      setConfirming({
-        action: "broadcast",
-        data: { title: title.trim(), message, target: "all" },
-        display: `Send GLOBAL BROADCAST: "${title.trim()}"`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: "⚠️ CONFIRMATION REQUIRED: Send this broadcast to all users?" }]);
-      return;
-    }
 
-    // Lottery: draw lottery [prize]
-    if (userMsg.startsWith("draw lottery ")) {
-      const prize = query.slice(13).trim();
-      setConfirming({
-        action: "lottery",
-        data: { prize },
-        display: `Draw lottery winner for: ${prize}`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Pick a winner for ${prize} now?` }]);
-      return;
-    }
-
-    // Tickets: close ticket [ID]
-    const ticketMatch = userMsg.match(/close ticket\s+([a-f0-9-]{10,})/i);
-    if (ticketMatch) {
-      const ticketId = ticketMatch[1];
-      setConfirming({
-        action: "ticket",
-        data: { ticketId, action: "close" },
-        display: `CLOSE support ticket ${ticketId}`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Close ticket ${ticketId}?` }]);
-      return;
-    }
-
-    // Roster: approve/deny admin [ID]
-    const rosterMatch = userMsg.match(/(approve|deny)\s+admin\s+(\d{17,19})/i);
-    if (rosterMatch) {
-      const [, action, id] = rosterMatch;
-      const status = action.toLowerCase() === "approve" ? "approved" : "denied";
-      setConfirming({
-        action: "roster",
-        data: { discordId: id, status },
-        display: `${action.toUpperCase()} admin application for ${id}`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${action.toUpperCase()} this staff application?` }]);
-      return;
-    }
-
-    // Wipe: set wipe [date] [label]
-    if (userMsg.startsWith("set wipe ")) {
-      const parts = query.slice(9).split(" ");
-      const date = parts[0];
-      const label = parts.slice(1).join(" ") || "Server Wipe";
-      setConfirming({
-        action: "wipe",
-        data: { wipeAt: date, label },
-        display: `Set WIPE TIMER to ${date} (${label})`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Update global wipe schedule?` }]);
-      return;
-    }
-
-    // Beta: approve/deny beta [ID]
-    const betaMatch = userMsg.match(/(approve|deny)\s+beta\s+([a-f0-9-]{10,})/i);
-    if (betaMatch) {
-      const [, action, id] = betaMatch;
-      setConfirming({
-        action: "beta",
-        data: { requestId: id, action: action.toLowerCase() },
-        display: `${action.toUpperCase()} beta tester request ${id}`
-      });
-      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${action.toUpperCase()} this beta access?` }]);
-      return;
-    }
-
-    // Simple keyword matching logic
-    const match = COPILOT_KNOWLEDGE.find(item => 
-      item.keywords.some(k => userMsg.includes(k)) || 
-      item.label.toLowerCase().includes(userMsg)
-    );
-
-    setTimeout(() => {
-      if (match) {
+      const { result } = data;
+      if (result.type === "command") {
+        setConfirming({
+          action: result.commandType,
+          data: result.data,
+          display: JSON.stringify(result.data, null, 2)
+        });
         setResponses(prev => [...prev, { 
           type: "bot", 
-          text: `I found that for you! You can manage ${match.label} in the corresponding section. ${match.desc}`,
-          action: { label: `Go to ${match.label}`, tab: match.tab }
+          text: `⚠️ ACTION PROPOSED: ${result.commandType.toUpperCase()}\n\n${JSON.stringify(result.data, null, 2)}\n\nConfirm execution?` 
         }]);
-      } else if (userMsg.includes("hello") || userMsg.includes("hi")) {
-        setResponses(prev => [...prev, { type: "bot", text: "Systems online and ready for your command, Admin. What's our next objective?" }]);
       } else {
-        setResponses(prev => [...prev, { type: "bot", text: "I'm not exactly sure about that one. Try: 'ban [ID] [reason]', 'goto [tab]', or 'logout'!" }]);
+        setResponses(prev => [...prev, { type: "bot", text: result.text || "Protocol unclear." }]);
       }
-    }, 400);
+    } catch (err) {
+      setResponses(prev => prev.filter(r => r.text !== "ANALYZING NEURAL INPUT..."));
+      setResponses(prev => [...prev, { type: "bot", text: "ERROR: Failed to reach GGN Command Center." }]);
+    }
   };
 
   return (
