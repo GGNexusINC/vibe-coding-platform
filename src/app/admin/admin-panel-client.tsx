@@ -702,6 +702,7 @@ function AdminCopilot({ onNavigate, onAction, members }: {
 
       if (isPositive) {
         setResponses(prev => [...prev, { type: "bot", text: "EXECUTING PROTOCOL... STAND BY." }]);
+        console.log("[Sentinel] Executing action:", confirming.action, confirming.data);
         const res = await onAction(confirming.action, confirming.data);
         if (res.ok) {
           setResponses(prev => [...prev, { type: "bot", text: `SUCCESS: ${res.message || 'Operation complete.'}` }]);
@@ -5557,6 +5558,9 @@ export function AdminPanelClient() {
             // Specific success messages
             if (action === "lottery") return { ok: true, message: `Winner: ${resData.winner?.username} (${resData.winner?.prize})` };
             if (resData.pending) return { ok: true, message: `Proposal submitted. (ID: ${resData.pendingBanId?.slice(0, 8)})` };
+            if (action === "mod" && resData.action === "warn") {
+              return { ok: true, message: `Warning issued. DM Status: ${resData.dmSent ? "Sent ✅" : "Blocked ❌"}` };
+            }
             
             return { ok: true, message: "Protocol executed successfully." };
           }}

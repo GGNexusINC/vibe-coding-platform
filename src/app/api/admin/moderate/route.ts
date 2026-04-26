@@ -203,6 +203,8 @@ export async function POST(req: Request) {
   const targetDiscordId: string = String(body?.targetDiscordId ?? "").trim();
   const reason: string = String(body?.reason ?? "No reason provided").trim().slice(0, 512);
 
+  console.log(`[Moderate] Action: ${action}, Target: ${targetDiscordId}, Actor: ${admin.username}`);
+
   if (!["warn", "ban", "unban"].includes(action)) {
     return NextResponse.json({ ok: false, error: "Invalid action. Use warn, ban, or unban." }, { status: 400 });
   }

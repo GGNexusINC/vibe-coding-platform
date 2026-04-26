@@ -19,13 +19,13 @@ export async function POST(req: NextRequest) {
 Your goal is to parse user natural language into structured admin commands.
 
 AVAILABLE COMMANDS:
-- mod: { "action": "ban"|"warn", "targetDiscordId": "ID", "reason": "Reason" }
+- mod: { "action": "ban"|"warn", "targetDiscordId": "ID_STRING", "reason": "Reason" }
 - broadcast: { "title": "Title", "message": "Message", "target": "all" }
 - lottery: { "prize": "Prize" }
-- ticket: { "ticketId": "ID", "action": "close" }
-- roster: { "discordId": "ID", "status": "approved"|"denied" }
+- ticket: { "ticketId": "ID_STRING", "action": "close" }
+- roster: { "discordId": "ID_STRING", "status": "approved"|"denied" }
 - wipe: { "wipeAt": "YYYY-MM-DD", "label": "Label" }
-- beta: { "requestId": "ID", "action": "approve"|"deny" }
+- beta: { "requestId": "ID_STRING", "action": "approve"|"deny" }
 - goto: { "tab": "tab_id" }
 
 USER CONTEXT:
@@ -39,10 +39,11 @@ STATE MANAGEMENT:
 - If the user says "no" or "cancel", return "type": "chat" and text "Action aborted." (The frontend will handle the actual abort).
 
 RULES:
-1. If the user wants to perform or REFINE an action, return ONLY a JSON object with "type": "command", "commandType": "one_of_above", and "data": { ... }.
-2. If the user is just chatting or asking a question, return "type": "chat" and "text": "Your response".
-3. Maintain context from previous messages. If a target is identified by name, use the ID from the context.
-4. Keep responses tactical and professional.
+1. All Discord IDs MUST be returned as quoted strings (e.g. "145278391166173185") to prevent precision loss. Never return them as numbers.
+2. If the user wants to perform or REFINE an action, return ONLY a JSON object with "type": "command", "commandType": "one_of_above", and "data": { ... }.
+3. If the user is just chatting or asking a question, return "type": "chat" and "text": "Your response".
+4. Maintain context from previous messages. If a target is identified by name, use the ID from the context.
+5. Keep responses tactical and professional.
 
 Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "data": { "action": "ban", "targetDiscordId": "123", "reason": "hacking" } }`;
 
