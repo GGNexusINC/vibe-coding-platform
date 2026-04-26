@@ -52,11 +52,12 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       )}
 
       <main className="relative flex-1 overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.88),rgba(10,13,6,0.96))]" />
+        {/* Dark Background Base */}
+        <div className="pointer-events-none absolute inset-0 bg-[#0a0d06]" />
 
         {/* Global Background Video for all pages EXCEPT Home */}
         {pathname !== "/" && (
-          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden h-screen w-screen">
             <video
               src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
               autoPlay
@@ -64,7 +65,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               muted
               playsInline
               preload="metadata"
-              className="h-full w-full object-cover opacity-[0.35] transition-all duration-1000"
+              className="absolute inset-0 h-full w-full object-cover opacity-[0.38] transition-all duration-[2500ms] ease-in-out"
               style={{
                 objectPosition:
                   pathname.startsWith("/store") ? "90% 10%" :
@@ -81,11 +82,14 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 (e.currentTarget as HTMLVideoElement).style.display = "none";
               }}
             />
-            {/* Visual tie-ins for the video */}
-            <div className="absolute inset-0 rz-bg opacity-[0.08] rz-drift mix-blend-overlay" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/30 via-transparent to-[#0a0d06]/70" />
+            {/* Visual enhancements */}
+            <div className="absolute inset-0 rz-bg opacity-[0.06] rz-drift mix-blend-overlay" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/60 via-transparent to-[#0a0d06]/90" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(10,13,6,0.3)_100%)]" />
           </div>
         )}
+
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.7),rgba(10,13,6,0.9))]" />
 
         <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(99,102,241,0.12),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(34,211,238,0.09),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(16,185,129,0.07),transparent_40%)]" />
         <div className="rz-starfield pointer-events-none">
