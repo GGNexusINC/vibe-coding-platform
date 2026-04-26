@@ -52,6 +52,39 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       )}
 
       <main className="relative flex-1 overflow-hidden">
+        {/* Global Background Video for all pages EXCEPT Home */}
+        {pathname !== "/" && (
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <video
+              src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="h-full w-full object-cover opacity-[0.22] transition-all duration-1000 md:block hidden"
+              style={{
+                objectPosition:
+                  pathname.startsWith("/store") ? "90% 10%" :
+                  pathname.startsWith("/rules") ? "10% 10%" :
+                  pathname.startsWith("/lottery") ? "10% 90%" :
+                  pathname.startsWith("/support") ? "95% 95%" :
+                  pathname.startsWith("/dashboard") ? "25% 25%" :
+                  pathname.startsWith("/admin") ? "75% 75%" :
+                  pathname.startsWith("/community") ? "50% 85%" :
+                  pathname.startsWith("/about") ? "50% 15%" :
+                  "center"
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLVideoElement).style.display = "none";
+              }}
+            />
+            {/* Visual tie-ins for the video */}
+            <div className="absolute inset-0 rz-bg opacity-[0.05] rz-drift mix-blend-overlay" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/40 via-transparent to-[#0a0d06]/80" />
+          </div>
+        )}
+
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.88),rgba(10,13,6,0.96))]" />
         <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(99,102,241,0.12),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(34,211,238,0.09),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(16,185,129,0.07),transparent_40%)]" />
         <div className="rz-starfield pointer-events-none">
