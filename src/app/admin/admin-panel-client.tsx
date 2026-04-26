@@ -735,7 +735,10 @@ function AdminCopilot({ onNavigate, onAction, members }: {
           context: {
             tabs: COPILOT_KNOWLEDGE,
             activeTab: "dashboard",
-            members: members.map(m => ({ id: m.discordId, username: m.username })),
+            members: members
+              .filter(m => currentQuery.toLowerCase().includes(m.username?.toLowerCase() || "") || m.discordId === currentQuery)
+              .slice(0, 50)
+              .map(m => ({ id: m.discordId, username: m.username })),
             pendingCommand: confirming // Tell the AI about the pending action!
           }
         })
@@ -789,9 +792,9 @@ function AdminCopilot({ onNavigate, onAction, members }: {
   };
 
   return (
-    <div className="fixed bottom-10 right-10 z-[9999] group/copilot">
+    <div className="fixed bottom-4 right-4 sm:bottom-10 sm:right-10 z-[9999] group/copilot">
       {open ? (
-        <div className="mb-4 w-[420px] overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-950/95 backdrop-blur-3xl shadow-[0_0_80px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-12 duration-700 flex flex-col max-h-[70vh] ring-1 ring-white/10">
+        <div className="mb-4 w-[calc(100vw-2rem)] sm:w-[420px] overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-950/95 backdrop-blur-3xl shadow-[0_0_80px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-12 duration-700 flex flex-col max-h-[85vh] sm:max-h-[70vh] ring-1 ring-white/10">
           {/* Tactical Overlay */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.12] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%] z-[100]" />
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-cyan-500/5 to-transparent z-[1]" />
@@ -912,22 +915,22 @@ function AdminCopilot({ onNavigate, onAction, members }: {
 
       <button 
         onClick={() => setOpen(!open)}
-        className={`group relative flex h-20 w-20 items-center justify-center rounded-[2rem] border transition-all duration-700 hover:scale-110 active:scale-90 ${
+        className={`group relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-[1.8rem] sm:rounded-[2rem] border transition-all duration-700 hover:scale-110 active:scale-90 ${
           open 
             ? 'bg-slate-900 border-cyan-400 shadow-[0_0_60px_rgba(6,182,212,0.5)] rotate-180' 
             : 'bg-slate-950 border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.2)] hover:border-cyan-400 hover:shadow-[0_0_60px_rgba(6,182,212,0.4)]'
         }`}
       >
-        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-cyan-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute -inset-[2px] rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 opacity-20 group-hover:opacity-80 blur-md transition-opacity" />
+        <div className="absolute inset-0 rounded-[1.8rem] sm:rounded-[2rem] bg-gradient-to-br from-cyan-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute -inset-[2px] rounded-[1.8rem] sm:rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 opacity-20 group-hover:opacity-80 blur-md transition-opacity" />
         
         <div className="relative">
           {open ? (
-            <span className="text-3xl font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">×</span>
+            <span className="text-2xl sm:text-3xl font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">×</span>
           ) : (
-            <div className="relative h-10 w-10 flex items-center justify-center">
-              <span className="text-4xl filter drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] group-hover:rotate-12 transition-transform duration-500">🤖</span>
-              <div className="absolute -top-1 -right-1 h-3 w-3 bg-cyan-400 rounded-full border-2 border-slate-950 animate-pulse shadow-[0_0_10px_rgba(34,211,238,1)]" />
+            <div className="relative h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center">
+              <span className="text-3xl sm:text-4xl filter drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] group-hover:rotate-12 transition-transform duration-500">🤖</span>
+              <div className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 w-3 bg-cyan-400 rounded-full border-2 border-slate-950 animate-pulse shadow-[0_0_10px_rgba(34,211,238,1)]" />
             </div>
           )}
         </div>
