@@ -76,24 +76,38 @@ export async function POST(
 
   // Admin closing - notify Discord and schedule channel deletion
   try {
-    await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: "POST",
       headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ content: "Ticket closed by staff. This channel will be deleted in 10 seconds." }),
+      body: JSON.stringify({ content: `🔒 Ticket closed by **${closedBy}**. This channel will be deleted in 10 seconds...` }),
     });
+    
+    const msgData = await msgRes.json().catch(() => ({}));
+    const msgId = msgData.id;
 
-    setTimeout(async () => {
-      try {
-        await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bot ${botToken}` },
-        });
-      } catch (deleteErr) {
-        console.error("[ticket-close] Channel delete failed:", deleteErr);
+    // Async countdown loop
+    (async () => {
+      for (let i = 9; i >= 0; i--) {
+        await new Promise(r => setTimeout(r, 1000));
+        if (msgId) {
+          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${msgId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ content: `🔒 Ticket closed by **${closedBy}**. This channel will be deleted in **${i}** seconds...` }),
+          }).catch(() => {});
+        }
       }
-    }, 10000);
+      
+      // Final deletion
+      await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bot ${botToken}` },
+      }).catch(deleteErr => {
+        console.error("[ticket-close] Channel delete failed:", deleteErr);
+      });
+    })();
 
-    return NextResponse.json({ ok: true, message: "Ticket closed - channel will be deleted in 10s" });
+    return NextResponse.json({ ok: true, message: "Ticket closed - channel deletion sequence initiated." });
   } catch (e) {
     console.error("[ticket-close] Discord error:", e);
     return NextResponse.json({ ok: true, message: "Ticket closed but Discord notification failed" });

@@ -90,15 +90,33 @@ export async function POST(req: Request) {
   if (botToken) {
     try {
       // 1. Send final message
-      await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      const msgRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: "POST",
         headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ content: `🔒 Ticket closed by **${closedBy}**. This channel will be deleted in 10 seconds.` }),
+        body: JSON.stringify({ content: `🔒 Ticket closed by **${closedBy}**. This channel will be deleted in 10 seconds...` }),
       });
 
-      // 2. Schedule deletion (we use a non-blocking way if possible, but in Route Handlers we just hope it works or do it via another service)
-      // Since we are in a serverless function, we should ideally use a background job, but for now we'll just return OK.
-      // The Bot will handle the deletion if we tell it to, but here we are calling the API from the bot anyway.
+      const msgData = await msgRes.json().catch(() => ({}));
+      const msgId = msgData.id;
+
+      // 2. Schedule deletion with live countdown
+      (async () => {
+        for (let i = 9; i >= 0; i--) {
+          await new Promise(r => setTimeout(r, 1000));
+          if (msgId) {
+            await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${msgId}`, {
+              method: "PATCH",
+              headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ content: `🔒 Ticket closed by **${closedBy}**. This channel will be deleted in **${i}** seconds...` }),
+            }).catch(() => {});
+          }
+        }
+
+        await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bot ${botToken}` },
+        }).catch(err => console.error("[ticket-close-bot] Delete error:", err));
+      })();
     } catch (e) {
       console.error("[ticket-close-bot] Discord notification error:", e);
     }
