@@ -663,20 +663,22 @@ function AdminCopilot({ onNavigate, onAction, members }: {
     { type: "bot", text: "SENTINEL ONLINE. NEURAL LINK ESTABLISHED.\n\nI have full access to all sectors. You can issue commands for:\n- MODERATION: 'ban [ID] [reason]'\n- BROADCAST: 'broadcast [title] | [message]'\n- LOTTERY: 'draw lottery [prize]'\n- TICKETS: 'close ticket [ID]'\n- ROSTER: 'approve admin [ID]'\n- WIPE: 'set wipe [date] [label]'\n- BETA: 'approve beta [ID]'\n\nWhat is our objective?" }
   ]);
 
+  const [typing, setTyping] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
     }
-  }, [responses]);
+  }, [responses, typing]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || typing) return;
 
-    const userMsg = query.trim().toLowerCase();
-    setResponses(prev => [...prev, { type: "user", text: query }]);
+    const currentQuery = query.trim();
+    const userMsg = currentQuery.toLowerCase();
+    setResponses(prev => [...prev, { type: "user", text: currentQuery }]);
     setQuery("");
 
     // --- LOCAL COMMANDS (Instant) ---
@@ -713,14 +715,15 @@ function AdminCopilot({ onNavigate, onAction, members }: {
     }
 
     // Call AI Backend
-    setResponses(prev => [...prev, { type: "bot", text: "ANALYZING NEURAL INPUT..." }]);
+    setTyping(true);
     
     try {
       const res = await fetch("/api/admin/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          prompt: query,
+          prompt: currentQuery,
+          history: responses.slice(-10),
           context: {
             tabs: COPILOT_KNOWLEDGE,
             activeTab: "dashboard",
@@ -730,8 +733,7 @@ function AdminCopilot({ onNavigate, onAction, members }: {
       });
       
       const data = await res.json();
-      // Remove "ANALYZING..." message
-      setResponses(prev => prev.filter(r => r.text !== "ANALYZING NEURAL INPUT..."));
+      setTyping(false);
 
       if (!data.ok) {
         setResponses(prev => [...prev, { type: "bot", text: `AI ERROR: ${data.error || "Connection lost."}` }]);
@@ -753,7 +755,7 @@ function AdminCopilot({ onNavigate, onAction, members }: {
         setResponses(prev => [...prev, { type: "bot", text: result.text || "Protocol unclear." }]);
       }
     } catch (err) {
-      setResponses(prev => prev.filter(r => r.text !== "ANALYZING NEURAL INPUT..."));
+      setTyping(false);
       setResponses(prev => [...prev, { type: "bot", text: "ERROR: Failed to reach GGN Command Center." }]);
     }
   };
@@ -761,61 +763,87 @@ function AdminCopilot({ onNavigate, onAction, members }: {
   return (
     <div className="fixed bottom-10 right-10 z-[9999] group/copilot">
       {open ? (
-        <div className="mb-4 w-85 overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_50px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-8 duration-500">
+        <div className="mb-4 w-[420px] overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-950/95 backdrop-blur-3xl shadow-[0_0_80px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-12 duration-700 flex flex-col max-h-[70vh]">
           {/* Tactical Overlay */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%]" />
+          <div className="absolute inset-0 pointer-events-none opacity-[0.08] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%]" />
           
-          <div className="relative bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-indigo-500/20 p-6 border-b border-white/10">
+          <div className="relative bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 p-7 border-b border-white/5 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative h-3 w-3">
-                  <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-50" />
-                  <div className="relative h-full w-full rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+              <div className="flex items-center gap-4">
+                <div className="relative h-4 w-4">
+                  <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-30" />
+                  <div className="relative h-full w-full rounded-full bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,1)]" />
                 </div>
                 <div>
-                  <span className="block text-[10px] font-black uppercase tracking-[0.3em] text-cyan-300">GGN Sentinel</span>
-                  <span className="block text-[8px] font-bold text-cyan-500/60 tracking-widest uppercase">Systems Nominal // Local: 0x42F</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-black uppercase tracking-[0.5em] text-cyan-100">SENTINEL</span>
+                    <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[8px] font-black text-cyan-400">ACTIVE</span>
+                  </div>
+                  <span className="block text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase mt-1">NEURAL INTERFACE // SECTOR 07</span>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-white/10 hover:text-white transition-all">✕</button>
+              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-full flex items-center justify-center text-slate-600 hover:bg-white/5 hover:text-cyan-400 transition-all group/close">
+                <span className="text-xl group-hover/close:rotate-90 transition-transform duration-300">✕</span>
+              </button>
             </div>
           </div>
           
-          <div ref={scrollerRef} className="h-80 overflow-y-auto p-5 space-y-4 custom-scrollbar relative scroll-smooth">
+          <div ref={scrollerRef} className="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar relative scroll-smooth bg-slate-950/50">
             {responses.map((res, i) => (
-              <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+              <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                <div className={`relative max-w-[88%] rounded-[1.8rem] px-6 py-4.5 text-[11px] leading-relaxed group/bubble ${
                   res.type === "user" 
-                    ? "bg-cyan-500/90 text-white rounded-tr-none shadow-lg shadow-cyan-500/20 border border-cyan-400/30" 
-                    : "bg-slate-950/80 text-slate-200 border border-white/10 rounded-tl-none backdrop-blur-md"
+                    ? "bg-gradient-to-br from-cyan-500 to-blue-700 text-white rounded-tr-none shadow-2xl shadow-cyan-500/20 border border-cyan-400/40" 
+                    : "bg-slate-900/40 text-slate-100 border border-white/5 rounded-tl-none backdrop-blur-md shadow-inner"
                 }`}>
-                  {res.text}
+                  {res.type === "bot" && (
+                    <div className="absolute -left-1.5 top-0 text-[10px] text-cyan-500/30 font-black">»</div>
+                  )}
+                  
+                  <div className="whitespace-pre-wrap font-medium tracking-normal leading-relaxed">{res.text}</div>
+                  
                   {res.action && (
                     <button 
                       onClick={() => {
                         onNavigate(res.action?.tab);
                         setOpen(false);
                       }}
-                      className="mt-3 flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+                      className="mt-5 flex items-center justify-center gap-3 w-full rounded-2xl bg-cyan-400/5 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-cyan-300 border border-cyan-400/20 hover:bg-cyan-400/10 hover:border-cyan-400/50 hover:text-cyan-100 transition-all active:scale-[0.97]"
                     >
-                      <span>⚡</span>
+                      <span className="animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.5)]">⚡</span>
                       {res.action.label}
                     </button>
                   )}
                 </div>
               </div>
             ))}
+            
+            {typing && (
+              <div className="flex justify-start animate-in fade-in duration-300">
+                <div className="bg-slate-900/40 rounded-[1.8rem] rounded-tl-none px-6 py-4 border border-white/5 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" />
+                </div>
+              </div>
+            )}
           </div>
 
-          <form onSubmit={handleSend} className="p-5 border-t border-white/10 bg-slate-950/80">
+          <form onSubmit={handleSend} className="p-7 border-t border-white/5 bg-slate-950 flex-shrink-0">
             <div className="relative group">
               <input 
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="INPUT COMMAND OR QUERY..."
-                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 text-[10px] font-bold tracking-widest text-cyan-100 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 placeholder:text-slate-600 transition-all"
+                placeholder={typing ? "SENTINEL IS THINKING..." : "ENTER COMMAND PROTOCOL..."}
+                disabled={typing}
+                className="w-full rounded-[1.5rem] border border-white/5 bg-slate-900/60 px-7 py-5 text-[12px] font-bold tracking-[0.05em] text-cyan-50 outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/10 placeholder:text-slate-600 transition-all disabled:opacity-30"
               />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-cyan-500/30">RET_</div>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                <div className={`h-2 w-2 rounded-full shadow-[0_0_10px] ${typing ? 'bg-amber-500 shadow-amber-500/50 animate-pulse' : 'bg-cyan-500 shadow-cyan-500/50'}`} />
+                <button disabled={typing || !query.trim()} className="text-cyan-400/40 hover:text-cyan-400 transition-colors disabled:opacity-0">
+                  <span className="text-sm font-black">⏎</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -823,11 +851,25 @@ function AdminCopilot({ onNavigate, onAction, members }: {
 
       <button 
         onClick={() => setOpen(!open)}
-        className="group relative flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-950 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 hover:scale-110 hover:rotate-3 hover:border-cyan-400 active:scale-95"
+        className={`group relative flex h-20 w-20 items-center justify-center rounded-[2rem] border transition-all duration-700 hover:scale-110 active:scale-90 ${
+          open 
+            ? 'bg-slate-900 border-cyan-400 shadow-[0_0_60px_rgba(6,182,212,0.5)] rotate-180' 
+            : 'bg-slate-950 border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.2)] hover:border-cyan-400 hover:shadow-[0_0_60px_rgba(6,182,212,0.4)]'
+        }`}
       >
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 opacity-20 group-hover:opacity-100 blur-sm transition-opacity" />
-        <span className="relative text-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">🤖</span>
+        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-cyan-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute -inset-[2px] rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 opacity-20 group-hover:opacity-80 blur-md transition-opacity" />
+        
+        <div className="relative">
+          {open ? (
+            <span className="text-3xl font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">×</span>
+          ) : (
+            <div className="relative h-10 w-10 flex items-center justify-center">
+              <span className="text-4xl filter drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] group-hover:rotate-12 transition-transform duration-500">🤖</span>
+              <div className="absolute -top-1 -right-1 h-3 w-3 bg-cyan-400 rounded-full border-2 border-slate-950 animate-pulse shadow-[0_0_10px_rgba(34,211,238,1)]" />
+            </div>
+          )}
+        </div>
       </button>
     </div>
   );

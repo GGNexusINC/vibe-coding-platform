@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, context } = await req.json();
+    const { prompt, context, history } = await req.json();
     
     const xaiKey = process.env.XAI_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
@@ -32,12 +32,22 @@ USER CONTEXT:
 ${JSON.stringify(context)}
 
 RULES:
-1. If the user wants to perform an action, return ONLY a JSON object with "type": "command" and "data": { ... }.
+1. If the user wants to perform an action, return ONLY a JSON object with "type": "command", "commandType": "one_of_above", and "data": { ... }.
 2. If the user is just chatting, return "type": "chat" and "text": "Your response".
-3. For moderation (ban/warn), if the user provides a name but not an ID, return "type": "chat" and "text": "I need a Discord ID to execute that protocol." unless you can find it in the context.
-4. Keep responses tactical and professional.
+3. Maintain context from previous messages in the history. If an ID was mentioned earlier, use it.
+4. If a target is identified by name, use the ID from the context.
+5. Keep responses tactical and professional.
 
 Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "data": { "action": "ban", "targetDiscordId": "123", "reason": "hacking" } }`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...(history || []).map((h: any) => ({
+        role: h.type === "user" ? "user" : "assistant",
+        content: h.text
+      })),
+      { role: "user", content: prompt }
+    ];
 
     const res = await fetch(url, {
       method: "POST",
@@ -47,10 +57,7 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
+        messages: messages,
         temperature: 0.1,
         response_format: { type: "json_object" }
       }),
