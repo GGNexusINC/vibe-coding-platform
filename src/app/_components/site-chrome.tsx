@@ -56,7 +56,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
         {/* Global Background Video for all pages EXCEPT Home */}
         {pathname !== "/" && (
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
             <video
               src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
               autoPlay
@@ -64,7 +64,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               muted
               playsInline
               preload="metadata"
-              className="h-full w-full object-cover opacity-[0.3] transition-all duration-1000 md:block hidden"
+              className="h-full w-full object-cover opacity-[0.35] transition-all duration-1000"
               style={{
                 objectPosition:
                   pathname.startsWith("/store") ? "90% 10%" :
@@ -82,8 +82,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               }}
             />
             {/* Visual tie-ins for the video */}
-            <div className="absolute inset-0 rz-bg opacity-[0.05] rz-drift mix-blend-overlay" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/20 via-transparent to-[#0a0d06]/60" />
+            <div className="absolute inset-0 rz-bg opacity-[0.08] rz-drift mix-blend-overlay" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/30 via-transparent to-[#0a0d06]/70" />
           </div>
         )}
 
