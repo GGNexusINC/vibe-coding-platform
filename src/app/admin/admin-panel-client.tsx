@@ -659,7 +659,7 @@ function AdminCopilot({ onNavigate, onAction, members }: {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [confirming, setConfirming] = useState<{ action: string, data: any, display: string } | null>(null);
-  const [responses, setResponses] = useState<{ type: "bot" | "user"; text: string; action?: { label: string; tab: string } }[]>([
+  const [responses, setResponses] = useState<{ type: "bot" | "user"; text: string; action?: { label: string; tab: string }; member?: any }[]>([
     { type: "bot", text: "SENTINEL ONLINE. NEURAL LINK ESTABLISHED.\n\nI have full access to all sectors. You can issue commands for:\n- MODERATION: 'ban [ID] [reason]'\n- BROADCAST: 'broadcast [title] | [message]'\n- LOTTERY: 'draw lottery [prize]'\n- TICKETS: 'close ticket [ID]'\n- ROSTER: 'approve admin [ID]'\n- WIPE: 'set wipe [date] [label]'\n- BETA: 'approve beta [ID]'\n\nWhat is our objective?" }
   ]);
 
@@ -751,14 +751,33 @@ function AdminCopilot({ onNavigate, onAction, members }: {
 
       const { result } = data;
       if (result.type === "command") {
+        const cmdType = result.commandType;
+        const cmdData = result.data;
+
+        // INSTANT GOTO
+        if (cmdType === "goto") {
+          onNavigate(cmdData.tab);
+          setResponses(prev => [...prev, { type: "bot", text: `NAVIGATING TO ${cmdData.tab.toUpperCase()}... SYSTEMS ENGAGED.` }]);
+          return;
+        }
+
+        // RICH PREVIEW
+        let targetMember = null;
+        const targetId = cmdData.targetDiscordId || cmdData.discordId || cmdData.ticketId || cmdData.requestId;
+        if (targetId) {
+          targetMember = members.find(m => m.discordId === targetId);
+        }
+
         setConfirming({
-          action: result.commandType,
-          data: result.data,
-          display: JSON.stringify(result.data, null, 2)
+          action: cmdType,
+          data: cmdData,
+          display: JSON.stringify(cmdData, null, 2)
         });
+
         setResponses(prev => [...prev, { 
           type: "bot", 
-          text: `⚠️ ACTION PROPOSED: ${result.commandType.toUpperCase()}\n\n${JSON.stringify(result.data, null, 2)}\n\nConfirm execution?` 
+          member: targetMember,
+          text: `⚠️ ACTION PROPOSED: ${cmdType.toUpperCase()}\n\n${JSON.stringify(cmdData, null, 2)}\n\nConfirm execution?` 
         }]);
       } else {
         setResponses(prev => [...prev, { type: "bot", text: result.text || "Protocol unclear." }]);
@@ -772,45 +791,68 @@ function AdminCopilot({ onNavigate, onAction, members }: {
   return (
     <div className="fixed bottom-10 right-10 z-[9999] group/copilot">
       {open ? (
-        <div className="mb-4 w-[420px] overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-950/95 backdrop-blur-3xl shadow-[0_0_80px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-12 duration-700 flex flex-col max-h-[70vh]">
+        <div className="mb-4 w-[420px] overflow-hidden rounded-[2.5rem] border border-cyan-500/30 bg-slate-950/95 backdrop-blur-3xl shadow-[0_0_80px_rgba(6,182,212,0.2)] animate-in slide-in-from-bottom-12 duration-700 flex flex-col max-h-[70vh] ring-1 ring-white/10">
           {/* Tactical Overlay */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.08] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%]" />
+          <div className="absolute inset-0 pointer-events-none opacity-[0.12] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,118,0.06))] bg-[length:100%_2px,3px_100%] z-[100]" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-cyan-500/5 to-transparent z-[1]" />
           
-          <div className="relative bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 p-7 border-b border-white/5 flex-shrink-0">
+          <div className="relative bg-slate-900/40 p-7 border-b border-white/10 flex-shrink-0 z-10 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-pulse" />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="relative h-4 w-4">
-                  <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-30" />
-                  <div className="relative h-full w-full rounded-full bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,1)]" />
+                <div className="relative h-5 w-5">
+                  <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-20" />
+                  <div className="relative h-full w-full rounded-full bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,1)] border-2 border-white/20" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-black uppercase tracking-[0.5em] text-cyan-100">SENTINEL</span>
-                    <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[8px] font-black text-cyan-400">ACTIVE</span>
+                    <span className="text-[14px] font-black uppercase tracking-[0.4em] text-cyan-100 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">SENTINEL</span>
+                    <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[8px] font-black text-cyan-400 border border-cyan-500/30">ONLINE</span>
                   </div>
-                  <span className="block text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase mt-1">NEURAL INTERFACE // SECTOR 07</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="block text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase">LINK ID: GGN-7-ALFA</span>
+                    <span className="h-1 w-1 rounded-full bg-slate-700" />
+                    <span className="block text-[9px] font-bold text-emerald-500/70 tracking-[0.1em] uppercase animate-pulse">NO PACKET LOSS</span>
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-full flex items-center justify-center text-slate-600 hover:bg-white/5 hover:text-cyan-400 transition-all group/close">
+              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white/5 hover:text-rose-400 transition-all group/close border border-transparent hover:border-rose-500/20">
                 <span className="text-xl group-hover/close:rotate-90 transition-transform duration-300">✕</span>
               </button>
             </div>
           </div>
           
-          <div ref={scrollerRef} className="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar relative scroll-smooth bg-slate-950/50">
+          <div ref={scrollerRef} className="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar relative scroll-smooth bg-slate-950/50 z-10">
             {responses.map((res, i) => (
               <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-                <div className={`relative max-w-[88%] rounded-[1.8rem] px-6 py-4.5 text-[11px] leading-relaxed group/bubble ${
+                <div className={`relative max-w-[92%] rounded-[2rem] px-6 py-4.5 text-[11px] leading-relaxed group/bubble transition-all hover:scale-[1.01] ${
                   res.type === "user" 
-                    ? "bg-gradient-to-br from-cyan-500 to-blue-700 text-white rounded-tr-none shadow-2xl shadow-cyan-500/20 border border-cyan-400/40" 
-                    : "bg-slate-900/40 text-slate-100 border border-white/5 rounded-tl-none backdrop-blur-md shadow-inner"
+                    ? "bg-gradient-to-br from-indigo-600 to-blue-800 text-white rounded-tr-none shadow-2xl shadow-indigo-500/10 border border-indigo-400/30 font-bold" 
+                    : "bg-slate-900/60 text-slate-100 border border-white/5 rounded-tl-none backdrop-blur-xl shadow-inner ring-1 ring-white/5"
                 }`}>
                   {res.type === "bot" && (
-                    <div className="absolute -left-1.5 top-0 text-[10px] text-cyan-500/30 font-black">»</div>
+                    <div className="absolute -left-2 top-0 text-[10px] text-cyan-500/50 font-black">»</div>
                   )}
                   
                   <div className="whitespace-pre-wrap font-medium tracking-normal leading-relaxed">{res.text}</div>
                   
+                  {res.member && (
+                    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 p-3 border border-white/5 animate-in zoom-in-95 duration-300">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10">
+                        {res.member.avatarUrl ? (
+                          <img src={res.member.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-xs font-bold text-slate-500">?</div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[10px] font-black text-white uppercase tracking-wider">{res.member.username}</div>
+                        <div className="truncate text-[9px] font-mono text-slate-500">{res.member.discordId}</div>
+                      </div>
+                      <div className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                    </div>
+                  )}
+
                   {res.action && (
                     <button 
                       onClick={() => {
@@ -838,20 +880,30 @@ function AdminCopilot({ onNavigate, onAction, members }: {
             )}
           </div>
 
-          <form onSubmit={handleSend} className="p-7 border-t border-white/5 bg-slate-950 flex-shrink-0">
+          <form onSubmit={handleSend} className="p-7 border-t border-white/10 bg-slate-950 flex-shrink-0 z-10 relative">
             <div className="relative group">
               <input 
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={typing ? "SENTINEL IS THINKING..." : "ENTER COMMAND PROTOCOL..."}
                 disabled={typing}
-                className="w-full rounded-[1.5rem] border border-white/5 bg-slate-900/60 px-7 py-5 text-[12px] font-bold tracking-[0.05em] text-cyan-50 outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/10 placeholder:text-slate-600 transition-all disabled:opacity-30"
+                className="w-full rounded-2xl border border-white/10 bg-slate-900/60 px-7 py-5 text-[12px] font-bold tracking-[0.05em] text-cyan-50 outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/5 placeholder:text-slate-600 transition-all disabled:opacity-30"
               />
               <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                <div className={`h-2 w-2 rounded-full shadow-[0_0_10px] ${typing ? 'bg-amber-500 shadow-amber-500/50 animate-pulse' : 'bg-cyan-500 shadow-cyan-500/50'}`} />
-                <button disabled={typing || !query.trim()} className="text-cyan-400/40 hover:text-cyan-400 transition-colors disabled:opacity-0">
+                <div className={`h-2 w-2 rounded-full shadow-[0_0_12px] transition-colors duration-500 ${typing ? 'bg-amber-500 shadow-amber-500/50 animate-pulse' : 'bg-cyan-500 shadow-cyan-500/80'}`} />
+                <button disabled={typing || !query.trim()} className="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-all disabled:opacity-0 active:scale-90">
                   <span className="text-sm font-black">⏎</span>
                 </button>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-6">
+              <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-slate-700" />
+                V-SYNC: 144HZ
+              </div>
+              <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                SECURE-CHANNEL: ENABLED
               </div>
             </div>
           </form>
@@ -5541,6 +5593,10 @@ export function AdminPanelClient() {
               case "roster":    endpoint = "/api/admin/roster"; break;
               case "wipe":      endpoint = "/api/admin/wipe-timer"; method = "PATCH"; break;
               case "beta":      endpoint = "/api/admin/beta"; method = "PATCH"; break;
+              case "goto": {
+                onNavigate(data.tab);
+                return { ok: true, message: `Navigated to ${data.tab}.` };
+              }
               default: return { ok: false, error: "Unknown action protocol." };
             }
 
