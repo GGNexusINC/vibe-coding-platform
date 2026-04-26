@@ -5594,7 +5594,7 @@ export function AdminPanelClient() {
               case "wipe":      endpoint = "/api/admin/wipe-timer"; method = "PATCH"; break;
               case "beta":      endpoint = "/api/admin/beta"; method = "PATCH"; break;
               case "goto": {
-                onNavigate(data.tab);
+                switchTab(data.tab);
                 return { ok: true, message: `Navigated to ${data.tab}.` };
               }
               default: return { ok: false, error: "Unknown action protocol." };
