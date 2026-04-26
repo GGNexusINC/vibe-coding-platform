@@ -309,6 +309,7 @@ export async function POST(req: Request) {
     }
   }
 
+  let dmSent = false;
   if (action === "warn") {
     try {
       const dmRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
@@ -319,9 +320,10 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({ recipient_id: targetDiscordId }),
       });
+      
       if (dmRes.ok) {
         const dm = await dmRes.json();
-        await fetch(`${DISCORD_API}/channels/${dm.id}/messages`, {
+        const msgRes = await fetch(`${DISCORD_API}/channels/${dm.id}/messages`, {
           method: "POST",
           headers: {
             Authorization: `Bot ${BOT_TOKEN}`,
@@ -331,21 +333,38 @@ export async function POST(req: Request) {
             embeds: [
               moderationEmbed({
                 author: "NewHopeGGN - Official Warning",
-                title: "Official Warning",
-                description: `> ${reason}`,
+                title: "Official Warning Issued",
+                description: `You have received a formal warning on the **NewHopeGGN** platform.\n\n**Reason:**\n> ${reason}`,
                 color: 0xf59e0b,
-                footer: "Please review our server rules to avoid further action.",
+                footer: "NewHopeGGN Integrity System",
                 fields: [
                   { name: "Issued By", value: actorName, inline: true },
-                  { name: "Server", value: "NewHopeGGN", inline: true },
+                  { name: "Time", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
                 ],
               }),
             ],
           }),
         });
+
+        if (msgRes.ok) {
+          dmSent = true;
+        } else {
+          console.error(`Failed to send DM message to ${targetDiscordId}:`, await msgRes.text());
+        }
+      } else {
+        const err = await dmRes.text();
+        console.error(`Failed to create DM channel for ${targetDiscordId}:`, err);
+        
+        // If DM failed (often due to user privacy settings), we should log it
+        await logActivity({
+          type: "admin_broadcast",
+          username: "System",
+          discordId: "0",
+          details: `⚠️ DM Delivery Failed for <@${targetDiscordId}>. User likely has DMs closed.`,
+        });
       }
-    } catch {
-      // DM failure is non-fatal.
+    } catch (dmErr) {
+      console.error("DM Protocol Error:", dmErr);
     }
   }
 
@@ -391,6 +410,7 @@ export async function POST(req: Request) {
           { name: "Reason", value: reason },
           { name: "Discord API", value: `${discordResult.status || "logged only"}`, inline: true },
           { name: "Recorded", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+          { name: "DM Sent", value: dmSent ? "✅ Successful" : "❌ Failed/Blocked", inline: true },
         ],
       }),
     ],
@@ -422,7 +442,7 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, action, targetDiscordId });
+  return NextResponse.json({ ok: true, action, targetDiscordId, dmSent });
 }
 
 export async function GET() {
