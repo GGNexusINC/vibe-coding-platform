@@ -49,12 +49,12 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
 
   async function handleProceed(referredBy: string) {
     setLoading(true);
-    // Log the "Official" (Sale Intent) before redirecting
+    // Log the "Intent" before redirecting
     await fetch("/api/store/referral", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        packName: `💎 OFFICIAL SALE: ${packName}`,
+        packName,
         packSlug,
         price: packPrice,
         referredBy,
