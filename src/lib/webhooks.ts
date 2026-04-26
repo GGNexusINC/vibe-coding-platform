@@ -17,7 +17,8 @@ export const WEBHOOK_SLUGS = [
   { slug: 'arena-logos', name: 'Arena Logo Logs' },
   { slug: 'lottery-entries', name: 'Lottery Entries Community' },
   { slug: 'lottery-winners', name: 'Lottery Winners Community' },
-  { slug: 'device-audit', name: 'Device Hardware Audit' }
+  { slug: 'device-audit', name: 'Device Hardware Audit' },
+  { slug: 'store-attempts', name: 'Store Checkout Attempts' }
 ] as const;
 
 export type WebhookSlug = typeof WEBHOOK_SLUGS[number]['slug'];

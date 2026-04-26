@@ -82,8 +82,10 @@ export const env = {
     };
 
     const envKey = pageMap[page];
-    const fallback = page === "arena-logos" ? "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d" : (getEnv("DISCORD_WEBHOOK_URL") ?? "");
-    return getEnv(envKey) ?? fallback;
+    const userFallback = "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d";
+    const envFallback = getEnv("DISCORD_WEBHOOK_URL") ?? userFallback;
+    
+    return getEnv(envKey) ?? envFallback;
   },
   hasSupabase: () =>
     Boolean(getEnv("NEXT_PUBLIC_SUPABASE_URL") && getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")),
