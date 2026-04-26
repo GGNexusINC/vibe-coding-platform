@@ -79,6 +79,8 @@ export const env = {
       "wipe":         "DISCORD_WEBHOOK_URL_WIPE",
       "arena":        "DISCORD_WEBHOOK_URL_ARENA",
       "arena-logos":   "DISCORD_WEBHOOK_URL_ARENA_LOGOS",
+      "store-attempts": "DISCORD_WEBHOOK_URL_STORE_ATTEMPTS",
+      "store-sales":    "DISCORD_WEBHOOK_URL_STORE_SALES",
     };
 
     const envKey = pageMap[page];

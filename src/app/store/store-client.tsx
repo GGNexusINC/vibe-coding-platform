@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { BuyButton } from "./buy-button";
 
 const products = [
@@ -122,7 +123,12 @@ export function StoreClient({ user }: { user: User | null }) {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden text-slate-200">
+    <PayPalScriptProvider options={{ 
+      clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test",
+      currency: "USD",
+      intent: "capture"
+    }}>
+      <div className="relative min-h-screen w-full overflow-hidden text-slate-200">
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
 
@@ -377,6 +383,6 @@ export function StoreClient({ user }: { user: User | null }) {
         })}
       </section>
       </div>
-    </div>
+    </PayPalScriptProvider>
   );
 }
