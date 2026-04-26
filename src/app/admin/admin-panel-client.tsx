@@ -731,7 +731,7 @@ function AdminCopilot({ onNavigate, onAction, members }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: currentQuery,
-          history: responses.slice(-10),
+          history: responses.slice(-6),
           context: {
             tabs: COPILOT_KNOWLEDGE,
             activeTab: "dashboard",

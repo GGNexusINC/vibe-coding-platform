@@ -56,7 +56,7 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
       { role: "user", content: prompt }
     ];
 
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${key}`,
@@ -70,8 +70,27 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
       }),
     });
 
-    const data = await res.json();
+    let data = await res.json();
     
+    // FALLBACK FOR GROQ RATE LIMIT
+    if (!res.ok && data?.error?.code === "rate_limit_exceeded" && !xaiKey) {
+      console.warn("[Sentinel AI] Groq rate limit hit. Falling back to llama-3.1-8b-instant...");
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: messages,
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        }),
+      });
+      data = await res.json();
+    }
+
     if (!res.ok) {
       console.error("AI API Error:", data);
       return NextResponse.json({ ok: false, error: data?.error?.message || "AI Provider Error" }, { status: res.status });
