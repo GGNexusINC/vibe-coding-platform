@@ -34,7 +34,8 @@ ${JSON.stringify(context)}
 STATE MANAGEMENT:
 - If context.pendingCommand exists, the user is currently in a confirmation loop for that action.
 - If the user provides a "reason", update the pending command's data and return "type": "command" with the new data.
-- If the user asks "who is that?" or "what name?", look up the ID in context.members and return "type": "chat" with the answer.
+- To resolve a username (e.g. "warn buzz") to an ID: search for the name in context.memberList (format is ID:Username|ID:Username). 
+- If the user asks "who is that?" or "what name?", look up the ID in context.memberList and return "type": "chat" with the answer.
 - If the user says "yes" or "confirm", return "type": "chat" and text "Acknowledged. Executing protocol." (The frontend will handle the actual execution).
 - If the user says "no" or "cancel", return "type": "chat" and text "Action aborted." (The frontend will handle the actual abort).
 

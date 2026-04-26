@@ -735,11 +735,12 @@ function AdminCopilot({ onNavigate, onAction, members }: {
           context: {
             tabs: COPILOT_KNOWLEDGE,
             activeTab: "dashboard",
-            members: members
-              .filter(m => currentQuery.toLowerCase().includes(m.username?.toLowerCase() || "") || m.discordId === currentQuery)
-              .slice(0, 50)
-              .map(m => ({ id: m.discordId, username: m.username })),
-            pendingCommand: confirming // Tell the AI about the pending action!
+            // Compact format: "ID:Name|ID:Name" to save massive token space
+            memberList: members
+              .slice(0, 150)
+              .map(m => `${m.discordId}:${m.username}`)
+              .join("|"),
+            pendingCommand: confirming
           }
         })
       });
