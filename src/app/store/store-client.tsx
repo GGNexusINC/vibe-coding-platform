@@ -122,14 +122,7 @@ export function StoreClient({ user }: { user: User | null }) {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950 text-slate-200">
-      {/* Hyper-futuristic background elements */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-[-10%] top-[-10%] h-[60%] w-[60%] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] h-[60%] w-[60%] rounded-full bg-cyan-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
-      </div>
+    <div className="relative min-h-screen w-full overflow-hidden text-slate-200">
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
 
