@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PayPalButtons } from "@paypal/react-paypal-js";
 
 const STAFF_LIST = [
   { name: "Kilo",        emoji: "👑" },
@@ -30,19 +29,32 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function openModal() {
+  async function openModal() {
     setSelected(null);
     setShowModal(true);
-  }
 
-  async function handleProceed(referredBy: string) {
-    setLoading(true);
-    // Log the referral before redirecting
+    // Log the "Before" (Intent) immediately
     await fetch("/api/store/referral", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         packName,
+        packSlug,
+        price: packPrice,
+        referredBy: "User opened menu",
+        user,
+      }),
+    }).catch(() => {});
+  }
+
+  async function handleProceed(referredBy: string) {
+    setLoading(true);
+    // Log the "Official" (Sale Intent) before redirecting
+    await fetch("/api/store/referral", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        packName: `💎 OFFICIAL SALE: ${packName}`,
         packSlug,
         price: packPrice,
         referredBy,
@@ -119,109 +131,36 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
                       <p className="text-sm font-black text-fuchsia-300">{selected}</p>
                     </div>
 
-                    <div className="mt-4">
-                      <PayPalButtons
-                        style={{ layout: "vertical", shape: "pill", label: "pay" }}
-                        createOrder={(data, actions) => {
-                          // Before log happens here implicitly because they select staff
-                          return actions.order.create({
-                            intent: "CAPTURE",
-                            purchase_units: [
-                              {
-                                description: `${packName} - Referred by: ${selected}`,
-                                amount: {
-                                  currency_code: "USD",
-                                  value: packPrice.toString(),
-                                },
-                              },
-                            ],
-                          });
-                        }}
-                        onApprove={async (data, actions) => {
-                          if (actions.order) {
-                            const order = await actions.order.capture();
-                            // "Officially Buy" Log
-                            await fetch("/api/store/success", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                orderId: order.id,
-                                payer: order.payer,
-                                packName,
-                                packSlug,
-                                price: packPrice,
-                                referredBy: selected,
-                                user,
-                              }),
-                            });
-                            alert("Payment Successful! Your items have been logged and added to your inventory.");
-                            setShowModal(false);
-                          }
-                        }}
-                        onError={(err) => {
-                          console.error("PayPal Error:", err);
-                          alert("There was an issue with the PayPal payment. Please try again or use the fallback link.");
-                        }}
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleProceed(selected)}
+                      className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 py-4 text-sm font-black text-white shadow-[0_0_30px_rgba(217,70,239,0.4)] transition hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(217,70,239,0.6)] active:scale-[0.98] disabled:opacity-60 disabled:scale-100"
+                    >
+                      {loading ? "Opening PayPal..." : "Proceed to PayPal →"}
+                    </button>
 
                     <button
                       type="button"
-                      onClick={() => handleProceed(selected)}
+                      onClick={() => setSelected(null)}
                       className="w-full text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 transition"
                     >
-                      ← Use Fallback Link (No Official Log)
+                      ← Change Selection
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="mt-4">
-                      <PayPalButtons
-                        style={{ layout: "vertical", shape: "pill", label: "pay" }}
-                        createOrder={(data, actions) => {
-                          return actions.order.create({
-                            intent: "CAPTURE",
-                            purchase_units: [
-                              {
-                                description: `${packName} - Direct Purchase`,
-                                amount: {
-                                  currency_code: "USD",
-                                  value: packPrice.toString(),
-                                },
-                              },
-                            ],
-                          });
-                        }}
-                        onApprove={async (data, actions) => {
-                          if (actions.order) {
-                            const order = await actions.order.capture();
-                            // "Officially Buy" Log
-                            await fetch("/api/store/success", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                orderId: order.id,
-                                payer: order.payer,
-                                packName,
-                                packSlug,
-                                price: packPrice,
-                                referredBy: "Direct",
-                                user,
-                              }),
-                            });
-                            alert("Payment Successful! Your items have been logged.");
-                            setShowModal(false);
-                          }
-                        }}
-                      />
-                    </div>
+                  <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
                     <button
                       type="button"
-                      onClick={() => handleProceed("Direct")}
-                      className="w-full text-center text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-slate-400 transition"
+                      onClick={() => handleProceed("None / Self")}
+                      disabled={loading}
+                      className="w-full rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 py-4 text-sm font-black text-fuchsia-300 transition hover:bg-fuchsia-500/10 hover:border-fuchsia-500/40 disabled:opacity-60"
                     >
-                      ← Use Fallback Link (Direct)
+                      {loading ? "Opening PayPal..." : "I found it myself → Proceed to PayPal"}
                     </button>
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                      Or select a staff member above
+                    </p>
                   </div>
                 )}
               </div>

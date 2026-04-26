@@ -52,8 +52,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       )}
 
       <main className="relative flex-1 overflow-hidden">
-        {/* Dark Background Base */}
-        <div className="pointer-events-none absolute inset-0 bg-[#0a0d06]" />
+        {/* Dark Background Base - hidden on home to show home video */}
+        <div className={`pointer-events-none absolute inset-0 bg-[#0a0d06] ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
 
         {/* Global Background Video for all pages EXCEPT Home */}
         {pathname !== "/" && (
@@ -93,7 +93,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.7),rgba(10,13,6,0.9))]" />
+        <div className={`pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.7),rgba(10,13,6,0.9))] ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
 
         <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(99,102,241,0.12),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(34,211,238,0.09),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(16,185,129,0.07),transparent_40%)]" />
         <div className="rz-starfield pointer-events-none">
