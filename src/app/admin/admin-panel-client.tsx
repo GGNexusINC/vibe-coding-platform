@@ -653,13 +653,13 @@ const COPILOT_KNOWLEDGE = [
 
 function AdminCopilot({ onNavigate, onAction }: { 
   onNavigate: (tab: any) => void;
-  onAction: (type: 'warn' | 'ban', target: string, reason: string) => Promise<{ok: boolean, error?: string, message?: string}>;
+  onAction: (action: string, data: any) => Promise<{ok: boolean, error?: string, message?: string}>;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [confirming, setConfirming] = useState<{ type: 'warn' | 'ban', target: string, reason: string } | null>(null);
+  const [confirming, setConfirming] = useState<{ action: string, data: any, display: string } | null>(null);
   const [responses, setResponses] = useState<{ type: "bot" | "user"; text: string; action?: { label: string; tab: string } }[]>([
-    { type: "bot", text: "Hello Admin! I'm your GGN Sentinel. I can help you navigate or even execute moderation commands. Try: 'ban [ID] [reason]'" }
+    { type: "bot", text: "SENTINEL ONLINE. NEURAL LINK ESTABLISHED.\n\nI have full access to all sectors. You can issue commands for:\n- MODERATION: 'ban [ID] [reason]'\n- BROADCAST: 'broadcast [title] | [message]'\n- LOTTERY: 'draw lottery [prize]'\n- TICKETS: 'close ticket [ID]'\n- ROSTER: 'approve admin [ID]'\n- WIPE: 'set wipe [date] [label]'\n- BETA: 'approve beta [ID]'\n\nWhat is our objective?" }
   ]);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -705,12 +705,12 @@ function AdminCopilot({ onNavigate, onAction }: {
     // Confirmation Logic
     if (confirming) {
       if (userMsg.includes("yes") || userMsg.includes("confirm") || userMsg.includes("do it")) {
-        setResponses(prev => [...prev, { type: "bot", text: "EXECUTING COMMAND... STAND BY." }]);
-        const res = await onAction(confirming.type, confirming.target, confirming.reason);
+        setResponses(prev => [...prev, { type: "bot", text: "EXECUTING PROTOCOL... STAND BY." }]);
+        const res = await onAction(confirming.action, confirming.data);
         if (res.ok) {
-          setResponses(prev => [...prev, { type: "bot", text: `PROTOCOL COMPLETE. ${res.message || 'Action executed successfully.'}` }]);
+          setResponses(prev => [...prev, { type: "bot", text: `SUCCESS: ${res.message || 'Operation complete.'}` }]);
         } else {
-          setResponses(prev => [...prev, { type: "bot", text: `ERROR: ${res.error || 'Execution failed.'}` }]);
+          setResponses(prev => [...prev, { type: "bot", text: `FAILURE: ${res.error || 'Execution failed.'}` }]);
         }
         setConfirming(null);
         return;
@@ -721,15 +721,102 @@ function AdminCopilot({ onNavigate, onAction }: {
       }
     }
 
-    // Command Parsing (Ban/Warn)
+    // --- COMMAND PARSING ENGINE ---
+
+    // Moderation: ban/warn [ID] [reason]
     const modMatch = query.match(/(ban|warn)\s+(\d{17,19})\s+(.*)/i);
     if (modMatch) {
       const [, type, target, reason] = modMatch;
-      setConfirming({ type: type.toLowerCase() as any, target, reason });
-      setResponses(prev => [...prev, { 
-        type: "bot", 
-        text: `⚠️ CRITICAL ACTION: Are you sure you want to ${type.toUpperCase()} user ${target} for: "${reason}"?` 
-      }]);
+      setConfirming({ 
+        action: "mod", 
+        data: { action: type.toLowerCase(), targetDiscordId: target, reason },
+        display: `Execute ${type.toUpperCase()} on ${target} for: "${reason}"`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${type.toUpperCase()} user ${target}?` }]);
+      return;
+    }
+
+    // Broadcast: broadcast [title] | [message]
+    if (userMsg.startsWith("broadcast ")) {
+      const content = query.slice(10);
+      const [title, ...msgParts] = content.split("|");
+      const message = msgParts.join("|").trim();
+      if (!title || !message) {
+        setResponses(prev => [...prev, { type: "bot", text: "FORMAT ERROR. Use: 'broadcast Title | Message'" }]);
+        return;
+      }
+      setConfirming({
+        action: "broadcast",
+        data: { title: title.trim(), message, target: "all" },
+        display: `Send GLOBAL BROADCAST: "${title.trim()}"`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: "⚠️ CONFIRMATION REQUIRED: Send this broadcast to all users?" }]);
+      return;
+    }
+
+    // Lottery: draw lottery [prize]
+    if (userMsg.startsWith("draw lottery ")) {
+      const prize = query.slice(13).trim();
+      setConfirming({
+        action: "lottery",
+        data: { prize },
+        display: `Draw lottery winner for: ${prize}`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Pick a winner for ${prize} now?` }]);
+      return;
+    }
+
+    // Tickets: close ticket [ID]
+    const ticketMatch = userMsg.match(/close ticket\s+([a-f0-9-]{10,})/i);
+    if (ticketMatch) {
+      const ticketId = ticketMatch[1];
+      setConfirming({
+        action: "ticket",
+        data: { ticketId, action: "close" },
+        display: `CLOSE support ticket ${ticketId}`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Close ticket ${ticketId}?` }]);
+      return;
+    }
+
+    // Roster: approve/deny admin [ID]
+    const rosterMatch = userMsg.match(/(approve|deny)\s+admin\s+(\d{17,19})/i);
+    if (rosterMatch) {
+      const [, action, id] = rosterMatch;
+      const status = action.toLowerCase() === "approve" ? "approved" : "denied";
+      setConfirming({
+        action: "roster",
+        data: { discordId: id, status },
+        display: `${action.toUpperCase()} admin application for ${id}`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${action.toUpperCase()} this staff application?` }]);
+      return;
+    }
+
+    // Wipe: set wipe [date] [label]
+    if (userMsg.startsWith("set wipe ")) {
+      const parts = query.slice(9).split(" ");
+      const date = parts[0];
+      const label = parts.slice(1).join(" ") || "Server Wipe";
+      setConfirming({
+        action: "wipe",
+        data: { wipeAt: date, label },
+        display: `Set WIPE TIMER to ${date} (${label})`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: Update global wipe schedule?` }]);
+      return;
+    }
+
+    // Beta: approve/deny beta [ID]
+    const betaMatch = userMsg.match(/(approve|deny)\s+beta\s+([a-f0-9-]{10,})/i);
+    if (betaMatch) {
+      const [, action, id] = betaMatch;
+      setConfirming({
+        action: "beta",
+        data: { requestId: id, action: action.toLowerCase() },
+        display: `${action.toUpperCase()} beta tester request ${id}`
+      });
+      setResponses(prev => [...prev, { type: "bot", text: `⚠️ CONFIRMATION REQUIRED: ${action.toUpperCase()} this beta access?` }]);
       return;
     }
 
@@ -5472,16 +5559,38 @@ export function AdminPanelClient() {
       {isAuthed && (
         <AdminCopilot 
           onNavigate={switchTab} 
-          onAction={async (type, target, reason) => {
-            const res = await fetch("/api/admin/moderate", {
-              method: "POST",
+          onAction={async (action, data) => {
+            let endpoint = "";
+            let method = "POST";
+            let body = data;
+
+            switch (action) {
+              case "mod":       endpoint = "/api/admin/moderate"; break;
+              case "broadcast": endpoint = "/api/admin/broadcast"; break;
+              case "lottery":   endpoint = "/api/lottery/draw"; break;
+              case "ticket":    endpoint = "/api/admin/tickets"; method = "PATCH"; break;
+              case "roster":    endpoint = "/api/admin/roster"; break;
+              case "wipe":      endpoint = "/api/admin/wipe-timer"; method = "PATCH"; break;
+              case "beta":      endpoint = "/api/admin/beta"; method = "PATCH"; break;
+              default: return { ok: false, error: "Unknown action protocol." };
+            }
+
+            const res = await fetch(endpoint, {
+              method,
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ action: type, targetDiscordId: target, reason }),
+              body: JSON.stringify(body),
             });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) return { ok: false, error: data?.error || "Action failed" };
-            if (data.pending) return { ok: true, message: `Proposal submitted for review. (ID: ${data.pendingBanId?.slice(0, 8)})` };
-            return { ok: true, message: `Action successfully applied to ${target}.` };
+            const resData = await res.json().catch(() => ({}));
+            
+            if (!res.ok || !resData.ok) {
+              return { ok: false, error: resData?.error || "Action failed." };
+            }
+
+            // Specific success messages
+            if (action === "lottery") return { ok: true, message: `Winner: ${resData.winner?.username} (${resData.winner?.prize})` };
+            if (resData.pending) return { ok: true, message: `Proposal submitted. (ID: ${resData.pendingBanId?.slice(0, 8)})` };
+            
+            return { ok: true, message: "Protocol executed successfully." };
           }}
         />
       )}
