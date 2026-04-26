@@ -70,6 +70,12 @@ const rules = [
     title: "Positive Vibes Only",
     copy: "Help new players, share knowledge, and bring good energy. We're building a community — not just a server.",
   },
+  {
+    id: "10",
+    emoji: "🏰",
+    title: "Alliance Restrictions",
+    copy: "No alliances are permitted for raiding other players or territories. However, forming alliances for defensive purposes is allowed and encouraged.",
+  },
 ];
 
 export default function RulesPage() {
