@@ -31,12 +31,18 @@ AVAILABLE COMMANDS:
 USER CONTEXT:
 ${JSON.stringify(context)}
 
+STATE MANAGEMENT:
+- If context.pendingCommand exists, the user is currently in a confirmation loop for that action.
+- If the user provides a "reason", update the pending command's data and return "type": "command" with the new data.
+- If the user asks "who is that?" or "what name?", look up the ID in context.members and return "type": "chat" with the answer.
+- If the user says "yes" or "confirm", return "type": "chat" and text "Acknowledged. Executing protocol." (The frontend will handle the actual execution).
+- If the user says "no" or "cancel", return "type": "chat" and text "Action aborted." (The frontend will handle the actual abort).
+
 RULES:
-1. If the user wants to perform an action, return ONLY a JSON object with "type": "command", "commandType": "one_of_above", and "data": { ... }.
-2. If the user is just chatting, return "type": "chat" and "text": "Your response".
-3. Maintain context from previous messages in the history. If an ID was mentioned earlier, use it.
-4. If a target is identified by name, use the ID from the context.
-5. Keep responses tactical and professional.
+1. If the user wants to perform or REFINE an action, return ONLY a JSON object with "type": "command", "commandType": "one_of_above", and "data": { ... }.
+2. If the user is just chatting or asking a question, return "type": "chat" and "text": "Your response".
+3. Maintain context from previous messages. If a target is identified by name, use the ID from the context.
+4. Keep responses tactical and professional.
 
 Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "data": { "action": "ban", "targetDiscordId": "123", "reason": "hacking" } }`;
 

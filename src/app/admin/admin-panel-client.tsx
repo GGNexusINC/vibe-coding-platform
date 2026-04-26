@@ -697,7 +697,10 @@ function AdminCopilot({ onNavigate, onAction, members }: {
 
     // --- AI COMMAND INTERFACE ---
     if (confirming) {
-      if (userMsg.includes("yes") || userMsg.includes("confirm") || userMsg.includes("do it")) {
+      const isPositive = userMsg.includes("yes") || userMsg.includes("confirm") || userMsg.includes("do it") || userMsg === "y";
+      const isNegative = userMsg.includes("no") || userMsg.includes("cancel") || userMsg.includes("abort") || userMsg === "n";
+
+      if (isPositive) {
         setResponses(prev => [...prev, { type: "bot", text: "EXECUTING PROTOCOL... STAND BY." }]);
         const res = await onAction(confirming.action, confirming.data);
         if (res.ok) {
@@ -707,11 +710,15 @@ function AdminCopilot({ onNavigate, onAction, members }: {
         }
         setConfirming(null);
         return;
-      } else {
+      } 
+      
+      if (isNegative) {
         setResponses(prev => [...prev, { type: "bot", text: "ACTION ABORTED." }]);
         setConfirming(null);
         return;
       }
+
+      // If it's neither, we let the AI handle it (could be a question or a reason update)
     }
 
     // Call AI Backend
@@ -727,7 +734,8 @@ function AdminCopilot({ onNavigate, onAction, members }: {
           context: {
             tabs: COPILOT_KNOWLEDGE,
             activeTab: "dashboard",
-            members: members.map(m => ({ id: m.discordId, username: m.username }))
+            members: members.map(m => ({ id: m.discordId, username: m.username })),
+            pendingCommand: confirming // Tell the AI about the pending action!
           }
         })
       });
