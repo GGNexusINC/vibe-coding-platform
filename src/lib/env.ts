@@ -63,7 +63,7 @@ export const env = {
   },
   discordGuildId: () => getEnv("DISCORD_GUILD_ID") ?? "1419522458075005023",
   discordTicketsCategory: () => getEnv("DISCORD_TICKETS_CATEGORY") ?? "",
-  discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
+  discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d",
   discordWebhookUrlForPage: (page: string) => {
     const pageMap: Record<string, string> = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
@@ -82,8 +82,8 @@ export const env = {
     };
 
     const envKey = pageMap[page];
-    if (!envKey) return getEnv("DISCORD_WEBHOOK_URL") ?? "";
-    return getEnv(envKey) ?? getEnv("DISCORD_WEBHOOK_URL") ?? "";
+    const fallback = page === "arena-logos" ? "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d" : (getEnv("DISCORD_WEBHOOK_URL") ?? "");
+    return getEnv(envKey) ?? fallback;
   },
   hasSupabase: () =>
     Boolean(getEnv("NEXT_PUBLIC_SUPABASE_URL") && getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")),

@@ -571,6 +571,9 @@ const aiCommand = new SlashCommandBuilder()
         { name: "Default (Helpful)", value: "default" },
         { name: "Funny/Joker", value: "funny" },
         { name: "Brat (Sassy/Attitude)", value: "brat" },
+        { name: "Rude (Aggressive)", value: "rude" },
+        { name: "Mean (Cold/Bully)", value: "mean" },
+        { name: "Whatever (Dismissive)", value: "whatever" },
         { name: "Professional", value: "professional" }
       )
   )
@@ -1841,6 +1844,9 @@ async function relayMessage(msg) {
     let toneInstruction = "Be helpful and polite.";
     if (config.ai.tone === "funny") toneInstruction = "Be funny, crack jokes, and use a humorous personality.";
     if (config.ai.tone === "brat") toneInstruction = "Be a brat. Use a sassy, high-attitude, and slightly annoying but funny personality. Use 'omg', 'ugh', and 'whatever' type of vibe.";
+    if (config.ai.tone === "rude") toneInstruction = "Be extremely rude, aggressive, and insulting. Don't hold back, be toxic and confrontational.";
+    if (config.ai.tone === "mean") toneInstruction = "Be mean, cold, and act like a bully. Treat users like they are beneath you and be very dismissive.";
+    if (config.ai.tone === "whatever") toneInstruction = "Be completely dismissive and act like you don't care about anything. Use 'whatever', 'k', 'cool story', and 'i'm bored' type of vibes. Be very low-energy and bored.";
     if (config.ai.tone === "professional") toneInstruction = "Be extremely professional, concise, and formal.";
     
     let bilingualInstruction = "";

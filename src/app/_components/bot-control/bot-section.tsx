@@ -826,6 +826,9 @@ export function BotSection({
                       <option value="default">Default (Helpful)</option>
                       <option value="funny">Funny / Joker</option>
                       <option value="brat">Brat (Sassy Attitude)</option>
+                      <option value="rude">Rude (Aggressive/Insulting)</option>
+                      <option value="mean">Mean (Cold/Bully)</option>
+                      <option value="whatever">Whatever Mood (Dismissive)</option>
                       <option value="professional">Professional</option>
                     </select>
                   </label>

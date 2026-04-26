@@ -187,6 +187,31 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
+    // Log the change to staff audits
+    try {
+      const { sendDiscordWebhook } = await import("@/lib/discord");
+      await sendDiscordWebhook({
+        username: "NewHope Bot Controller",
+        embeds: [{
+          title: "🤖 Bot Settings Updated",
+          color: 0x0ea5e9, // sky-500
+          description: `Bot settings for guild \`${guildId}\` were updated.`,
+          fields: [
+            { name: "Guild ID", value: `\`${guildId}\``, inline: true },
+            { name: "Updated By", value: adminSession ? "Site Admin" : (session?.username || "Unknown"), inline: true },
+            { name: "Modules", value: [
+              nextSettings.translation?.enabled ? "✅ Translation" : "❌ Translation",
+              nextSettings.ai?.enabled ? "✅ AI" : "❌ AI",
+              nextSettings.logging?.enabled ? "✅ Logs" : "❌ Logs",
+            ].join("\n"), inline: false }
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      }, { webhookUrl: (await import("@/lib/env")).env.discordWebhookUrlForPage("staff-audits") });
+    } catch (e) {
+      console.error("[bot-settings] Audit log failed:", e);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });

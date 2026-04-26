@@ -77,6 +77,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
+  // Log the addition to staff audits
+  try {
+    await sendDiscordWebhook({
+      username: "NewHope Package System",
+      embeds: [{
+        title: "📦 Item Added to Inventory",
+        color: 0x10b981, // emerald-500
+        fields: [
+          { name: "User ID", value: `\`${user_id}\``, inline: true },
+          { name: "Item", value: `\`${item_name || item_slug}\``, inline: true },
+          { name: "Type", value: `\`${item_type}\``, inline: true },
+          { name: "Added By", value: adminSession ? `Admin (${adminSession.username})` : "System/Service", inline: true },
+          { name: "Wipe Cycle", value: `\`${wipe_cycle || getCurrentWipeCycle()}\``, inline: true }
+        ],
+        timestamp: new Date().toISOString()
+      }]
+    }, { webhookUrl: env.discordWebhookUrlForPage("staff-audits") });
+  } catch (e) {
+    console.error("[inventory] Audit log failed:", e);
+  }
+
   return NextResponse.json({ ok: true, item: data });
 }
 
