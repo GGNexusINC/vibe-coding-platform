@@ -9,9 +9,11 @@ import {
   type DiscordWebhookPayload,
 } from "@/lib/discord";
 
+import { env } from "@/lib/env";
+
 const DISCORD_API = "https://discord.com/api/v10";
-const GUILD_ID = process.env.GUILD_ID || "1419522458075005023";
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = env.discordBotToken();
+const GUILD_ID = env.discordGuildId();
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
