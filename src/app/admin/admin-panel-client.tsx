@@ -651,9 +651,10 @@ const COPILOT_KNOWLEDGE = [
   { keywords: ["arena", "event", "tournament"], tab: "arena", label: "Arena Events", desc: "Manage PvP tournaments and voting." },
 ];
 
-function AdminCopilot({ onNavigate, onAction }: { 
+function AdminCopilot({ onNavigate, onAction, members }: { 
   onNavigate: (tab: any) => void;
   onAction: (action: string, data: any) => Promise<{ok: boolean, error?: string, message?: string}>;
+  members: any[];
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -722,7 +723,8 @@ function AdminCopilot({ onNavigate, onAction }: {
           prompt: query,
           context: {
             tabs: COPILOT_KNOWLEDGE,
-            activeTab: "dashboard" // Could be dynamic
+            activeTab: "dashboard",
+            members: members.map(m => ({ id: m.discordId, username: m.username }))
           }
         })
       });
@@ -5474,6 +5476,7 @@ export function AdminPanelClient() {
       {isAuthed && (
         <AdminCopilot 
           onNavigate={switchTab} 
+          members={stats?.summary?.members || []}
           onAction={async (action, data) => {
             let endpoint = "";
             let method = "POST";

@@ -57,8 +57,18 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
     });
 
     const data = await res.json();
-    const content = data.choices[0].message.content;
     
+    if (!res.ok) {
+      console.error("AI API Error:", data);
+      return NextResponse.json({ ok: false, error: data?.error?.message || "AI Provider Error" }, { status: res.status });
+    }
+
+    if (!data.choices?.[0]?.message?.content) {
+      console.error("Unexpected AI Response:", data);
+      return NextResponse.json({ ok: false, error: "AI failed to generate a valid response." }, { status: 500 });
+    }
+
+    const content = data.choices[0].message.content;
     return NextResponse.json({ ok: true, result: JSON.parse(content) });
   } catch (error: any) {
     console.error("AI Error:", error);
