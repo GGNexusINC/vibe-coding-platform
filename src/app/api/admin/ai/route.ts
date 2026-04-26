@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const url = xaiKey ? "https://api.x.ai/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
     const key = xaiKey || groqKey;
-    const model = xaiKey ? "grok-beta" : "llama-3.1-70b-versatile";
+    const model = xaiKey ? "grok-beta" : "llama-3.3-70b-versatile";
 
     const systemPrompt = `You are GGN Sentinel, a tactical AI admin assistant for NewHopeGGN.
 Your goal is to parse user natural language into structured admin commands.
