@@ -654,10 +654,11 @@ const COPILOT_KNOWLEDGE = [
   { keywords: ["arena", "event", "tournament"], tab: "arena", label: "Arena Events", desc: "Manage PvP tournaments and voting." },
 ];
 
-function AdminCopilot({ onNavigate, onAction, members }: { 
+function AdminCopilot({ onNavigate, onAction, members, mayhemMode }: { 
   onNavigate: (tab: any) => void;
   onAction: (action: string, data: any) => Promise<{ok: boolean, error?: string, message?: string}>;
   members: any[];
+  mayhemMode: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -5780,14 +5781,14 @@ export function AdminPanelClient() {
                 onClick={() => switchTab(tab.id)}
                 className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${
                   active
-                    ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 shadow-[0_0_10px_rgba(34,211,238,0.15)]"
+                    ? (mayhemMode ? "bg-rose-500/15 text-rose-300 border border-rose-400/30 shadow-[0_0_10px_rgba(244,63,94,0.15)]" : "bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 shadow-[0_0_10px_rgba(34,211,238,0.15)]")
                     : "text-slate-500 border border-transparent hover:bg-white/5 hover:text-slate-300"
                 }`}
               >
                 <span className={`text-base leading-none ${active ? "scale-110" : ""} transition-transform duration-150`}>{tab.icon}</span>
                 <span className="whitespace-nowrap">{tab.label}</span>
                 {"badge" in tab && tab.badge > 0 && (
-                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-black text-slate-950">{tab.badge}</span>
+                  <span className={`flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-black ${mayhemMode ? "bg-rose-500 text-white" : "bg-amber-400 text-slate-950"}`}>{tab.badge}</span>
                 )}
               </button>
             );
@@ -5798,6 +5799,7 @@ export function AdminPanelClient() {
         <AdminCopilot 
           onNavigate={switchTab} 
           members={stats?.summary?.members || []}
+          mayhemMode={mayhemMode}
           onAction={async (action, data) => {
             let endpoint = "";
             let method = "POST";
