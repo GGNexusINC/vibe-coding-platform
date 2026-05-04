@@ -151,22 +151,7 @@ function getClaimTimer(item: InventoryItem) {
   };
 }
 
-function StatusPill({ item }: { item: InventoryItem }) {
-  const classes =
-    item.status === "available"
-      ? "border-teal-300/30 bg-teal-300/10 text-teal-200"
-      : item.status === "saved"
-        ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
-        : item.status === "expired"
-          ? "border-rose-300/30 bg-rose-300/10 text-rose-200"
-          : "border-slate-400/20 bg-slate-400/10 text-slate-400";
 
-  return (
-    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${classes}`}>
-      {item.status}
-    </span>
-  );
-}
 
 function getInventoryArt(item: InventoryItem) {
   const metadataImage =
@@ -212,99 +197,125 @@ function InventoryCard({
   const muted = item.status === "used" || item.status === "expired";
 
   return (
-    <article className={`group relative overflow-hidden rounded-2xl border ${style.panel} ${style.glow} shadow-2xl transition duration-300 hover:-translate-y-1 hover:border-white/20 ${muted ? "opacity-55" : ""}`}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_44%)]" />
-      <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/8 blur-2xl transition group-hover:bg-white/12" />
-      <div className={`absolute left-0 top-0 h-1 w-full bg-gradient-to-r ${style.accent}`} />
+    <article className={`group relative flex flex-col overflow-hidden rounded-[2rem] border border-white/6 bg-slate-900/40 transition-all duration-500 hover:border-white/10 hover:bg-slate-900/60 hover:shadow-2xl hover:shadow-black/50 ${muted ? "opacity-40 grayscale" : ""}`}>
+      {/* Visual Accents */}
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${style.accent} opacity-40 group-hover:opacity-100 transition-opacity`} />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/5 blur-2xl group-hover:bg-white/10 transition-colors" />
 
-      <div className="relative p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br ${style.accent} p-[1px] shadow-xl`}>
-              <div className="absolute inset-[1px] rounded-2xl bg-slate-950/90" />
-              {art?.image ? (
-                <img
-                  src={art.image}
-                  alt={`${item.item_name} Once Human item art`}
-                  className="relative h-12 w-14 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.22)]"
-                  loading="lazy"
-                />
-              ) : (
-                <ItemIcon type={item.item_type} className="relative h-10 w-10 text-white/85 drop-shadow-[0_0_18px_rgba(255,255,255,0.18)]" />
-              )}
-            </div>
-
-            <div className="min-w-0">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/60">
-                  {style.label}
-                </span>
-                {isReward && (
-                  <span className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
-                    Reward
-                  </span>
-                )}
-                {item.metadata?.given_by && (
-                  <span className="rounded-full border border-violet-300/25 bg-violet-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-violet-200">
-                    Gift
-                  </span>
-                )}
-                {art?.sourceName && (
-                  <span className="rounded-full border border-cyan-300/20 bg-cyan-300/8 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
-                    Once Human Art
-                  </span>
-                )}
-              </div>
-
-              <h3 className="truncate text-base font-black tracking-tight text-white">
-                {item.item_name}
-              </h3>
-              <p className="mt-1 text-[11px] font-medium text-slate-400">
-                Acquired {new Date(item.purchase_date).toLocaleDateString()}
-                {item.wipe_cycle ? ` - ${item.wipe_cycle}` : ""}
-              </p>
-              {item.metadata?.reason && (
-                <p className="mt-1 line-clamp-2 text-[11px] text-violet-200/75">
-                  Reason: {item.metadata.reason}
-                </p>
-              )}
+      <div className="flex flex-col p-5">
+        {/* Top row: Art & Meta */}
+        <div className="flex items-start gap-4">
+          <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-slate-950 p-2 shadow-inner group-hover:border-white/10 transition-colors">
+            {art?.image ? (
+              <img
+                src={art.image}
+                alt=""
+                className="h-full w-full object-contain drop-shadow-[0_0_12px_rgba(255,255,255,0.1)] group-hover:scale-105 transition-transform"
+              />
+            ) : (
+              <ItemIcon type={item.item_type} className="h-10 w-10 text-slate-500" />
+            )}
+            {/* Condition badge */}
+            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg border border-slate-900 bg-slate-800 text-[10px] font-black text-white shadow-lg">
+              {item.status === "available" ? "★" : item.status === "saved" ? "S" : "✓"}
             </div>
           </div>
 
-          <StatusPill item={item} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+              <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-white/5 bg-white/5 text-slate-400`}>
+                {style.label}
+              </span>
+              {isReward && (
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-400">
+                  Reward
+                </span>
+              )}
+              {item.metadata?.given_by && (
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-violet-500/20 bg-violet-500/10 text-violet-400">
+                  Gift
+                </span>
+              )}
+            </div>
+            <h3 className="truncate text-lg font-black tracking-tight text-white group-hover:text-cyan-100 transition-colors">
+              {item.item_name}
+            </h3>
+            <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+              <span className="flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {new Date(item.purchase_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
+              {item.wipe_cycle && (
+                <span className="flex items-center gap-1 border-l border-white/10 pl-2">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {item.wipe_cycle}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
+        {/* Reason or Claim Info */}
+        {item.metadata?.reason && (
+          <div className="mt-4 rounded-xl bg-white/[0.03] p-2.5 text-[11px] font-medium text-slate-400 border border-white/5 italic">
+            "{item.metadata.reason}"
+          </div>
+        )}
+
+        {/* Claim Timer */}
         {timer && (
-          <div className="mt-4 rounded-xl border border-white/8 bg-black/25 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Claim Window</span>
-              <span className={`text-[11px] font-black ${timer.urgent ? "text-rose-300" : "text-amber-200"}`}>{timer.label}</span>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+              <span className="text-slate-500">Extraction Window</span>
+              <span className={timer.urgent ? "text-rose-400 animate-pulse" : "text-cyan-400"}>{timer.label}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/8">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/5 border border-white/5">
               <div
-                className={`h-full rounded-full bg-gradient-to-r ${timer.urgent ? "from-rose-500 to-amber-300" : "from-cyan-400 to-teal-300"}`}
+                className={`h-full rounded-full transition-all duration-1000 ${timer.urgent ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"}`}
                 style={{ width: `${timer.percent}%` }}
               />
             </div>
           </div>
         )}
 
+        {/* Actions */}
         {item.status === "available" && (
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-5 grid grid-cols-2 gap-2">
             <button
-              onClick={() => onAction(item.id, "use", item.item_type)}
+              onClick={(e) => { e.stopPropagation(); onAction(item.id, "use", item.item_type); }}
               disabled={disabled}
-              className="rounded-xl border border-teal-300/30 bg-teal-300/10 px-3 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-teal-100 transition hover:-translate-y-0.5 hover:bg-teal-300/18 disabled:cursor-not-allowed disabled:opacity-45"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-400 disabled:opacity-40 active:scale-95"
             >
-              {actionLoading === item.id ? "Processing..." : isReward ? "Use + Open Ticket" : "Use Package"}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+              {actionLoading === item.id ? "..." : "Claim"}
             </button>
             <button
-              onClick={() => onAction(item.id, "save", item.item_type)}
+              onClick={(e) => { e.stopPropagation(); onAction(item.id, "save", item.item_type); }}
               disabled={disabled}
-              className="rounded-xl border border-amber-300/25 bg-amber-300/8 px-3 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-amber-100 transition hover:-translate-y-0.5 hover:bg-amber-300/14 disabled:cursor-not-allowed disabled:opacity-45"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-amber-500/20 hover:border-amber-500/30 hover:text-amber-400 disabled:opacity-40 active:scale-95"
             >
-              Save for Wipe
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save
             </button>
+          </div>
+        )}
+
+        {item.status === "saved" && (
+          <div className="mt-5">
+            <button
+              onClick={(e) => { e.stopPropagation(); onAction(item.id, "use", item.item_type); }}
+              disabled={disabled}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-cyan-400 transition hover:bg-cyan-500/20 hover:text-cyan-300 disabled:opacity-40 active:scale-95"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {actionLoading === item.id ? "..." : "Reclaim to Current Wipe"}
+            </button>
+          </div>
+        )}
+
+        {muted && (
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            {item.status === "used" ? "Successfully Extracted" : "Window Expired"}
           </div>
         )}
       </div>
@@ -316,7 +327,7 @@ export function InventorySection() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [logs, setLogs] = useState<PackageLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState<"available" | "saved" | "archive" | "history">("available");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [activeTicket, setActiveTicket] = useState<{
@@ -346,9 +357,15 @@ export function InventorySection() {
     try {
       const res = await fetch("/api/inventory", { cache: "no-store" });
       const data = await res.json();
-      if (data.ok) setItems(data.items);
+      if (data.ok) {
+        setItems(data.items);
+        // If the current tab is empty but another isn't, switch to the one with items
+        const hasAvailable = data.items.some((i: any) => i.status === "available");
+        const hasSaved = data.items.some((i: any) => i.status === "saved");
+        if (!hasAvailable && hasSaved) setActiveTab("saved");
+      }
     } catch {
-      // Keep the current inventory visible if a refresh fails.
+      // Keep current
     } finally {
       setLoading(false);
     }
@@ -356,11 +373,11 @@ export function InventorySection() {
 
   async function fetchLogs() {
     try {
-      const res = await fetch("/api/inventory/logs?limit=20", { cache: "no-store" });
+      const res = await fetch("/api/inventory/logs?limit=30", { cache: "no-store" });
       const data = await res.json();
       if (data.ok) setLogs(data.logs || []);
     } catch {
-      // History is nice-to-have.
+      // Ignore
     }
   }
 
@@ -397,6 +414,7 @@ export function InventorySection() {
     const claimedItemName = claimedItem?.item_name ?? "Inventory item";
     const claimedItemType = claimedItem?.item_type ?? itemType;
     const claimedItemImage = getOnceHumanItemArt(claimedItemName)?.image ?? undefined;
+    
     setConfirmItem(null);
     setActionLoading(itemId);
     setMessage("");
@@ -415,325 +433,316 @@ export function InventorySection() {
         return;
       }
 
-      const ticket = data.support_ticket;
-      if (action === "use" && ticket?.id && ticket?.channelId) {
-        setActiveTicket({
-          id: ticket.id,
-          channelId: ticket.channelId,
-          itemName: data.item?.item_name ?? claimedItemName,
-          itemType: data.item?.item_type ?? claimedItemType,
-          itemImage: getOnceHumanItemArt(data.item?.item_name ?? claimedItemName)?.image ?? claimedItemImage,
-        });
-        setMessage("Prize claimed. Your live support chat is open below.");
-      } else if (action === "use") {
-        const opened = await openFallbackClaimTicket(
-          data.item?.item_name ?? claimedItemName,
-          data.item?.item_type ?? claimedItemType,
-          claimedItemImage,
-        );
-        setMessage(opened ? "Claimed. Your live support chat is open below." : "Package claimed. Staff have been notified.");
+      if (action === "use") {
+        const ticket = data.support_ticket;
+        if (ticket?.id && ticket?.channelId) {
+          setActiveTicket({
+            id: ticket.id,
+            channelId: ticket.channelId,
+            itemName: data.item?.item_name ?? claimedItemName,
+            itemType: data.item?.item_type ?? claimedItemType,
+            itemImage: getOnceHumanItemArt(data.item?.item_name ?? claimedItemName)?.image ?? claimedItemImage,
+          });
+          setMessage("Prize claimed. Staff delivery channel is open.");
+        } else {
+          const opened = await openFallbackClaimTicket(
+            data.item?.item_name ?? claimedItemName,
+            data.item?.item_type ?? claimedItemType,
+            claimedItemImage,
+          );
+          setMessage(opened ? "Claimed. Live support channel open below." : "Package claimed. Staff notified.");
+        }
       } else {
-        setMessage("Package saved for the next wipe.");
+        setMessage("Item successfully stored for next wipe.");
       }
 
-      fetchInventory();
-      fetchLogs();
+      await fetchInventory();
+      await fetchLogs();
     } catch {
-      setMessage("Network error. Try again.");
+      setMessage("Connection error. Please try again.");
     } finally {
       setActionLoading(null);
     }
   }
 
   const grouped = useMemo(() => {
-    const available = items.filter((item) => item.status === "available");
-    const saved = items.filter((item) => item.status === "saved");
-    const used = items.filter((item) => item.status === "used");
-    const expired = items.filter((item) => item.status === "expired");
-    const rewards = items.filter((item) => item.metadata?.reward_source);
-    return { available, saved, used, expired, rewards };
+    return {
+      available: items.filter((item) => item.status === "available"),
+      saved: items.filter((item) => item.status === "saved"),
+      archive: items.filter((item) => item.status === "used" || item.status === "expired"),
+      rewards: items.filter((item) => item.metadata?.reward_source),
+    };
   }, [items]);
 
-  const totalValue = grouped.available.length + grouped.saved.length;
+  const totalActive = grouped.available.length + grouped.saved.length;
+
+  const tabs = [
+    { id: "available", label: "Vault", count: grouped.available.length, icon: "📦" },
+    { id: "saved", label: "Wipe Storage", count: grouped.saved.length, icon: "💾" },
+    { id: "archive", label: "Archive", count: grouped.archive.length, icon: "📁" },
+    { id: "history", label: "Ledger", count: logs.length, icon: "📜" },
+  ] as const;
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-orange-300/15 bg-[linear-gradient(145deg,rgba(12,17,10,0.96),rgba(7,12,18,0.95)_48%,rgba(21,12,7,0.96))] shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
-      <div className="pointer-events-none absolute inset-0 opacity-70">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(251,191,36,0.14),transparent_34%),radial-gradient(circle_at_88%_18%,rgba(20,184,166,0.12),transparent_30%),radial-gradient(circle_at_42%_90%,rgba(249,115,22,0.11),transparent_34%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:30px_30px]" />
+    <section className="relative overflow-hidden rounded-[2.5rem] border border-white/6 bg-[#0a0d14] shadow-[0_32px_120px_rgba(0,0,0,0.6)]">
+      {/* Background VFX */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-1/4 -top-1/4 h-[150%] w-[150%] bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.03),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] mix-blend-overlay" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
       </div>
 
       {confirmItem && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-orange-300/20 bg-slate-950 shadow-2xl">
-            <div className="border-b border-white/8 bg-white/[0.03] px-6 py-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-orange-200">Confirm inventory action</p>
-              <h3 className="mt-2 text-xl font-black text-white">
-                {confirmItem.action === "use" ? "Claim this item now?" : "Save this item?"}
-              </h3>
-            </div>
-            <div className="px-6 py-5">
-              <p className="text-sm leading-6 text-slate-300">
-                {confirmItem.action === "use"
-                  ? "This marks the item as used and opens a staff delivery flow when needed."
-                  : "This keeps the item reserved for the next wipe when the system supports saving it."}
-              </p>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setConfirmItem(null)}
-                  className="h-11 rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-slate-300 transition hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmAction}
-                  className="h-11 rounded-xl bg-[linear-gradient(135deg,#f97316,#fbbf24)] text-sm font-black text-stone-950 transition hover:scale-[1.02]"
-                >
-                  Confirm
-                </button>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-sm overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-2xl shadow-black/50">
+            <div className="bg-gradient-to-b from-white/5 to-transparent px-6 py-5 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-2xl text-cyan-400">
+                {confirmItem.action === "use" ? "🚀" : "💾"}
               </div>
+              <h3 className="text-xl font-bold text-white">
+                {confirmItem.action === "use" ? "Claim Item?" : "Save for Wipe?"}
+              </h3>
+              <p className="mt-2 text-sm text-slate-400">
+                {confirmItem.action === "use"
+                  ? "This will initialize the delivery process and open a support ticket."
+                  : "This item will be safely stored and ready for the next season."}
+              </p>
+            </div>
+            <div className="flex gap-2 p-4 pt-0">
+              <button
+                onClick={() => setConfirmItem(null)}
+                className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-bold text-slate-400 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className="flex-1 rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400 active:scale-95"
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
       )}
 
       <div className="relative">
-        <header className="border-b border-white/8 px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-orange-100">
-                <span className="h-1.5 w-1.5 rounded-full bg-lime-300 shadow-[0_0_14px_rgba(190,242,100,0.85)]" />
-                Survivor storage vault
+        {/* Header Section */}
+        <header className="px-6 pt-8 pb-6 sm:px-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                <span className="h-1 w-1 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                Survivor Secure Vault
               </div>
-              <h2 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
-                Inventory
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-                Premium packs, reward claims, saved wipe items, and staff delivery tickets in one place.
-              </p>
+              <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Storage</h2>
+              <p className="text-sm font-medium text-slate-500">Manage your packages, rewards, and seasonal wipe items.</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
-              {[
-                ["Ready", grouped.available.length, "text-teal-200"],
-                ["Saved", grouped.saved.length, "text-amber-200"],
-                ["Stored", totalValue, "text-orange-100"],
-              ].map(([label, value, color]) => (
-                <div key={label} className="rounded-2xl border border-white/8 bg-black/25 p-3 text-center">
-                  <div className={`text-2xl font-black ${color}`}>{value}</div>
-                  <div className="mt-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</div>
-                </div>
+            {/* Tab Navigation */}
+            <nav className="flex items-center gap-1 self-start rounded-2xl bg-white/5 p-1 backdrop-blur-md">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`group relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 ${
+                    activeTab === tab.id ? "bg-white/10 text-white shadow-sm" : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  <span className={`text-sm transition-transform duration-200 ${activeTab === tab.id ? "scale-110" : "group-hover:scale-110"}`}>
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className={`ml-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1.5 text-[9px] font-black tracking-tighter ${
+                      activeTab === tab.id ? "bg-cyan-500 text-white" : "bg-white/10 text-slate-500"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                  {activeTab === tab.id && (
+                    <span className="absolute -bottom-1 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                  )}
+                </button>
               ))}
-            </div>
+            </nav>
           </div>
         </header>
 
-        <div className="space-y-5 p-4 sm:p-6">
+        {/* Status Message */}
+        <div className="px-6 sm:px-10">
           {message && (
-            <div className={`rounded-2xl border px-4 py-3 text-sm font-bold ${
+            <div className={`mb-6 animate-in slide-in-from-top-2 rounded-2xl border px-4 py-3 text-sm font-bold backdrop-blur-md ${
               message.toLowerCase().includes("error") || message.toLowerCase().includes("fail")
-                ? "border-rose-300/25 bg-rose-500/10 text-rose-100"
-                : "border-teal-300/25 bg-teal-500/10 text-teal-100"
+                ? "border-rose-500/20 bg-rose-500/10 text-rose-300"
+                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
             }`}>
-              {message}
-            </div>
-          )}
-
-          {grouped.rewards.length > 0 && (
-            <div className="overflow-hidden rounded-3xl border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(134,25,143,0.22),rgba(8,47,73,0.22),rgba(20,83,45,0.18))]">
-              <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.28em] text-fuchsia-100">Reward claim window</div>
-                  <p className="mt-2 text-sm font-semibold text-white">
-                    Lottery and Whack-a-Mole prizes land here with a 48 hour timer.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-200">
-                  <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1.5">3 mole chances per wipe</span>
-                  <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1.5">Use opens ticket</span>
-                  <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1.5">Save before expiry</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">{message.toLowerCase().includes("error") ? "⚠️" : "✅"}</span>
+                {message}
               </div>
             </div>
           )}
 
           {activeTicket && (
-            <div className="rounded-3xl border border-cyan-300/25 bg-cyan-950/20 p-4 shadow-[0_0_36px_rgba(34,211,238,0.12)]">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-200">Prize claim live chat</p>
-                  <p className="mt-1 text-xs text-slate-400">Staff can answer from Discord while you stay on this page.</p>
+            <div className="mb-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-950/20 p-6 shadow-2xl shadow-cyan-500/10 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-2xl">🎟️</div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white">Delivery Support Ticket</h4>
+                    <p className="text-xs text-slate-400">Live chat with staff for item fulfillment.</p>
+                  </div>
                 </div>
-                <a
-                  href="/support"
-                  className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300/18"
-                >
-                  Support center
-                </a>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Active Session</span>
+                </div>
               </div>
+              
               {activeTicket.itemName && (
-                <div className="mb-4 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-3">
-                  {activeTicket.itemImage ? (
-                    <img
-                      src={activeTicket.itemImage}
-                      alt={activeTicket.itemName}
-                      className="h-16 w-16 shrink-0 rounded-xl border border-white/10 bg-slate-950 object-cover"
-                    />
-                  ) : null}
+                <div className="mb-6 flex items-center gap-4 rounded-2xl bg-black/40 p-4 border border-white/5">
+                  <div className="h-16 w-16 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-inner shrink-0">
+                    {activeTicket.itemImage ? (
+                      <img src={activeTicket.itemImage} alt="" className="h-full w-full object-contain p-1" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-2xl">📦</div>
+                    )}
+                  </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Claiming Exact Item</div>
-                    <div className="mt-1 truncate text-sm font-black text-white">{activeTicket.itemName}</div>
-                    <div className="mt-0.5 text-xs text-slate-400">{activeTicket.itemType || "Reward item"}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fulfilling Item</div>
+                    <div className="truncate text-lg font-black text-white">{activeTicket.itemName}</div>
+                    <div className="text-xs text-cyan-400 font-bold">{activeTicket.itemType?.toUpperCase() || "PACKAGE"}</div>
                   </div>
                 </div>
               )}
-              <TicketChat
-                ticketId={activeTicket.id}
-                channelId={activeTicket.channelId}
-                onClose={() => setActiveTicket(null)}
-                presenceSide="user"
-              />
+
+              <div className="rounded-2xl border border-white/5 bg-slate-950/50 overflow-hidden">
+                <TicketChat
+                  ticketId={activeTicket.id}
+                  channelId={activeTicket.channelId}
+                  onClose={() => setActiveTicket(null)}
+                  presenceSide="user"
+                />
+              </div>
             </div>
           )}
+        </div>
 
-          {loading && (
-            <div className="grid gap-3 md:grid-cols-2">
-              {[0, 1].map((idx) => (
-                <div key={idx} className="h-48 animate-pulse rounded-2xl border border-white/8 bg-white/[0.04]" />
+        {/* Content Section */}
+        <main className="min-h-[400px] px-6 pb-10 sm:px-10">
+          {loading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-48 animate-pulse rounded-3xl border border-white/5 bg-white/[0.02]" />
               ))}
             </div>
-          )}
-
-          {!loading && items.length === 0 && !showHistory && (
-            <div className="rounded-3xl border border-white/8 bg-black/25 px-6 py-12 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-300/15 bg-orange-300/8">
-                <ItemIcon type="pack" className="h-12 w-12 text-orange-100/60" />
+          ) : activeTab === "history" ? (
+            /* History / Ledger View */
+            <div className="rounded-[2rem] border border-white/5 bg-black/30 backdrop-blur-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="border-b border-white/5 bg-white/5 px-6 py-4 flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Activity History</h4>
+                <span className="text-[10px] text-slate-600">Last 30 actions</span>
               </div>
-              <h3 className="mt-5 text-lg font-black text-white">Your vault is empty</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                Store purchases, event rewards, and saved wipe packs will appear here.
-              </p>
-              <a
-                href="/store"
-                className="mt-5 inline-flex rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 py-2.5 text-xs font-black uppercase tracking-[0.18em] text-stone-950 transition hover:scale-[1.03]"
-              >
-                Visit store
-              </a>
-            </div>
-          )}
-
-          {grouped.available.length > 0 && (
-            <div>
-              <SectionTitle label="Ready to claim" count={grouped.available.length} tone="text-teal-200" />
-              <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                {grouped.available.map((item) => (
-                  <InventoryCard key={item.id} item={item} actionLoading={actionLoading} onAction={handleAction} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {grouped.saved.length > 0 && (
-            <div>
-              <SectionTitle label="Saved for next wipe" count={grouped.saved.length} tone="text-amber-200" />
-              <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                {grouped.saved.map((item) => (
-                  <InventoryCard key={item.id} item={item} actionLoading={actionLoading} onAction={handleAction} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(grouped.used.length > 0 || grouped.expired.length > 0) && (
-            <div>
-              <SectionTitle label="Archive" count={grouped.used.length + grouped.expired.length} tone="text-slate-400" />
-              <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                {[...grouped.used, ...grouped.expired].map((item) => (
-                  <InventoryCard key={item.id} item={item} actionLoading={actionLoading} onAction={handleAction} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-hidden rounded-3xl border border-white/8 bg-black/25">
-            <button
-              onClick={() => {
-                setShowHistory((current) => !current);
-                if (!showHistory) fetchLogs();
-              }}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.03]"
-            >
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity ledger</div>
-                <div className="mt-1 text-sm font-bold text-white">Inventory history</div>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">
-                {showHistory ? "Hide" : "Show"}
-              </span>
-            </button>
-
-            {showHistory && (
-              <div className="max-h-72 divide-y divide-white/6 overflow-y-auto border-t border-white/8 scrollbar-none">
+              <div className="divide-y divide-white/5">
                 {logs.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-slate-500">No inventory activity yet.</div>
+                  <div className="py-12 text-center text-slate-600">No activity logged yet.</div>
                 ) : (
                   logs.map((log) => {
                     const meta = actionLabels[log.action] || { label: log.action, color: "text-slate-300" };
                     const date = new Date(log.action_at);
-                    const showReason = log.details?.reason && !["User initiated", "Admin given"].includes(log.details.reason);
-
                     return (
-                      <div key={log.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`text-[10px] font-black uppercase tracking-[0.18em] ${meta.color}`}>{meta.label}</span>
-                            <span className="truncate text-sm font-bold text-white">{log.item_name}</span>
+                      <div key={log.id} className="flex items-center justify-between gap-4 px-6 py-4 transition hover:bg-white/[0.02]">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className={`h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-lg ${meta.color.replace('text-', 'text-opacity-50 ')}`}>
+                            {log.action.includes('use') ? '🚀' : log.action.includes('save') ? '💾' : '📦'}
                           </div>
-                          {(showReason || log.action_by_name) && (
-                            <p className="mt-1 text-xs text-slate-500">
-                              {log.action_by_name ? `From ${log.action_by_name}` : ""}
-                              {log.action_by_name && showReason ? " - " : ""}
-                              {showReason ? log.details?.reason : ""}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border border-current opacity-70 ${meta.color}`}>
+                                {meta.label}
+                              </span>
+                              <span className="truncate text-sm font-bold text-white">{log.item_name}</span>
+                            </div>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              {log.action_by_name ? `Action by ${log.action_by_name}` : "System entry"}
+                              {log.details?.reason && ` · ${log.details.reason}`}
                             </p>
-                          )}
+                          </div>
                         </div>
-                        <div className="shrink-0 text-right text-[10px] font-semibold text-slate-500">
-                          <div>{date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
-                          <div>{date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs font-bold text-slate-300">{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                          <div className="text-[10px] text-slate-600">{date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
                       </div>
                     );
                   })
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Standard Grid View (Available, Saved, Archive) */
+            <>
+              {items.filter(i => (activeTab === "available" ? i.status === "available" : activeTab === "saved" ? i.status === "saved" : i.status === "used" || i.status === "expired")).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
+                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2.5rem] border border-white/5 bg-white/[0.03] text-4xl grayscale opacity-30">
+                    {activeTab === "available" ? "📦" : activeTab === "saved" ? "💾" : "📁"}
+                  </div>
+                  <h3 className="text-xl font-bold text-white">No items found</h3>
+                  <p className="mt-2 max-w-xs text-sm text-slate-500">
+                    {activeTab === "available" 
+                      ? "Your vault is currently empty. Visit the store to acquire new packages."
+                      : activeTab === "saved"
+                        ? "Items saved for the next wipe cycle will appear here."
+                        : "Your item usage history is empty."}
+                  </p>
+                  {activeTab === "available" && (
+                    <a href="/store" className="mt-6 rounded-xl bg-white/5 border border-white/10 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-white/10">
+                      Browse Store
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  {items
+                    .filter(item => {
+                      if (activeTab === "available") return item.status === "available";
+                      if (activeTab === "saved") return item.status === "saved";
+                      return item.status === "used" || item.status === "expired";
+                    })
+                    .map((item) => (
+                      <InventoryCard
+                        key={item.id}
+                        item={item}
+                        actionLoading={actionLoading}
+                        onAction={handleAction}
+                      />
+                    ))
+                  }
+                </div>
+              )}
+            </>
+          )}
+        </main>
 
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/8 px-4 py-3">
-            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,0.75)]" />
+        {/* Footer Note */}
+        <footer className="border-t border-white/5 px-6 py-6 sm:px-10 bg-white/[0.01]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">Delivery note</div>
-              <p className="mt-1 text-xs leading-5 text-slate-400">
-                All package deliveries still require staff confirmation before in-game delivery.
+              <h5 className="text-xs font-black uppercase tracking-widest text-amber-400">Protocol Information</h5>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                All package extractions are monitored by server administrators. Large volume claims may require additional verification. 
+                Saved items are guaranteed to persist across seasonal wipes unless otherwise specified in the package terms.
               </p>
             </div>
           </div>
-        </div>
+        </footer>
       </div>
     </section>
   );
 }
 
-function SectionTitle({ label, count, tone }: { label: string; count: number; tone: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${tone.replace("text-", "bg-")} shadow-[0_0_14px_currentColor]`} />
-        <span className={`text-[11px] font-black uppercase tracking-[0.22em] ${tone}`}>{label}</span>
-      </div>
-      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black text-slate-300">
-        {count}
-      </span>
-    </div>
-  );
-}
+

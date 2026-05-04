@@ -13,8 +13,7 @@ export function requireEnv(key: string): string {
 export type KnownAdmin = { discordId: string; username: string; role: "owner" | "admin" };
 
 export const KNOWN_ADMINS: KnownAdmin[] = [
-  { discordId: "940804710267486249",  username: "Kilo",        role: "owner" },
-  { discordId: "1310794181190352997", username: "Buzzworthy",  role: "owner" },
+  { discordId: "940804710267486249",  username: "Buzzworthy",  role: "owner" },
   { discordId: "145278391166173185",  username: "Zeus",        role: "owner" },
   { discordId: "1142676239283396638", username: "JosNL32",     role: "owner" },
 ];
@@ -63,7 +62,7 @@ export const env = {
   },
   discordGuildId: () => getEnv("DISCORD_GUILD_ID") ?? "1419522458075005023",
   discordTicketsCategory: () => getEnv("DISCORD_TICKETS_CATEGORY") ?? "",
-  discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d",
+  discordWebhookUrl: () => getEnv("DISCORD_WEBHOOK_URL") ?? "",
   discordWebhookUrlForPage: (page: string) => {
     const pageMap: Record<string, string> = {
       "ban-page":     "DISCORD_WEBHOOK_URL_BAN_PAGE",
@@ -81,15 +80,21 @@ export const env = {
       "arena-logos":   "DISCORD_WEBHOOK_URL_ARENA_LOGOS",
       "store-attempts": "DISCORD_WEBHOOK_URL_STORE_ATTEMPTS",
       "store-sales":    "DISCORD_WEBHOOK_URL_STORE_SALES",
+      "streamers":      "DISCORD_WEBHOOK_URL_STREAMERS",
+      "inventory":      "DISCORD_WEBHOOK_URL_INVENTORY",
+      "lottery-winners": "DISCORD_WEBHOOK_URL_LOTTERY_WINNERS",
+      "lottery-entries": "DISCORD_WEBHOOK_URL_LOTTERY_ENTRIES",
+      "device-audit":    "DISCORD_WEBHOOK_URL_DEVICE_AUDIT",
     };
 
     const envKey = pageMap[page];
-    const userFallback = "https://discord.com/api/webhooks/1497710664909586533/5YRpNfMVANF0bLlB2gi-oRG8_l0y-_brYW0wvvL36TwUlo00PajemYpdp8koDbhB0N-d";
-    const envFallback = getEnv("DISCORD_WEBHOOK_URL") ?? userFallback;
+    const envFallback = getEnv("DISCORD_WEBHOOK_URL") ?? "";
     
     return getEnv(envKey) ?? envFallback;
   },
   hasSupabase: () =>
     Boolean(getEnv("NEXT_PUBLIC_SUPABASE_URL") && getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")),
+  geminiApiKey: () => getEnv("GOOGLE_GEMINI_API_KEY") ?? getEnv("GEMINI_API_KEY") ?? "",
+  xaiApiKey: () => getEnv("XAI_API_KEY") ?? "",
 };
 

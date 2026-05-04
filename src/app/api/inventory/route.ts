@@ -130,7 +130,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Item not found" }, { status: 404 });
   }
 
-  if (item.status !== "available") {
+  if (item.status !== "available" && item.status !== "saved") {
     return NextResponse.json({ ok: false, error: `Item is ${item.status}` }, { status: 400 });
   }
 

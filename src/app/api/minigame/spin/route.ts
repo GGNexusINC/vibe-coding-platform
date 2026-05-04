@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { getDynamicWebhookUrl } from "@/lib/webhooks";
 import { buildRewardInventoryItem, getCurrentWipeCycle } from "@/lib/reward-inventory";
 import { scoreToWhackAMolePrize, type OnceHumanPrize } from "@/lib/once-human-items";
 
@@ -128,7 +129,8 @@ export async function POST(req: Request) {
     }
   }
 
-  const webhookUrl = env.discordWebhookUrlForPage("minigame");
+  // Use getDynamicWebhookUrl so the admin-panel-configured URL is used (falls back to env)
+  const webhookUrl = await getDynamicWebhookUrl("minigame");
   if (webhookUrl) {
     const rarityScore: Record<string, string> = {
       legendary: "5 / 5",

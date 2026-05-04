@@ -599,11 +599,21 @@ const aiCommand = new SlashCommandBuilder()
   )
   .toJSON();
 
+const ticketCommand = new SlashCommandBuilder()
+  .setName("nhticket")
+  .setDescription("Open a support ticket on the NewHopeGGN website")
+  .addStringOption(opt =>
+    opt.setName("reason")
+      .setDescription("Brief description of your issue (optional)")
+      .setRequired(false)
+      .setMaxLength(200)
+  )
+  .toJSON();
 
 async function registerSlashCommands() {
   try {
     const rest = new REST({ version: "10" }).setToken(BOT_TOKEN);
-    const commandList = [translateCommand, autoTextCommand, premiumCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand, notesCommand, aiCommand];
+    const commandList = [translateCommand, autoTextCommand, premiumCommand, vcListenCommand, vcAutoCommand, vcStopCommand, vcPermCheckCommand, notesCommand, aiCommand, ticketCommand];
 
     console.log("[bot] Registering global slash commands...");
     await rest.put(
@@ -1907,7 +1917,8 @@ STRICT RULES:
 2. NEVER hallucinate other users' messages in your output. Output ONLY your own response.
 3. NEVER start your response with your name or any labels like "Assistant:".
 4. Keep it concise, friendly, and social.
-5. If a user refers to you, you know they are talking to NEWHOPE.` 
+5. If a user refers to you, you know they are talking to NEWHOPE.
+6. SUPPORT RULE (CRITICAL): If a user mentions a problem, issue, bug, complaint, ban appeal, refund, delivery issue, or asks for help with their account/purchase/item — DO NOT try to resolve it yourself. Instead, ALWAYS direct them to open a ticket on the website: ${SITE_URL}/support — say something like "Hey! For that you'll want to open a support ticket on our site 👉 ${SITE_URL}/support — staff will take care of you there! Use /nhticket for a quick link."`, 
                 },
                 ...history
               ],
@@ -1940,6 +1951,44 @@ STRICT RULES:
 }
 
 // ── Slash command handler ─────────────────────────────────────────────────
+// ── /nhticket handler helper ─────────────────────────────────────────────
+function buildTicketEmbed(user, reason) {
+  const embed = new EmbedBuilder()
+    .setColor(0x00f2ff)
+    .setTitle("🎟️ Open a Support Ticket")
+    .setDescription(
+      `Hey ${user ? `<@${user.id}>` : "there"}! Need help? Our staff team handles all support requests through the **NewHopeGGN website**.\n\n` +
+      `Opening a ticket on the site lets you:\n` +
+      `• 📋 Track your ticket status in real-time\n` +
+      `• 💬 Chat live with staff directly on the site\n` +
+      `• 📦 Manage inventory claims and deliveries\n` +
+      `• 🛡️ Submit ban appeals & account issues\n\n` +
+      `Staff will respond as fast as possible — usually within a few hours.`
+    )
+    .addFields(
+      { name: "📌 Your Issue", value: reason ? `> ${reason}` : "> No reason provided — you can describe it after opening the ticket.", inline: false },
+      { name: "⏱️ Response Time", value: "Typically within a few hours", inline: true },
+      { name: "📡 Status", value: "Staff Online", inline: true },
+    )
+    .setFooter({ text: "NewHopeGGN Support • Powered by newhopeggn.vercel.app", iconURL: BOT_AVATAR })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("Open a Ticket")
+      .setStyle(ButtonStyle.Link)
+      .setURL(`${SITE_URL}/support`)
+      .setEmoji("🎟️"),
+    new ButtonBuilder()
+      .setLabel("View My Tickets")
+      .setStyle(ButtonStyle.Link)
+      .setURL(`${SITE_URL}/dashboard`)
+      .setEmoji("📋"),
+  );
+
+  return { embeds: [embed], components: [row] };
+}
+
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isButton()) {
     if (interaction.customId.startsWith("close_ticket_")) {
@@ -1973,6 +2022,14 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (!interaction.isChatInputCommand()) return;
+
+  // Handle /nhticket immediately here (before the big try block) for speed
+  if (interaction.commandName === "nhticket") {
+    const reason = interaction.options.getString("reason") || null;
+    const payload = buildTicketEmbed(interaction.user, reason);
+    await interaction.reply({ ...payload, ephemeral: false });
+    return;
+  }
 
   console.log(`[bot] Interaction: /${interaction.commandName} from ${interaction.user?.tag ?? interaction.user?.id}`);
 

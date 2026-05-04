@@ -162,6 +162,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                       { href: "/store", label: "Wipe Store" },
                       { href: "/support", label: "Support" },
                       { href: "/community", label: "Community" },
+                      { href: "/streamers", label: "Streamers" },
                       { href: "/about", label: "About" },
                     ].map((l) => (
                       <li key={l.href}>

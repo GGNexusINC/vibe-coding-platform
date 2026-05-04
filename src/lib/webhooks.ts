@@ -18,7 +18,10 @@ export const WEBHOOK_SLUGS = [
   { slug: 'lottery-entries', name: 'Lottery Entries Community' },
   { slug: 'lottery-winners', name: 'Lottery Winners Community' },
   { slug: 'device-audit', name: 'Device Hardware Audit' },
-  { slug: 'store-attempts', name: 'Store Checkout Attempts' }
+  { slug: 'store-attempts', name: 'Store Checkout Attempts' },
+  { slug: 'store-sales', name: 'Store Sales (Paid)' },
+  { slug: 'streamers', name: 'Streamer Applications' },
+  { slug: 'inventory', name: 'Inventory Actions' }
 ] as const;
 
 export type WebhookSlug = typeof WEBHOOK_SLUGS[number]['slug'];

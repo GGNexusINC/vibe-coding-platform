@@ -184,6 +184,9 @@ const pageOptions = [
   { value: "ban-page", label: "Ban Page", note: "Punishments, warnings, and moderation notices." },
   { value: "staff-page", label: "Staff Page", note: "Staff-only announcements and internal alerts." },
   { value: "wipe", label: "😺 Wipe", note: "Wipe cycle announcements and new season alerts." },
+  { value: "arena", label: "⚔️ Arena / Events", note: "Tournament and arena announcements." },
+  { value: "lottery-winners", label: "🏆 Lottery", note: "Lottery winner announcements." },
+  { value: "server-audit", label: "🛡️ Server Audit", note: "Internal server operation logs." },
 ];
 
 const broadcastPresets = [
@@ -810,8 +813,16 @@ function AdminCopilot({ onNavigate, onAction, members }: {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-black uppercase tracking-[0.4em] text-cyan-100 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">SENTINEL</span>
-                    <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[8px] font-black text-cyan-400 border border-cyan-500/30">ONLINE</span>
+                    <span className={`text-[14px] font-black uppercase tracking-[0.4em] transition-colors duration-500 ${
+                      mayhemMode ? "text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]" : "text-cyan-100 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+                    }`}>
+                      {mayhemMode ? "TERMINATOR" : "SENTINEL"}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-[8px] font-black border transition-colors duration-500 ${
+                      mayhemMode ? "bg-rose-500/20 text-rose-400 border-rose-500/30" : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                    }`}>
+                      {mayhemMode ? "AGGRESSIVE" : "ONLINE"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className="block text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase">LINK ID: GGN-7-ALFA</span>
@@ -831,8 +842,8 @@ function AdminCopilot({ onNavigate, onAction, members }: {
               <div key={i} className={`flex ${res.type === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
                 <div className={`relative max-w-[92%] rounded-[2rem] px-6 py-4.5 text-[11px] leading-relaxed group/bubble transition-all hover:scale-[1.01] ${
                   res.type === "user" 
-                    ? "bg-gradient-to-br from-indigo-600 to-blue-800 text-white rounded-tr-none shadow-2xl shadow-indigo-500/10 border border-indigo-400/30 font-bold" 
-                    : "bg-slate-900/60 text-slate-100 border border-white/5 rounded-tl-none backdrop-blur-xl shadow-inner ring-1 ring-white/5"
+                    ? (mayhemMode ? "bg-gradient-to-br from-rose-600 to-red-800 text-white rounded-tr-none shadow-2xl shadow-rose-500/20 border border-rose-400/30 font-bold" : "bg-gradient-to-br from-indigo-600 to-blue-800 text-white rounded-tr-none shadow-2xl shadow-indigo-500/10 border border-indigo-400/30 font-bold")
+                    : (mayhemMode ? "bg-rose-950/40 text-rose-100 border border-rose-500/20 rounded-tl-none backdrop-blur-xl shadow-inner ring-1 ring-rose-500/10" : "bg-slate-900/60 text-slate-100 border border-white/5 rounded-tl-none backdrop-blur-xl shadow-inner ring-1 ring-white/5")
                 }`}>
                   {res.type === "bot" && (
                     <div className="absolute -left-2 top-0 text-[10px] text-cyan-500/50 font-black">»</div>
@@ -1001,6 +1012,13 @@ export function AdminPanelClient() {
   const [modAction, setModAction] = useState<"warn" | "ban" | "unban">("warn");
   const [modStatus, setModStatus] = useState("");
   const [modWorking, setModWorking] = useState(false);
+  const [mayhemMode, setMayhemMode] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("mayhemMode") === "true" : false));
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mayhemMode", mayhemMode.toString());
+    }
+  }, [mayhemMode]);
   const [showModModal, setShowModModal] = useState(false);
   const [approveNote, setApproveNote] = useState("");
   const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
@@ -1064,6 +1082,7 @@ export function AdminPanelClient() {
   const [inventoryFilter, setInventoryFilter] = useState("all");
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventorySummary, setInventorySummary] = useState({ total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
 
   // Package logs state
   const [packageLogs, setPackageLogs] = useState<any[]>([]);
@@ -1555,6 +1574,20 @@ export function AdminPanelClient() {
       setInventorySummary(data.summary || { total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
     }
     setInventoryLoading(false);
+  }
+
+  function toggleInventorySelection(id: string) {
+    setSelectedInventoryIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAllInventory() {
+    if (selectedInventoryIds.length === inventoryItems.length) {
+      setSelectedInventoryIds([]);
+    } else {
+      setSelectedInventoryIds(inventoryItems.map(item => item.id));
+    }
   }
 
   async function handleInventoryAction(itemIds: string[], action: "mark_used" | "mark_available" | "mark_saved" | "delete") {
@@ -2282,7 +2315,10 @@ export function AdminPanelClient() {
   };
 
   return (
-    <div className="relative min-h-screen">
+    <div className={`relative min-h-screen transition-colors duration-500 ${mayhemMode ? "bg-[#0a0000]" : ""}`}>
+      {mayhemMode && (
+        <div className="fixed inset-0 pointer-events-none z-[9999] ring-[20px] ring-rose-600/10 inset-shadow-sm shadow-[inset_0_0_100px_rgba(244,63,94,0.1)] opacity-50 animate-pulse" />
+      )}
       {!isAuthed ? (
         /* ── Login card ── */
         <div className="flex min-h-[80vh] items-center justify-center px-4">
@@ -2308,13 +2344,48 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               DESKTOP SIDEBAR
           ══════════════════════════════════════════════ */}
-          <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-white/6 bg-gradient-to-b from-slate-950 to-[#090c14]">
+          <aside className={`hidden md:flex w-60 shrink-0 flex-col border-r transition-colors duration-500 ${
+            mayhemMode 
+              ? "border-rose-900/40 bg-gradient-to-b from-[#1a0000] to-[#0a0000]" 
+              : "border-white/6 bg-gradient-to-b from-slate-950 to-[#090c14]"
+          }`}>
             <div className="px-5 pt-7 pb-5">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-xs font-black text-white">N</div>
                 <span className="text-sm font-bold text-white tracking-tight">NewHopeGGN</span>
               </div>
               <div className="mt-1 text-[10px] text-slate-500 pl-0.5">Admin Panel</div>
+              
+              <div className="mt-6 px-3">
+                <button
+                  onClick={() => setMayhemMode(!mayhemMode)}
+                  className={`relative w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border transition-all duration-500 group/mayhem overflow-hidden ${
+                    mayhemMode 
+                      ? "bg-rose-500/20 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.2)]" 
+                      : "bg-slate-900/40 border-white/5 hover:border-white/10"
+                  }`}
+                >
+                  {mayhemMode && (
+                    <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.15),transparent_70%)] animate-pulse" />
+                  )}
+                  <div className="flex items-center gap-2.5 relative z-10">
+                    <span className={`text-lg transition-transform duration-500 ${mayhemMode ? "rotate-12 scale-110" : "grayscale group-hover:grayscale-0"}`}>
+                      {mayhemMode ? "👹" : "💀"}
+                    </span>
+                    <div className="text-left">
+                      <div className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${mayhemMode ? "text-rose-400" : "text-slate-500"}`}>
+                        Mayhem Mode
+                      </div>
+                      <div className={`text-[9px] font-bold transition-colors ${mayhemMode ? "text-rose-300/60" : "text-slate-600"}`}>
+                        {mayhemMode ? "SYSTEM OVERRIDE" : "Standard Ops"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`relative w-8 h-4 rounded-full transition-colors duration-500 ${mayhemMode ? "bg-rose-600" : "bg-slate-800"}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-all duration-500 shadow-sm ${mayhemMode ? "translate-x-4 shadow-[0_0_8px_white]" : ""}`} />
+                  </div>
+                </button>
+              </div>
             </div>
 
             <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
@@ -2325,12 +2396,14 @@ export function AdminPanelClient() {
                   {mainTabs.map((tab) => (
                     <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                        activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                        activeTab === tab.id 
+                          ? (mayhemMode ? "bg-rose-500/20 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.3)] border border-rose-500/30" : "bg-white/8 text-white shadow-sm") 
+                          : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                       }`}>
-                      {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />}
-                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                      {activeTab === tab.id && <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full ${mayhemMode ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,1)]" : "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"}`} />}
+                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? (mayhemMode ? "text-rose-500 scale-110" : "text-cyan-400 scale-110") : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
                       <span className="flex-1 text-left">{tab.label}</span>
-                      {"badge" in tab && tab.badge > 0 && <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>}
+                      {"badge" in tab && tab.badge > 0 && <span className={`flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold ${mayhemMode ? "bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-amber-400/25 text-amber-300"}`}>{tab.badge}</span>}
                     </button>
                   ))}
                 </div>
@@ -2343,12 +2416,14 @@ export function AdminPanelClient() {
                   {featureTabs.map((tab) => (
                     <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                        activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                        activeTab === tab.id 
+                          ? (mayhemMode ? "bg-rose-500/20 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.3)] border border-rose-500/30" : "bg-white/8 text-white shadow-sm") 
+                          : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                       }`}>
-                      {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />}
-                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                      {activeTab === tab.id && <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full ${mayhemMode ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,1)]" : "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"}`} />}
+                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? (mayhemMode ? "text-rose-500 scale-110" : "text-cyan-400 scale-110") : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
                       <span className="flex-1 text-left">{tab.label}</span>
-                      {"badge" in tab && tab.badge > 0 && <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>}
+                      {"badge" in tab && tab.badge > 0 && <span className={`flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold ${mayhemMode ? "bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-amber-400/25 text-amber-300"}`}>{tab.badge}</span>}
                     </button>
                   ))}
                 </div>
@@ -2361,12 +2436,14 @@ export function AdminPanelClient() {
                   {supportTabs.map((tab) => (
                     <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                        activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                        activeTab === tab.id 
+                          ? (mayhemMode ? "bg-rose-500/20 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.3)] border border-rose-500/30" : "bg-white/8 text-white shadow-sm") 
+                          : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                       }`}>
-                      {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />}
-                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                      {activeTab === tab.id && <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full ${mayhemMode ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,1)]" : "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"}`} />}
+                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? (mayhemMode ? "text-rose-500 scale-110" : "text-cyan-400 scale-110") : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
                       <span className="flex-1 text-left">{tab.label}</span>
-                      {"badge" in tab && tab.badge > 0 && <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>}
+                      {"badge" in tab && tab.badge > 0 && <span className={`flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold ${mayhemMode ? "bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-amber-400/25 text-amber-300"}`}>{tab.badge}</span>}
                     </button>
                   ))}
                 </div>
@@ -2379,12 +2456,14 @@ export function AdminPanelClient() {
                   {systemTabs.map((tab) => (
                     <button key={tab.id} type="button" onClick={() => switchTab(tab.id)} data-tabid={tab.id}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                        activeTab === tab.id ? "bg-white/8 text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                        activeTab === tab.id 
+                          ? (mayhemMode ? "bg-rose-500/20 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.3)] border border-rose-500/30" : "bg-white/8 text-white shadow-sm") 
+                          : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                       }`}>
-                      {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />}
-                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
+                      {activeTab === tab.id && <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full ${mayhemMode ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,1)]" : "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"}`} />}
+                      <span className={`text-base transition-transform duration-150 ${activeTab === tab.id ? (mayhemMode ? "text-rose-500 scale-110" : "text-cyan-400 scale-110") : "text-slate-600 group-hover:text-slate-400"}`}>{tab.icon}</span>
                       <span className="flex-1 text-left">{tab.label}</span>
-                      {"badge" in tab && tab.badge > 0 && <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-400/25 px-1 text-[9px] font-bold text-amber-300">{tab.badge}</span>}
+                      {"badge" in tab && tab.badge > 0 && <span className={`flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold ${mayhemMode ? "bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-amber-400/25 text-amber-300"}`}>{tab.badge}</span>}
                     </button>
                   ))}
                 </div>
@@ -2408,15 +2487,29 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               MAIN CONTENT
           ══════════════════════════════════════════════ */}
-          <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto scroll-smooth">
+          <main className={`flex-1 min-w-0 overflow-x-hidden overflow-y-auto scroll-smooth transition-colors duration-500 ${
+            mayhemMode ? "bg-[#0a0000]" : ""
+          }`}>
             {/* Mobile header */}
-            <div className="flex items-center justify-between border-b border-white/6 bg-slate-950/95 px-4 py-3 md:hidden sticky top-0 z-30 backdrop-blur">
+            <div className={`flex items-center justify-between border-b px-4 py-3 md:hidden sticky top-0 z-30 backdrop-blur transition-colors duration-500 ${
+              mayhemMode ? "border-rose-500/20 bg-rose-950/95" : "border-white/6 bg-slate-950/95"
+            }`}>
               <div className="flex items-center gap-2">
-                <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-[10px] font-black text-white">N</div>
+                <div className={`h-6 w-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white transition-colors duration-500 ${
+                  mayhemMode ? "bg-gradient-to-br from-rose-500 to-red-700" : "bg-gradient-to-br from-cyan-400 to-violet-500"
+                }`}>N</div>
                 <span className="text-sm font-bold text-white">Admin Panel</span>
               </div>
               <div className="flex items-center gap-2">
-                {isOwner && <span className="rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[10px] font-bold text-amber-300">👑 Owner</span>}
+                <button
+                  onClick={() => setMayhemMode(!mayhemMode)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 ${
+                    mayhemMode ? "border-rose-500/30 bg-rose-500/20 text-rose-400" : "border-white/10 bg-white/5 text-slate-400"
+                  }`}
+                >
+                  {mayhemMode ? "👹" : "💀"}
+                </button>
+                {isOwner && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${mayhemMode ? "border-rose-400/25 bg-rose-400/8 text-rose-300" : "border-amber-400/25 bg-amber-400/8 text-amber-300"}`}>👑 Owner</span>}
                 <button type="button" onClick={() => void loadStats()} disabled={refreshing} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-400 disabled:opacity-40">
                   {refreshing ? "⟳" : "↻"}
                 </button>
@@ -2430,8 +2523,13 @@ export function AdminPanelClient() {
             <div className="grid min-w-0 gap-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Overview</h1>
-                  <p className="mt-0.5 text-sm text-slate-500">Real-time server stats · auto-syncs every 15s</p>
+                  <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Overview
+                    {mayhemMode && <span className="text-rose-500 animate-pulse">👹</span>}
+                  </h1>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {mayhemMode ? "Real-time carnage monitoring · all systems overclocked" : "Real-time server stats · auto-syncs every 15s"}
+                  </p>
                 </div>
                 <button type="button" onClick={() => void loadStats()} disabled={refreshing}
                   className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 active:scale-95 transition-all disabled:opacity-40">
@@ -2442,15 +2540,40 @@ export function AdminPanelClient() {
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: "Active Now", value: stats?.summary.activeNowCount ?? 0, color: "from-emerald-400/15 to-emerald-400/3 border-emerald-400/15", accent: "text-emerald-400", dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" },
-                  { label: "Members", value: stats?.summary.totalMembersTracked ?? 0, color: "from-cyan-400/15 to-cyan-400/3 border-cyan-400/15", accent: "text-cyan-400", dot: "bg-cyan-400" },
-                  { label: "Active Days", value: stats?.summary.activeDaysObserved ?? 0, color: "from-violet-400/15 to-violet-400/3 border-violet-400/15", accent: "text-violet-400", dot: "bg-violet-400", suffix: " days" },
-                  { label: "Events", value: stats?.summary.totalEvents ?? 0, color: "from-amber-400/15 to-amber-400/3 border-amber-400/15", accent: "text-amber-400", dot: "bg-amber-400" },
+                  { 
+                    label: "Active Now", 
+                    value: stats?.summary.activeNowCount ?? 0, 
+                    color: mayhemMode ? "from-rose-500/20 to-rose-950/10 border-rose-500/30" : "from-emerald-400/15 to-emerald-400/3 border-emerald-400/15", 
+                    accent: mayhemMode ? "text-rose-400" : "text-emerald-400", 
+                    dot: mayhemMode ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" 
+                  },
+                  { 
+                    label: "Members", 
+                    value: stats?.summary.totalMembersTracked ?? 0, 
+                    color: mayhemMode ? "from-rose-500/15 to-rose-950/5 border-rose-500/20" : "from-cyan-400/15 to-cyan-400/3 border-cyan-400/15", 
+                    accent: mayhemMode ? "text-rose-400" : "text-cyan-400", 
+                    dot: mayhemMode ? "bg-rose-500" : "bg-cyan-400" 
+                  },
+                  { 
+                    label: "Active Days", 
+                    value: stats?.summary.activeDaysObserved ?? 0, 
+                    color: mayhemMode ? "from-rose-500/15 to-rose-950/5 border-rose-500/20" : "from-violet-400/15 to-violet-400/3 border-violet-400/15", 
+                    accent: mayhemMode ? "text-rose-400" : "text-violet-400", 
+                    dot: mayhemMode ? "bg-rose-500" : "bg-violet-400", 
+                    suffix: " days" 
+                  },
+                  { 
+                    label: "Events", 
+                    value: stats?.summary.totalEvents ?? 0, 
+                    color: mayhemMode ? "from-rose-500/15 to-rose-950/5 border-rose-500/20" : "from-amber-400/15 to-amber-400/3 border-amber-400/15", 
+                    accent: mayhemMode ? "text-rose-400" : "text-amber-400", 
+                    dot: mayhemMode ? "bg-rose-500" : "bg-amber-400" 
+                  },
                 ].map((s) => (
-                  <div key={s.label} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b ${s.color} p-4 transition-transform duration-150 hover:scale-[1.02]`}>
+                  <div key={s.label} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b ${s.color} p-4 transition-all duration-300 hover:scale-[1.02] ${mayhemMode ? "hover:shadow-[0_0_20px_rgba(244,63,94,0.15)]" : ""}`}>
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${s.dot}`} />
-                      <span className="text-[11px] font-medium text-slate-400">{s.label}</span>
+                      <span className={`text-[11px] font-medium ${mayhemMode ? "text-rose-300/60" : "text-slate-400"}`}>{s.label}</span>
                     </div>
                     <div className={`text-3xl font-black tracking-tight ${s.accent}`}>
                       {s.value.toLocaleString()}
@@ -2835,9 +2958,11 @@ export function AdminPanelClient() {
             <div className="grid min-w-0 max-w-full gap-4 overflow-hidden">
               <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">🧪 Beta Tester Requests</h1>
+                  <h1 className={`text-xl font-bold tracking-tight transition-colors duration-500 ${mayhemMode ? "text-rose-500" : "text-white"}`}>
+                    {mayhemMode ? "💀 MAYHEM SECTOR" : "🧪 Beta Tester Requests"}
+                  </h1>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {betaRequests.filter(r => r.status === 'pending').length} pending request{betaRequests.filter(r => r.status === 'pending').length !== 1 ? 's' : ''}
+                    {mayhemMode ? "RECRUITING MORE CHAOS AGENTS" : `${betaRequests.filter(r => r.status === 'pending').length} pending request${betaRequests.filter(r => r.status === 'pending').length !== 1 ? 's' : ''}`}
                   </p>
                 </div>
                 <button
@@ -2970,10 +3095,14 @@ export function AdminPanelClient() {
               </div>
 
               <input
-                className="h-10 w-full rounded-xl border border-white/8 bg-slate-900/80 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30 transition"
+                className={`h-10 w-full rounded-xl border px-4 text-sm text-white outline-none transition-all duration-500 ${
+                  mayhemMode 
+                    ? "border-rose-500/20 bg-rose-950/30 placeholder:text-rose-900/40 focus:border-rose-500/50" 
+                    : "border-white/8 bg-slate-900/80 placeholder:text-slate-600 focus:border-cyan-400/30"
+                }`}
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Search by name or Discord ID…"
+                placeholder={mayhemMode ? "SEARCH THE TARGET DATABASE..." : "Search by name or Discord ID…"}
               />
 
               {selectedMember && (
@@ -3066,13 +3195,21 @@ export function AdminPanelClient() {
           {activeTab === "broadcast" && (
             <div className="grid min-w-0 max-w-full gap-5 lg:max-w-2xl">
               <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Discord Broadcast</h1>
-                <p className="mt-0.5 text-sm text-slate-500">Send a message to a Discord channel via webhook.</p>
+                <h1 className={`text-xl font-bold tracking-tight transition-colors duration-500 ${mayhemMode ? "text-rose-500" : "text-white"}`}>
+                  {mayhemMode ? "🚨 WAR BROADCAST" : "Discord Broadcast"}
+                </h1>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  {mayhemMode ? "SEND DIRECTIVES TO THE FRONT LINES" : "Send a message to a Discord channel via webhook."}
+                </p>
               </div>
                 <div className="flex max-w-full flex-wrap gap-2">
                   {broadcastPresets.map((p) => (
                     <button key={p.label} type="button" onClick={() => applyPreset(p)}
-                    className="max-w-full rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-left text-xs font-semibold text-slate-400 hover:bg-white/8 hover:text-white transition">
+                    className={`max-w-full rounded-lg border px-3 py-1.5 text-left text-xs font-semibold transition-all duration-300 ${
+                      mayhemMode 
+                        ? "border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-100 shadow-[0_0_10px_rgba(244,63,94,0.1)]" 
+                        : "border-white/8 bg-white/4 text-slate-400 hover:bg-white/8 hover:text-white"
+                    }`}>
                     {p.label}
                   </button>
                 ))}
@@ -4293,22 +4430,34 @@ export function AdminPanelClient() {
                 </select>
               </div>
 
-              {/* Inventory Table */}
-              <div className="rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
-                <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[1.5fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+              {/* Inventory Table & Batch Actions */}
+              <div className="relative rounded-2xl border border-white/6 bg-slate-900/50 overflow-hidden">
+                {/* Header / Select All */}
+                <div className="border-b border-white/6 px-5 py-3 grid grid-cols-[40px_1.5fr_1fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-widest text-slate-600 items-center">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={inventoryItems.length > 0 && selectedInventoryIds.length === inventoryItems.length}
+                      onChange={toggleSelectAllInventory}
+                      className="h-4 w-4 rounded border-white/10 bg-slate-800 text-cyan-500 focus:ring-0 focus:ring-offset-0"
+                    />
+                  </div>
                   <span>User</span>
                   <span>Item</span>
                   <span>Status</span>
                   <span>Date</span>
-                  <span>Actions</span>
+                  <span className="text-right">Actions</span>
                 </div>
                 
                 {inventoryLoading ? (
-                  <div className="px-5 py-8 text-center text-slate-500">Loading inventory...</div>
+                  <div className="px-5 py-12 text-center">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-cyan-500/20 border-t-cyan-500" />
+                    <div className="mt-2 text-sm text-slate-500">Retrieving inventory…</div>
+                  </div>
                 ) : inventoryItems.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-slate-500">No items in inventory</div>
+                  <div className="px-5 py-12 text-center text-slate-500">No items in inventory matching filters</div>
                 ) : (
-                  <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
+                  <div className="divide-y divide-white/5 max-h-[600px] overflow-y-auto custom-scrollbar">
                     {inventoryItems
                       .filter((item) => {
                         if (inventoryFilter === "all") return true;
@@ -4319,80 +4468,145 @@ export function AdminPanelClient() {
                         if (!inventorySearch) return true;
                         return item.user_id?.toLowerCase().includes(inventorySearch.toLowerCase());
                       })
-                      .map((item) => (
-                        <div key={item.id} className="px-5 py-3 grid grid-cols-[1.5fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {(() => {
-                              const m = inventoryMemberMap.get(item.user_id);
-                              return (
+                      .map((item) => {
+                        const isSelected = selectedInventoryIds.includes(item.id);
+                        return (
+                          <div 
+                            key={item.id} 
+                            onClick={() => toggleInventorySelection(item.id)}
+                            className={`px-5 py-3 grid grid-cols-[40px_1.5fr_1fr_1fr_1fr_auto] gap-4 items-center text-sm transition-colors cursor-pointer group ${
+                              isSelected ? "bg-cyan-500/5" : "hover:bg-white/[0.02]"
+                            }`}
+                          >
+                            <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleInventorySelection(item.id)}
+                                className="h-4 w-4 rounded border-white/10 bg-slate-800 text-cyan-500 focus:ring-0 focus:ring-offset-0"
+                              />
+                            </div>
+                            <div className="flex items-center gap-3 min-w-0">
+                              {(() => {
+                                const m = inventoryMemberMap.get(item.user_id);
+                                return (
+                                  <>
+                                    <div className="h-8 w-8 rounded-lg border border-white/10 bg-slate-800 flex-shrink-0 overflow-hidden shadow-inner relative group-hover:border-white/20 transition-colors">
+                                      {m?.avatarUrl ? (
+                                        <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                      ) : (
+                                        <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-600 font-bold">?</div>
+                                      )}
+                                      {m?.activeNow && <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-slate-900 bg-emerald-400" />}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="text-white font-bold truncate group-hover:text-cyan-200 transition-colors">
+                                        {m?.globalName || m?.username || "Unknown User"}
+                                      </div>
+                                      <div className="font-mono text-[9px] text-slate-500 truncate">
+                                        {item.user_id}
+                                      </div>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-2xl opacity-80 shrink-0">
+                                {item.item_type === "insurance" ? "🛡️" : item.item_name.toLowerCase().includes("wipe") ? "⏳" : "📦"}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="text-white font-medium truncate">{item.item_name}</div>
+                                {item.item_type === "insurance" && (
+                                  <span className="text-[9px] font-black uppercase tracking-tighter text-violet-400">Insurance Policy</span>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                                item.status === "available" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                                item.status === "used" ? "bg-slate-500/10 border-white/10 text-slate-500" :
+                                item.status === "saved" ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+                                "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${
+                                  item.status === "available" ? "bg-emerald-400" :
+                                  item.status === "used" ? "bg-slate-600" :
+                                  item.status === "saved" ? "bg-amber-400" :
+                                  "bg-rose-400"
+                                }`} />
+                                {item.status}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-500 font-medium">
+                              {new Date(item.purchase_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                            <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                              {item.status === "available" && (
                                 <>
-                                  <div className="h-8 w-8 rounded-full border border-white/10 bg-slate-800 flex-shrink-0 overflow-hidden shadow-inner">
-                                    {m?.avatarUrl ? (
-                                      <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
-                                    ) : (
-                                      <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-600 font-bold">?</div>
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="text-white font-bold truncate">
-                                      {m?.globalName || m?.username || "Unknown User"}
-                                    </div>
-                                    <div className="font-mono text-[10px] text-slate-500 truncate">
-                                      {item.user_id}
-                                    </div>
-                                  </div>
+                                  <button
+                                    onClick={() => void handleInventoryAction([item.id], "mark_used")}
+                                    className="p-1.5 rounded-lg bg-white/5 border border-white/8 text-slate-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-400 transition"
+                                    title="Mark as used"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                  </button>
+                                  <button
+                                    onClick={() => void handleInventoryAction([item.id], "mark_saved")}
+                                    className="p-1.5 rounded-lg bg-white/5 border border-white/8 text-slate-400 hover:bg-amber-500/20 hover:border-amber-500/30 hover:text-amber-400 transition"
+                                    title="Save for next wipe"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                  </button>
                                 </>
-                              );
-                            })()}
+                              )}
+                              <button
+                                onClick={() => void handleInventoryAction([item.id], "delete")}
+                                className="p-1.5 rounded-lg bg-white/5 border border-white/8 text-slate-400 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400 transition"
+                                title="Delete permanently"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-white">{item.item_name}</span>
-                            {item.item_type === "insurance" && (
-                              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">INS</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className={`text-[10px] px-2 py-1 rounded-full uppercase font-bold ${
-                              item.status === "available" ? "bg-emerald-500/20 text-emerald-400" :
-                              item.status === "used" ? "bg-slate-500/20 text-slate-400" :
-                              item.status === "saved" ? "bg-amber-500/20 text-amber-400" :
-                              "bg-rose-500/20 text-rose-400"
-                            }`}>
-                              {item.status}
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {new Date(item.purchase_date).toLocaleDateString()}
-                          </div>
-                          <div className="flex gap-1">
-                            {item.status === "available" && (
-                              <>
-                                <button
-                                  onClick={() => void handleInventoryAction([item.id], "mark_used")}
-                                  className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-xs hover:bg-emerald-500/30"
-                                  title="Mark as used"
-                                >
-                                  ✓
-                                </button>
-                                <button
-                                  onClick={() => void handleInventoryAction([item.id], "mark_saved")}
-                                  className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs hover:bg-amber-500/30"
-                                  title="Save for next wipe"
-                                >
-                                  💾
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => void handleInventoryAction([item.id], "delete")}
-                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-400 text-xs hover:bg-rose-500/30"
-                              title="Delete"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Floating Batch Actions Toolbar */}
+                {selectedInventoryIds.length > 0 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3 rounded-2xl border border-cyan-400/30 bg-slate-900/90 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 duration-300 z-10">
+                    <div className="flex flex-col border-r border-white/10 pr-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Selection</span>
+                      <span className="text-sm font-bold text-white">{selectedInventoryIds.length} items selected</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { void handleInventoryAction(selectedInventoryIds, "mark_used"); setSelectedInventoryIds([]); }}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 transition border border-emerald-500/20"
+                      >
+                        ✓ Mark Used
+                      </button>
+                      <button
+                        onClick={() => { void handleInventoryAction(selectedInventoryIds, "mark_saved"); setSelectedInventoryIds([]); }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition border border-amber-500/20"
+                      >
+                        💾 Mark Saved
+                      </button>
+                      <button
+                        onClick={() => { void handleInventoryAction(selectedInventoryIds, "delete"); setSelectedInventoryIds([]); }}
+                        className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-bold hover:bg-rose-500/30 transition border border-rose-500/20"
+                      >
+                        🗑️ Delete
+                      </button>
+                      <button
+                        onClick={() => setSelectedInventoryIds([])}
+                        className="px-3 py-1.5 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition border border-white/10"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -5711,9 +5925,11 @@ function WebhooksManager() {
     { slug: "device-audit", name: "Device Audit", desc: "Security logs for hardware/browser fingerprinting." },
     { slug: "general-chat", name: "General Chat", desc: "Main server updates and announcements." },
     { slug: "staff-audits", name: "Staff Audits", desc: "Internal logs for admin actions." },
-    { slug: "store-sales", name: "Store Sales", desc: "Automated logs for successful PayPal purchases." },
-      { slug: "store-attempts", name: "Store Checkout Attempts", desc: "Logs when users click buy to initiate the checkout process." },
-      { slug: "login-audits", name: "Login Audits", desc: "Logs when users sign in or sign out of the dashboard." },
+    { slug: "store-sales", name: "Store Sales (Paid)", desc: "Automated logs for successful PayPal purchases." },
+    { slug: "store-attempts", name: "Store Checkout Attempts", desc: "Logs when users click buy to initiate the checkout process." },
+    { slug: "streamers", name: "Streamer Applications", desc: "Logs when users apply for the streamer program." },
+    { slug: "inventory", name: "Inventory Actions", desc: "Logs for manual item granting or revoking." },
+    { slug: "login-audits", name: "Login Audits", desc: "Logs when users sign in or sign out of the dashboard." },
     { slug: "ban-page", name: "Ban Logs", desc: "Enforcement notifications." },
   ];
 

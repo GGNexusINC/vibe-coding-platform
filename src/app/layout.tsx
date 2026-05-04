@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Heartbeat } from "@/app/_components/heartbeat";
 import { DeviceAuditBeacon } from "@/app/_components/device-audit-beacon";
 import { SiteChrome } from "@/app/_components/site-chrome";
+import { TicketStatusFloat } from "@/app/_components/ticket-status-float";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -53,6 +54,7 @@ export default function RootLayout({
         <Heartbeat />
         <DeviceAuditBeacon />
         <SiteChrome>{children}</SiteChrome>
+        <TicketStatusFloat />
         <Analytics />
       </body>
     </html>

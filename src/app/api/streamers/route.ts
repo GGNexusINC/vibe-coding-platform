@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getAdminSession } from "@/lib/admin-auth";
 import { applyAsStreamer, getStreamers, updateStreamerStatus } from "@/lib/streamer-store";
-import { env } from "@/lib/env";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { getDynamicWebhookUrl } from "@/lib/webhooks";
 
 export async function GET() {
   const streamers = await getStreamers("approved");
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
 
-  const webhookUrl = env.discordWebhookUrlForPage("general-chat");
+  const webhookUrl = await getDynamicWebhookUrl("streamers");
   if (webhookUrl) {
     await sendDiscordWebhook(
       {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const STAFF_LIST = [
   { name: "Kilo",        emoji: "👑" },
@@ -28,29 +29,41 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [intentId, setIntentId] = useState<string>("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function openModal() {
     setSelected(null);
     setShowModal(true);
-
-    // Log the "Before" (Intent) immediately
-    await fetch("/api/store/referral", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        packName,
-        packSlug,
-        price: packPrice,
-        referredBy: "User opened menu",
-        user,
-      }),
-    }).catch(() => {});
+    
+    const newIntentId = typeof crypto !== "undefined" && crypto.randomUUID 
+      ? crypto.randomUUID().slice(0, 8).toUpperCase()
+      : Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+    setIntentId(newIntentId);
   }
 
-  async function handleProceed(referredBy: string) {
+  function handleProceed(referredBy: string) {
+    // Construct custom_id string to pass to PayPal
+    const customIdStr = `${user?.discord_id || "guest"}|${user?.username || "guest"}|${packSlug}|${intentId}`;
+    
+    // Append custom_id to the PayPal URL so it gets passed back to our webhook
+    // We set both 'custom' (v1/Legacy) and 'custom_id' (v2/SDK) for maximum compatibility
+    const finalUrl = new URL(buyUrl);
+    finalUrl.searchParams.set("custom", customIdStr);
+    finalUrl.searchParams.set("custom_id", customIdStr);
+
+    // Open PayPal in a new tab synchronously BEFORE any async await to bypass popup blockers
+    window.open(finalUrl.toString(), "_blank", "noopener,noreferrer");
+    
     setLoading(true);
-    // Log the "Intent" before redirecting
-    await fetch("/api/store/referral", {
+
+    // Log the "Intent" in the background
+    fetch("/api/store/referral", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -59,13 +72,12 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
         price: packPrice,
         referredBy,
         user,
+        intentId,
       }),
-    }).catch(() => {});
-
-    // Open PayPal in a new tab
-    window.open(buyUrl, "_blank", "noopener,noreferrer");
-    setLoading(false);
-    setShowModal(false);
+    }).catch(() => {}).finally(() => {
+      setLoading(false);
+      setShowModal(false);
+    });
   }
 
   return (
@@ -78,9 +90,9 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
         Buy
       </button>
 
-      {showModal && (
+      {showModal && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
           onClick={(e) => { if (e.target === e.currentTarget && !loading) setShowModal(false); }}
         >
@@ -166,7 +178,8 @@ export function BuyButton({ packName, packPrice, packSlug, buyUrl, user }: BuyBu
               </div>
             </>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

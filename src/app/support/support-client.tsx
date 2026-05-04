@@ -27,6 +27,7 @@ export default function SupportClient() {
 
   const searchParams = useSearchParams();
   const [subject, setSubject] = useState(searchParams.get("subject") ?? "");
+  const [inGameName, setInGameName] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,26 @@ export default function SupportClient() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-load ticket from URL
+  useEffect(() => {
+    const tid = searchParams.get("ticketId");
+    if (!tid || activeTicket) return;
+
+    async function loadTicket() {
+      try {
+        const res = await fetch(`/api/support/ticket/${tid}`);
+        const data = await res.json();
+        if (data.ok && data.ticket?.channelId) {
+          setActiveTicket({ id: data.ticket.id, channelId: data.ticket.channelId });
+          setSubject(data.ticket.subject);
+        }
+      } catch (e) {
+        console.error("[SupportClient] Failed to auto-load ticket:", e);
+      }
+    }
+    loadTicket();
+  }, [searchParams, activeTicket]);
+
   async function submitTicket(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loading) return;
@@ -69,7 +90,7 @@ export default function SupportClient() {
     const res = await fetch("/api/support/ticket", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject, message }),
+      body: JSON.stringify({ subject, message, inGameName }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -80,6 +101,7 @@ export default function SupportClient() {
     }
 
     setSubject("");
+    setInGameName("");
     setMessage("");
     setStatus(data?.message || "Ticket submitted!");
     
@@ -271,6 +293,20 @@ export default function SupportClient() {
                 className="h-12 w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 text-sm text-white placeholder:text-slate-600 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
               />
               <div className="text-[10px] text-slate-600 text-right">{subject.length}/100</div>
+            </div>
+
+            {/* In-Game Name Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">In-Game Name</label>
+              <input
+                type="text"
+                value={inGameName}
+                onChange={(e) => setInGameName(e.target.value)}
+                placeholder="What is your character name in-game?"
+                maxLength={100}
+                required
+                className="h-12 w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 text-sm text-white placeholder:text-slate-600 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+              />
             </div>
 
             {/* Message Field */}

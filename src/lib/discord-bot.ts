@@ -10,6 +10,7 @@ const ADMIN_IDS = [
   "940804710267486249",   // Kilo
   "1310794181190352997",  // Buzzworthy
   "145278391166173185",   // Hope
+  "767783306166665227",   // Butter
 ];
 
 // Also allow the bot itself if needed
@@ -52,16 +53,15 @@ export async function createTicketChannel(
         topic: `Support ticket from ${username}: ${subject.slice(0, 100)}`,
         parent_id: env.discordTicketsCategory() || undefined,
         permission_overwrites: [
-          // Deny @everyone - type 0 = role, 1024 = VIEW_CHANNEL
+          // Deny @everyone
           { id: GUILD_ID, type: 0, deny: 1024, allow: 0 },
-          // Allow bot - type 1 = user
+          // Allow bot
           { id: BOT_ID, type: 1, allow: 1024, deny: 0 },
-          // Allow Kilo
+          // Allow individual admins (type 1 = user)
           { id: "940804710267486249", type: 1, allow: 1024, deny: 0 },
-          // Allow Buzzworthy  
           { id: "1310794181190352997", type: 1, allow: 1024, deny: 0 },
-          // Allow Hope
           { id: "145278391166173185", type: 1, allow: 1024, deny: 0 },
+          { id: "767783306166665227", type: 1, allow: 1024, deny: 0 },
         ],
       }),
     });
@@ -113,8 +113,9 @@ export async function sendTicketMessage(
       footer: { text: "Ticket System • Reply here to respond" },
     };
 
-    // Mention all admin users directly by ID
+    // Ping all admins including Butter
     const adminMentions = [
+      "<@767783306166665227>",   // Butter
       "<@940804710267486249>",   // Kilo
       "<@1310794181190352997>",  // Buzzworthy
       "<@145278391166173185>",   // Hope
@@ -240,6 +241,7 @@ export async function sendTicketToWebhook(
     username: string;
     discord_id?: string;
     avatar_url?: string;
+    inGameName?: string;
   },
   subject: string,
   message: string,
@@ -254,6 +256,7 @@ export async function sendTicketToWebhook(
       image: itemImageUrl ? { url: itemImageUrl } : undefined,
       fields: [
         { name: "User", value: user.username, inline: true },
+        { name: "In-Game Name", value: user.inGameName || "Not provided", inline: true },
         { name: "Subject", value: subject, inline: true },
         { name: "Message", value: message.slice(0, 1024) },
       ],

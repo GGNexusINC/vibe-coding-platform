@@ -244,7 +244,7 @@ export function StoreClient({ user }: { user: User | null }) {
                 Signed in as {user.global_name || user.username}
               </div>
               <div className="mt-2 text-sm text-emerald-50/90">
-                You are ready to open pack checkout links and have your purchase tracked.
+                Account securely linked. Purchases will be automatically delivered to your in-game inventory.
               </div>
             </div>
           )}
@@ -317,20 +317,42 @@ export function StoreClient({ user }: { user: User | null }) {
                 <div className="mt-8 space-y-3">
                   {product.bullets.map((item) => {
                     const lItem = item.toLowerCase();
-                    let bgClass = "bg-white/5 border-white/5";
+                    let styleClass = "bg-white/5 border-white/10 text-slate-200";
                     let dotColor = "text-cyan-400";
-                    
-                    if (lItem.includes("stone")) { bgClass = "bg-stone-500/10 border-stone-500/20"; dotColor = "text-stone-400"; }
-                    else if (lItem.includes("wood")) { bgClass = "bg-amber-500/10 border-amber-500/20"; dotColor = "text-amber-500"; }
-                    else if (lItem.includes("steel")) { bgClass = "bg-slate-400/10 border-slate-400/20"; dotColor = "text-slate-300"; }
-                    else if (lItem.includes("tungsten")) { bgClass = "bg-cyan-400/10 border-cyan-400/20"; dotColor = "text-cyan-400"; }
-                    else if (lItem.includes("rifle") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14")) { bgClass = "bg-rose-500/10 border-rose-500/20"; dotColor = "text-rose-400"; }
-                    else if (lItem.includes("pulse") || lItem.includes("generator")) { bgClass = "bg-indigo-500/10 border-indigo-500/20"; dotColor = "text-indigo-400"; }
+
+                    if (lItem.includes("stone")) { 
+                      styleClass = "bg-gradient-to-br from-stone-800 to-stone-700 border-stone-500/60 text-stone-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_6px_-1px_rgba(0,0,0,0.5)]"; 
+                      dotColor = "text-stone-300";
+                    }
+                    else if (lItem.includes("wood")) { 
+                      styleClass = "bg-gradient-to-br from-[#5c3e29] to-[#422a1b] border-[#8a5d3c]/60 text-[#f5e5d5] shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_6px_-1px_rgba(0,0,0,0.5)]"; 
+                      dotColor = "text-[#d19466]";
+                    }
+                    else if (lItem.includes("steel")) { 
+                      styleClass = "bg-gradient-to-br from-slate-500 via-slate-400 to-slate-500 border-slate-300 text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),0_4px_6px_-1px_rgba(0,0,0,0.5)]"; 
+                      dotColor = "text-slate-900";
+                    }
+                    else if (lItem.includes("tungsten")) { 
+                      styleClass = "bg-gradient-to-br from-cyan-900 via-teal-700 to-cyan-950 border-cyan-400/80 text-white shadow-[inset_0_1px_3px_rgba(34,211,238,0.5),0_4px_6px_-1px_rgba(0,0,0,0.5)]"; 
+                      dotColor = "text-cyan-200";
+                    }
+                    else if (lItem.includes("rifle") || lItem.includes("ammo") || lItem.includes("p90") || lItem.includes("mk14") || lItem.includes("shotgun")) { 
+                      styleClass = "bg-gradient-to-br from-rose-950 to-red-900 border-red-500/40 text-rose-100 shadow-md"; 
+                      dotColor = "text-rose-400";
+                    }
+                    else if (lItem.includes("pulse") || lItem.includes("generator") || lItem.includes("trap")) { 
+                      styleClass = "bg-gradient-to-br from-indigo-950 to-violet-900 border-violet-500/40 text-indigo-100 shadow-md"; 
+                      dotColor = "text-indigo-400";
+                    }
+                    else if (lItem.includes("blueprint") || lItem.includes("use") || lItem.includes("returned")) {
+                      styleClass = "bg-gradient-to-br from-emerald-950 to-green-900 border-emerald-500/40 text-emerald-100 shadow-md";
+                      dotColor = "text-emerald-400";
+                    }
 
                     return (
-                      <div key={item} className={`flex items-center gap-4 rounded-2xl border p-4 transition-all group/item ${bgClass}`}>
-                         <span className={`flex h-2 w-2 rounded-full animate-pulse shadow-[0_0_8px_currentColor] ${dotColor}`} />
-                         <span className="text-sm font-black tracking-tight text-slate-200 uppercase">{item}</span>
+                      <div key={item} className={`flex items-center gap-4 rounded-2xl border p-4 transition-all group/item ${styleClass}`}>
+                         <span className={`flex h-2 w-2 rounded-full animate-pulse shrink-0 ${dotColor} bg-current shadow-[0_0_8px_currentColor]`} />
+                         <span className="text-sm font-black tracking-tight uppercase">{item}</span>
                       </div>
                     );
                   })}

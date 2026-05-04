@@ -10,6 +10,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const subject = String(body?.subject ?? "").trim();
   const message = String(body?.message ?? "").trim();
+  const inGameName = String(body?.inGameName ?? "").trim();
+  const fullMessage = inGameName ? `**In-Game Name:** ${inGameName}\n\n${message}` : message;
 
   if (!subject || !message) {
     return NextResponse.json(
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
         .select("id, discord_channel_id")
         .eq("guest_email", `discord:${user.discord_id}`)
         .eq("subject", subject)
-        .eq("message", message)
+        .eq("message", fullMessage)
         .eq("status", "open")
         .gte("created_at", recentCutoff)
         .order("created_at", { ascending: false })
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
             avatar_url: user?.avatar_url ?? undefined,
           },
           subject,
-          message,
+          fullMessage,
         );
       }
     }
@@ -99,7 +101,7 @@ export async function POST(req: Request) {
       guest_username: user?.username ?? "Guest",
       guest_email: user?.discord_id ? `discord:${user.discord_id}` : null,
       subject,
-      message,
+      message: fullMessage,
       discord_channel_id: ticketChannelId ?? null,
       status: "open",
     });
@@ -116,6 +118,7 @@ export async function POST(req: Request) {
       username: user?.username ?? "Guest",
       discord_id: user?.discord_id,
       avatar_url: user?.avatar_url ?? undefined,
+      inGameName, // Passed along to helper
     };
 
     // 1. Always log to Server Audit if configured
@@ -124,7 +127,7 @@ export async function POST(req: Request) {
         serverAuditWebhookUrl,
         webhookPayload,
         subject,
-        message,
+        message, // Original message for clean display
         ticketChannelId,
       ).catch(() => null);
     }
@@ -137,7 +140,7 @@ export async function POST(req: Request) {
         supportWebhookUrl,
         webhookPayload,
         subject,
-        message,
+        message, // Original message for clean display
         ticketChannelId,
       ).catch(() => null);
     }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createClient } from "@supabase/supabase-js";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { getDynamicWebhookUrl } from "@/lib/webhooks";
 import { cleanupExpiredRewardItems, REWARD_CLAIM_WINDOW_MS } from "@/lib/reward-inventory";
 import { getOnceHumanItemArt } from "@/lib/once-human-items";
 
@@ -38,7 +39,7 @@ async function logToDiscord(
   actorName: string,
   details?: Record<string, any>
 ) {
-  const title = ACTION_TITLES[action] || `� ${action}`;
+  const title = ACTION_TITLES[action] || `📦 ${action}`;
   const color = ACTION_COLORS[action] ?? 0x64748b;
 
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [
@@ -62,6 +63,9 @@ async function logToDiscord(
   const isInsuranceClaim = action === "user_used" && itemType === "insurance";
 
   try {
+    const webhookUrl = await getDynamicWebhookUrl("inventory");
+    if (!webhookUrl) return false;
+
     await sendDiscordWebhook({
       username: "NewHope Package System",
       content: isInsuranceClaim ? `🛡️ <@&${process.env.DISCORD_STAFF_ROLE_ID || "STAFF_ROLE_ID"}> **Insurance claim — staff action required!**` : undefined,
@@ -74,7 +78,7 @@ async function logToDiscord(
           timestamp: new Date().toISOString(),
         },
       ],
-    });
+    }, { webhookUrl });
     return true;
   } catch (e) {
     console.error("Package log webhook failed:", e);
@@ -143,7 +147,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Missing item_ids or action" }, { status: 400 });
   }
 
+  // Fetch items for logging BEFORE update/delete
+  const { data: itemsToLog } = await supabase
+    .from("user_inventory")
+    .select("*")
+    .in("id", item_ids);
+
   let updateData: any = {};
+  const actorName = adminSession.username || adminSession.discord_id;
 
   if (action === "mark_used") {
     updateData = { status: "used", used_date: new Date().toISOString() };
@@ -160,6 +171,17 @@ export async function POST(req: Request) {
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
+
+    // Log deletion
+    if (itemsToLog) {
+      for (const item of itemsToLog) {
+        await logToDiscord("admin_revoked", item.item_name, item.item_type, item.user_id, actorName, { 
+          reason: "Admin deleted",
+          wipe_cycle: item.wipe_cycle
+        });
+      }
+    }
+
     return NextResponse.json({ ok: true, message: `${item_ids.length} items deleted` });
   } else {
     return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400 });
@@ -172,6 +194,24 @@ export async function POST(req: Request) {
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  // Log updates
+  if (itemsToLog) {
+    for (const item of itemsToLog) {
+      await logToDiscord(
+        action === "mark_used" ? "user_used" : action === "mark_saved" ? "user_saved" : "admin_restored",
+        item.item_name,
+        item.item_type,
+        item.user_id,
+        actorName,
+        { 
+          old_status: item.status, 
+          new_status: updateData.status || action,
+          wipe_cycle: item.wipe_cycle
+        }
+      );
+    }
   }
 
   return NextResponse.json({ ok: true, message: `${item_ids.length} items updated` });

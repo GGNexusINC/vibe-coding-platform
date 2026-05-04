@@ -19,6 +19,7 @@ const sections = [
     label: "More",
     links: [
       { href: "/community", emoji: "Chat", label: "Community" },
+      { href: "/streamers", emoji: "Live", label: "Streamers" },
       { href: "/rules", emoji: "Rules", label: "Rules" },
       { href: "/lottery", emoji: "Win", label: "Lottery" },
       { href: "/minigame", emoji: "Game", label: "Whack-a-Mole" },

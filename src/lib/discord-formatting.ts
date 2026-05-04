@@ -33,13 +33,52 @@ export function ansi(text: string, color: AnsiColor): string {
 }
 
 // Create a gradient-like effect using multiple colors
+// Optimizes character count by grouping characters or applying per-line for long text
 export function gradientText(text: string, colors: AnsiColor[]): string {
+  if (!text) return "";
+  
+  // For very long text, apply colors per line to keep character count under Discord limits
+  if (text.length > 400) {
+    return text.split("\n").map((line, i) => {
+      if (!line.trim()) return line;
+      return ansi(line, colors[i % colors.length]);
+    }).join("\n");
+  }
+
+  // For medium text, apply colors per word
+  if (text.length > 100) {
+    return text.split(/(\s+)/).map((segment, i) => {
+      if (segment.trim() === "") return segment;
+      return ansi(segment, colors[i % colors.length]);
+    }).join("");
+  }
+
+  // For short text (like titles), use the rich per-character gradient
   const chars = text.split("");
-  const result = chars.map((char, i) => {
-    if (char === " ") return char;
+  let result = "";
+  let lastColor = "";
+
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    if (char === " " || char === "\n") {
+      if (lastColor) {
+        result += resetCode;
+        lastColor = "";
+      }
+      result += char;
+      continue;
+    }
+    
     const color = colors[i % colors.length];
-    return ansi(char, color);
-  }).join("");
+    if (color !== lastColor) {
+      if (lastColor) result += resetCode;
+      result += ansiCodes[color];
+      lastColor = color;
+    }
+    result += char;
+  }
+  
+  if (lastColor) result += resetCode;
   return result;
 }
 

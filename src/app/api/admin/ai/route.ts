@@ -4,16 +4,13 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, context, history } = await req.json();
     
+    const geminiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     const xaiKey = process.env.XAI_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
     
-    if (!xaiKey && !groqKey) {
+    if (!geminiKey && !xaiKey && !groqKey) {
       return NextResponse.json({ ok: false, error: "AI API Key not configured." }, { status: 500 });
     }
-
-    const url = xaiKey ? "https://api.x.ai/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
-    const key = xaiKey || groqKey;
-    const model = xaiKey ? "grok-beta" : "llama-3.3-70b-versatile";
 
     const systemPrompt = `You are GGN Sentinel, a tactical AI admin assistant for NewHopeGGN.
 Your goal is to parse user natural language into structured admin commands.
@@ -57,44 +54,83 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
       { role: "user", content: prompt }
     ];
 
-    let res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${key}`,
+    // Helper to call OpenAI-compatible APIs
+    async function callAI(url: string, key: string, model: string, isGemini: boolean = false) {
+      const headers: Record<string, string> = {
         "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      };
+      
+      if (isGemini) {
+        // Gemini uses a query param for the key in some versions, but the OpenAI compatible one uses Bearer
+        headers["Authorization"] = `Bearer ${key}`;
+      } else {
+        headers["Authorization"] = `Bearer ${key}`;
+      }
+
+      const body: any = {
         model: model,
         messages: messages,
         temperature: 0.1,
-        response_format: { type: "json_object" }
-      }),
-    });
+      };
 
-    let data = await res.json();
-    
-    // FALLBACK FOR GROQ RATE LIMIT
-    if (!res.ok && data?.error?.code === "rate_limit_exceeded" && !xaiKey) {
-      console.warn("[Sentinel AI] Groq rate limit hit. Falling back to llama-3.1-8b-instant...");
-      res = await fetch(url, {
+      // Only add response_format if not Gemini (Gemini OpenAI shim might not support it yet)
+      if (!isGemini) {
+        body.response_format = { type: "json_object" };
+      }
+
+      return await fetch(url, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: messages,
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        }),
+        headers,
+        body: JSON.stringify(body),
       });
-      data = await res.json();
     }
 
-    if (!res.ok) {
+    let response;
+    let data;
+
+    // 1. TRY GEMINI (Primary)
+    if (geminiKey) {
+      console.log("[Sentinel AI] Attempting Gemini 1.5 Flash...");
+      response = await callAI(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        geminiKey,
+        "gemini-1.5-flash",
+        true
+      );
+      data = await response.json();
+      
+      if (response.ok) {
+        console.log("[Sentinel AI] Gemini success.");
+      } else {
+        console.warn("[Sentinel AI] Gemini failed:", data?.error?.message || response.statusText);
+      }
+    }
+
+    // 2. FALLBACK TO GROK
+    if ((!response || !response.ok) && xaiKey) {
+      console.log("[Sentinel AI] Falling back to Grok Beta...");
+      response = await callAI(
+        "https://api.x.ai/v1/chat/completions",
+        xaiKey,
+        "grok-beta"
+      );
+      data = await response.json();
+    }
+
+    // 3. FALLBACK TO GROQ (Llama 3.3)
+    if ((!response || !response.ok) && groqKey) {
+      console.log("[Sentinel AI] Falling back to Groq (Llama 3.3)...");
+      response = await callAI(
+        "https://api.groq.com/openai/v1/chat/completions",
+        groqKey,
+        "llama-3.3-70b-versatile"
+      );
+      data = await response.json();
+    }
+
+    if (!response || !response.ok) {
       console.error("AI API Error:", data);
-      return NextResponse.json({ ok: false, error: data?.error?.message || "AI Provider Error" }, { status: res.status });
+      return NextResponse.json({ ok: false, error: data?.error?.message || "All AI Providers failed." }, { status: response?.status || 500 });
     }
 
     if (!data.choices?.[0]?.message?.content) {
@@ -103,9 +139,24 @@ Example: "ban 123 for hacking" -> { "type": "command", "commandType": "mod", "da
     }
 
     const content = data.choices[0].message.content;
-    return NextResponse.json({ ok: true, result: JSON.parse(content) });
+    
+    // Clean up Gemini's potential markdown code blocks
+    let jsonString = content.trim();
+    if (jsonString.startsWith("```json")) {
+      jsonString = jsonString.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    } else if (jsonString.startsWith("```")) {
+      jsonString = jsonString.replace(/^```\n?/, "").replace(/\n?```$/, "");
+    }
+
+    try {
+      return NextResponse.json({ ok: true, result: JSON.parse(jsonString) });
+    } catch (e) {
+      console.error("Failed to parse AI JSON:", jsonString);
+      return NextResponse.json({ ok: false, error: "AI returned invalid JSON format." }, { status: 500 });
+    }
   } catch (error: any) {
     console.error("AI Error:", error);
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 }
+

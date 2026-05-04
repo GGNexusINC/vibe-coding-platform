@@ -10,13 +10,14 @@ import { brandDiscordWebhookPayload } from "@/lib/discord";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { packName, packSlug, price, referredBy, user } = body;
+    const { packName, packSlug, price, referredBy, user, intentId } = body;
 
     await logActivity({
       type: "purchase_intent",
       username: user?.username || "Guest",
       discordId: user?.discord_id,
-      details: `Store referral logged: ${packName} ($${price}) — Referred by: ${referredBy ?? "None"} — Redirecting to PayPal.`,
+      details: `Store referral logged: ${packName} ($${price}) — Referred by: ${referredBy ?? "None"} [Tracking ID: ${intentId || "N/A"}]`,
+      metadata: { packName, packSlug, price, referredBy, intentId }
     });
 
     const attemptsWebhook = await getDynamicWebhookUrl("store-attempts");
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
               { name: "Pack", value: packName || "Unknown", inline: true },
               { name: "Price", value: `$${price || 0}`, inline: true },
               { name: "Referred By", value: referredBy || "None", inline: true },
+              { name: "Tracking ID", value: `\`${intentId || "N/A"}\``, inline: true },
             ],
             timestamp: new Date().toISOString(),
           }]

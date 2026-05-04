@@ -8,7 +8,9 @@ import { ansiBlock, holographic, neon, goldGradient, ansi, decorations } from "@
 
 export const dynamic = "force-dynamic";
 
-const allowedTargets = ["ban-page", "general-chat", "staff-page", "wipe"];
+import { getDynamicWebhookUrl, WEBHOOK_SLUGS } from "@/lib/webhooks";
+
+const allowedTargets = WEBHOOK_SLUGS.map(s => s.slug);
 
 export type CustomWebhook = { id: string; label: string; url: string };
 
@@ -125,15 +127,22 @@ export async function POST(req: Request) {
     formatStyle = (body?.formatStyle ?? "") as "normal" | "holographic" | "neon" | "gold" | "ansi";
   }
 
+  // Target mapping aliases for user friendliness
+  if (target === "general" || target === "all") target = "general-chat";
+  if (target === "event") target = "arena";
+
   // Look up custom webhook URL if target is not a built-in
-  let customWebhookUrl: string | undefined;
-  if (!allowedTargets.includes(target)) {
+  let resolvedWebhookUrl: string | undefined;
+  if (!(allowedTargets as string[]).includes(target)) {
     const customHooks = await getCustomWebhooks();
     const found = customHooks.find((h: CustomWebhook) => h.id === target);
     if (!found) {
       return NextResponse.json({ ok: false, error: "Choose a valid destination." }, { status: 400 });
     }
-    customWebhookUrl = found.url;
+    resolvedWebhookUrl = found.url;
+  } else {
+    // Try to get from dynamic webhooks (DB) first, then fallback to env
+    resolvedWebhookUrl = await getDynamicWebhookUrl(target as any);
   }
 
   if (!title || !message.trim()) {
@@ -185,13 +194,13 @@ export async function POST(req: Request) {
       details: `Broadcast sent for ${target}: ${title}${audienceLabel ? ` (${audienceLabel})` : ""}`,
     });
 
-    const webhookUrl = customWebhookUrl || env.discordWebhookUrlForPage(target);
+    const webhookUrl = resolvedWebhookUrl;
     if (!webhookUrl) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Discord webhook URL is not configured on the server. Set DISCORD_WEBHOOK_URL (or DISCORD_WEBHOOK_URL_BAN_PAGE / DISCORD_WEBHOOK_URL_GENERAL_CHAT).",
+            "Discord webhook URL is not configured on the server. Set DISCORD_WEBHOOK_URL or configure it in the Webhooks tab.",
         },
         { status: 500 },
       );
@@ -219,17 +228,27 @@ export async function POST(req: Request) {
     // If using ANSI formatting, we need to add it as content instead of embed description
     const useAnsi = formatStyle !== "normal";
 
+    let content = useAnsi ? `${decorations.sparkles} **${title}** ${decorations.sparkles}\n${formattedMessage}` : undefined;
+    if (content && content.length > 2000) {
+      content = content.slice(0, 1990) + "... (msg too long)";
+    }
+
+    let description = useAnsi ? undefined : formattedMessage;
+    if (description && description.length > 4096) {
+      description = description.slice(0, 4090) + "...";
+    }
+
     const payload: DiscordWebhookPayload = {
       username: "NewHopeGGN",
       avatar_url: "https://cdn.discordapp.com/icons/1419522458075005023/a_placeholder.png",
-      content: useAnsi ? `${decorations.sparkles} **${title}** ${decorations.sparkles}\n${formattedMessage}` : undefined,
+      content,
       embeds: useAnsi ? [] : [
         {
           author: {
             name: audienceLabel ? `📣 Admin Broadcast · ${audienceLabel}` : "📣 Admin Broadcast",
           },
           title,
-          description: formattedMessage,
+          description,
           color: embedColor ?? 0x22c55e,
           image: embedImageUrl ? { url: embedImageUrl } : undefined,
           fields: [
