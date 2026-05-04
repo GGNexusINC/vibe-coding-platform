@@ -4,6 +4,7 @@ import { Heartbeat } from "@/app/_components/heartbeat";
 import { DeviceAuditBeacon } from "@/app/_components/device-audit-beacon";
 import { SiteChrome } from "@/app/_components/site-chrome";
 import { TicketStatusFloat } from "@/app/_components/ticket-status-float";
+import { MayhemSync } from "@/app/_components/mayhem-sync";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="rz-corporate-shell min-h-full flex flex-col bg-[#0a0d06]">
+        <MayhemSync />
         <Heartbeat />
         <DeviceAuditBeacon />
         <SiteChrome>{children}</SiteChrome>

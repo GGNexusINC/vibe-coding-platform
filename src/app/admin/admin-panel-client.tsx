@@ -1013,13 +1013,34 @@ export function AdminPanelClient() {
   const [modAction, setModAction] = useState<"warn" | "ban" | "unban">("warn");
   const [modStatus, setModStatus] = useState("");
   const [modWorking, setModWorking] = useState(false);
-  const [mayhemMode, setMayhemMode] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("mayhemMode") === "true" : false));
+  const [mayhemMode, setMayhemMode] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("mayhemMode", mayhemMode.toString());
+    const syncMayhem = async () => {
+      try {
+        const res = await fetch("/api/admin/mayhem-mode");
+        const data = await res.json();
+        if (data.ok) setMayhemMode(data.enabled);
+      } catch (e) {
+        console.error("Failed to sync mayhem mode:", e);
+      }
+    };
+    syncMayhem();
+  }, []);
+
+  const handleToggleMayhem = async () => {
+    const next = !mayhemMode;
+    setMayhemMode(next);
+    try {
+      await fetch("/api/admin/mayhem-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next })
+      });
+    } catch (e) {
+      console.error("Failed to toggle mayhem mode:", e);
     }
-  }, [mayhemMode]);
+  };
   const [showModModal, setShowModModal] = useState(false);
   const [approveNote, setApproveNote] = useState("");
   const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
@@ -2359,7 +2380,7 @@ export function AdminPanelClient() {
               
               <div className="mt-6 px-3">
                 <button
-                  onClick={() => setMayhemMode(!mayhemMode)}
+                  onClick={handleToggleMayhem}
                   className={`relative w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border transition-all duration-500 group/mayhem overflow-hidden ${
                     mayhemMode 
                       ? "bg-rose-500/20 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.2)]" 
@@ -2503,7 +2524,7 @@ export function AdminPanelClient() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setMayhemMode(!mayhemMode)}
+                  onClick={handleToggleMayhem}
                   className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 ${
                     mayhemMode ? "border-rose-500/30 bg-rose-500/20 text-rose-400" : "border-white/10 bg-white/5 text-slate-400"
                   }`}
