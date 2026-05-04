@@ -21,8 +21,8 @@ export function MayhemSync() {
 
     fetchStatus();
 
-    // Poll every 30 seconds for global changes
-    const interval = setInterval(fetchStatus, 30000);
+    // Poll every 5 seconds for global changes
+    const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 

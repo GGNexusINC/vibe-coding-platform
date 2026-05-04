@@ -492,3 +492,95 @@ body.mayhem-mode .rz-rainbow-text {
   );
   background-size: 300% 100%;
 }
+
+/* Hard Overrides for Brand Elements */
+body.mayhem-mode .text-lime-400,
+body.mayhem-mode .text-emerald-400,
+body.mayhem-mode .text-cyan-400,
+body.mayhem-mode .text-orange-400 {
+  color: #f43f5e !important;
+}
+
+body.mayhem-mode .bg-lime-400,
+body.mayhem-mode .bg-emerald-400,
+body.mayhem-mode .bg-cyan-400,
+body.mayhem-mode .bg-orange-400 {
+  background-color: #e11d48 !important;
+}
+
+body.mayhem-mode .border-lime-400\/30,
+body.mayhem-mode .border-emerald-400\/30,
+body.mayhem-mode .border-cyan-400\/30,
+body.mayhem-mode .border-orange-400\/30 {
+  border-color: rgba(244, 63, 94, 0.4) !important;
+}
+
+body.mayhem-mode video {
+  filter: sepia(100%) hue-rotate(-50deg) saturate(400%) contrast(120%) !important;
+}
+
+body.mayhem-mode .bg-\[\#0a0d06\],
+body.mayhem-mode .bg-slate-950,
+body.mayhem-mode .bg-\[\#0d110a\]\/80 {
+  background-color: #0a0000 !important;
+}
+
+body.mayhem-mode .bg-\[\#0d110a\]\/80 {
+  background-color: rgba(26, 0, 0, 0.8) !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
+}
+
+body.mayhem-mode .shadow-cyan-500\/20,
+body.mayhem-mode .shadow-orange-500\/20,
+body.mayhem-mode .shadow-emerald-500\/20 {
+  box-shadow: 0 0 30px rgba(244, 63, 94, 0.4) !important;
+}
+
+body.mayhem-mode .bg-gradient-to-r.from-cyan-500.to-blue-600,
+body.mayhem-mode .bg-\[linear-gradient\(135deg\)\#f97316\#fbbf24\] {
+  background: linear-gradient(135deg, #f43f5e, #9f1239) !important;
+}
+
+body.mayhem-mode .bg-orange-400\/15,
+body.mayhem-mode .bg-orange-400\/10 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+}
+
+body.mayhem-mode .text-orange-200,
+body.mayhem-mode .text-orange-100 {
+  color: #fecdd3 !important;
+}
+
+body.mayhem-mode .ring-orange-400\/30 {
+  --tw-ring-color: rgba(244, 63, 94, 0.4) !important;
+}
+
+body.mayhem-mode .border-orange-900\/40,
+body.mayhem-mode .border-orange-900\/30,
+body.mayhem-mode .border-orange-900\/35,
+body.mayhem-mode .border-orange-900\/25 {
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+body.mayhem-mode .bg-\[linear-gradient\(180deg\,rgba\(13\,17\,25\,0\.99\)\,rgba\(5\,8\,12\,0\.98\)\)\] {
+  background: linear-gradient(180deg, #1a0000, #0a0000) !important;
+}
+
+body.mayhem-mode .text-orange-300\/70,
+body.mayhem-mode .text-orange-200\/50,
+body.mayhem-mode .text-orange-200\/60 {
+  color: rgba(244, 63, 94, 0.6) !important;
+}
+
+body.mayhem-mode .bg-orange-400\/10,
+body.mayhem-mode .bg-orange-400\/8,
+body.mayhem-mode .bg-orange-400\/15 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+}
+
+body.mayhem-mode .shadow-\[0_0_22px_rgba\(249\,115\,22\,0\.18\)\],
+body.mayhem-mode .shadow-\[0_0_32px_rgba\(249\,115\,22\,0\.18\)\],
+body.mayhem-mode .shadow-\[0_0_24px_rgba\(249\,115\,22\,0\.14\)\],
+body.mayhem-mode .shadow-\[0_24px_80px_rgba\(0\,0\,0\,0\.65\)\] {
+  box-shadow: 0 0 32px rgba(244, 63, 94, 0.3) !important;
+}
