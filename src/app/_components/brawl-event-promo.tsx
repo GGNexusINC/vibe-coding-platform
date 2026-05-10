@@ -40,24 +40,24 @@ export function BrawlEventPromo() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-300">New Community Event</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-300">New Game Mode</span>
             </div>
             
             <h2 className="font-[family:var(--font-brand-display)] text-4xl font-black uppercase tracking-tight text-white sm:text-5xl">
               Once Human <br/>
               <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
-                Brawl Event
+                Brawl Mode
               </span>
             </h2>
             
             <p className="mt-6 text-lg leading-relaxed text-stone-300">
-              The ultimate showdown is here. Join the <span className="text-orange-400 font-bold">NewHopeGGN Brawl</span>. 
+              The ultimate showdown is here. Join the <span className="text-orange-400 font-bold">NewHopeGGN Brawl Mode</span>. 
               Battle for supremacy in the arena, win exclusive wipe packs, and claim your title as the Apex Survivor.
             </p>
             
             <div className="mt-10 flex flex-wrap gap-4">
               <a 
-                href="/support?subject=Brawl%20Event%20Registration" 
+                href="/support?subject=Brawl%20Mode%20Registration" 
                 className="group relative flex h-14 items-center justify-center rounded-2xl bg-orange-500 px-8 text-sm font-bold text-black transition-all hover:scale-105 hover:bg-orange-400 active:scale-95"
               >
                 <span className="relative z-10">Register Now</span>
@@ -93,7 +93,7 @@ export function BrawlEventPromo() {
             <div className="h-full w-full overflow-hidden">
               <img 
                 src="/brawl-event-art.png" 
-                alt="Brawl Event Art" 
+                alt="Brawl Mode Art" 
                 className="h-full w-full object-cover transition-transform duration-[10s] hover:scale-110"
               />
             </div>

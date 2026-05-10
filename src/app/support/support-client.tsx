@@ -326,7 +326,7 @@ export default function SupportClient() {
               <div className="text-[10px] text-slate-600 text-right">{message.length}/2000</div>
             </div>
 
-            {/* Brawl Event Toggle */}
+            {/* Brawl Mode Toggle */}
             <div 
               onClick={() => setIsBrawlEvent(!isBrawlEvent)}
               className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
@@ -344,7 +344,7 @@ export default function SupportClient() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">Brawl Event Related?</div>
+                  <div className="text-sm font-semibold text-white">Brawl Mode Related?</div>
                   <div className="text-[11px] text-slate-500">Toggle this if your ticket is about the Once Human Brawl</div>
                 </div>
               </div>

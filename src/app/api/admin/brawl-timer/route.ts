@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const rawWipeAt: string | null = body?.wipeAt ?? null;   // ISO string or null to clear
-  const label: string = String(body?.label ?? "Brawl Event").trim().slice(0, 80);
+  const label: string = String(body?.label ?? "Brawl Mode").trim().slice(0, 80);
   const wipeMs = rawWipeAt ? new Date(rawWipeAt).getTime() : NaN;
   const wipeAt = rawWipeAt === null
     ? null

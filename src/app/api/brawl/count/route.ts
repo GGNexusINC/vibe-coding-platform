@@ -12,11 +12,11 @@ export async function GET() {
 
     const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-    // Count tickets with Brawl Event tag
+    // Count tickets with Brawl Mode tag
     const { count, error } = await supabase
       .from("tickets")
       .select("*", { count: "exact", head: true })
-      .ilike("subject", "%[BRAWL EVENT]%");
+      .ilike("subject", "%[BRAWL MODE]%");
 
     if (error) {
       console.error("[brawl-count] Error fetching count:", error);

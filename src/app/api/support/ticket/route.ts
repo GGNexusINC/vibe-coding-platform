@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   let subject = String(body?.subject ?? "").trim();
   
   if (isBrawlEvent) {
-    subject = `[BRAWL EVENT] ${subject}`;
+    subject = `[BRAWL MODE] ${subject}`;
   }
 
   const fullMessage = inGameName ? `**In-Game Name:** ${inGameName}\n\n${message}` : message;

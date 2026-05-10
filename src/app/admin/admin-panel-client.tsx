@@ -1003,7 +1003,7 @@ export function AdminPanelClient() {
   const [brawlAt, setBrawlAt] = useState("");
   const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null }[]>([]);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
-  const [brawlLabel, setBrawlLabel] = useState("Brawl Event");
+  const [brawlLabel, setBrawlLabel] = useState("Brawl Mode");
   const [wipeSaving, setWipeSaving] = useState(false);
   const [brawlSaving, setBrawlSaving] = useState(false);
   const [wipeStatus, setWipeStatus] = useState("");
@@ -1345,7 +1345,7 @@ export function AdminPanelClient() {
         const dt = new Date(d.wipeAt);
         const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         setBrawlAt(local);
-        setBrawlLabel(d.label ?? "Brawl Event");
+        setBrawlLabel(d.label ?? "Brawl Mode");
       }
     }).catch(() => {});
 
@@ -5392,8 +5392,8 @@ export function AdminPanelClient() {
 
               <div className="grid gap-5">
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Brawl Event Timer</h1>
-                  <p className="mt-0.5 text-sm text-slate-500">Event-specific countdown for the Brawl.</p>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Brawl Mode Timer</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Specific countdown for the Brawl game mode.</p>
                 </div>
                 <div className="rz-surface rz-panel-border rounded-2xl p-5 grid gap-4 border-orange-500/30">
                   <div className="grid gap-1.5">
@@ -5402,7 +5402,7 @@ export function AdminPanelClient() {
                       className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
                       value={brawlLabel}
                       onChange={e => setBrawlLabel(e.target.value)}
-                      placeholder="e.g. Next Brawl Event"
+                      placeholder="e.g. Next Brawl Mode"
                       maxLength={80}
                     />
                   </div>
@@ -5432,7 +5432,7 @@ export function AdminPanelClient() {
                       }}
                       className="h-11 flex-1 rounded-2xl bg-orange-500/15 text-sm font-bold text-orange-300 hover:bg-orange-500/25 disabled:opacity-50 transition"
                     >
-                      {brawlSaving ? "Saving…" : "Set Brawl Timer"}
+                      {brawlSaving ? "Saving…" : "Set Brawl Mode Timer"}
                     </button>
                     <button
                       type="button"

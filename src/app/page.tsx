@@ -674,7 +674,7 @@ export default function Home() {
   const [wipeMs, setWipeMs] = useState<number | null>(null);
   const [brawlMs, setBrawlMs] = useState<number | null>(null);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
-  const [brawlLabel, setBrawlLabel] = useState("Brawl Event");
+  const [brawlLabel, setBrawlLabel] = useState("Brawl Mode");
   const [now, setNow] = useState(Date.now());
   const [eggClicks, setEggClicks] = useState(0);
   const [eggActive, setEggActive] = useState(false);
@@ -727,7 +727,7 @@ export default function Home() {
         .then(d => {
           if (d.ok && d.wipeAt) {
             setBrawlMs(new Date(d.wipeAt).getTime());
-            setBrawlLabel(d.label ?? "Brawl Event");
+            setBrawlLabel(d.label ?? "Brawl Mode");
           } else if (d.ok && !d.wipeAt) {
             setBrawlMs(null);
           }
@@ -816,7 +816,7 @@ export default function Home() {
               Play the lottery for a chance to win wipe packs, rare rewards, and staff-verified prize claims.
             </div>
 
-            {/* Brawl Event Promotion */}
+            {/* Brawl Mode Promotion */}
             <BrawlEventPromo />
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
@@ -997,7 +997,7 @@ export default function Home() {
                 <div className="min-w-0">
                   <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${past ? "border-slate-500/30 bg-slate-500/10 text-slate-400" : "border-orange-400/30 bg-orange-400/10 text-orange-200"}`}>
                     <span className={`h-2 w-2 rounded-full ${past ? "bg-slate-500" : "bg-orange-400 animate-pulse"}`} />
-                    {past ? "EVENT STARTED" : `⏳ ${brawlLabel}`}
+                    {past ? "MODE ACTIVE" : `⏳ ${brawlLabel}`}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {segments.map((seg, i) => (
@@ -1017,8 +1017,8 @@ export default function Home() {
                 <div className="flex flex-col items-center gap-3 sm:items-end">
                   {!past ? (
                     <>
-                      <p className="max-w-xs text-center text-xs font-semibold leading-5 text-orange-100/70 sm:text-right">Prepare for the arena. Registration is open for the upcoming Brawl Event.</p>
-                      <a href="/support?subject=Brawl%20Event%20Registration" className="inline-flex items-center gap-2 rounded-2xl border border-orange-400/30 bg-orange-500/15 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-orange-100 shadow-[0_0_24px_rgba(249,115,22,0.14)] transition hover:-translate-y-0.5 hover:bg-orange-500/25">
+                      <p className="max-w-xs text-center text-xs font-semibold leading-5 text-orange-100/70 sm:text-right">Prepare for the arena. Registration is open for the upcoming Brawl Mode.</p>
+                      <a href="/support?subject=Brawl%20Mode%20Registration" className="inline-flex items-center gap-2 rounded-2xl border border-orange-400/30 bg-orange-500/15 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-orange-100 shadow-[0_0_24px_rgba(249,115,22,0.14)] transition hover:-translate-y-0.5 hover:bg-orange-500/25">
                         Register for Brawl
                       </a>
                     </>
