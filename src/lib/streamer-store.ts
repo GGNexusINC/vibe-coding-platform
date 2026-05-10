@@ -11,14 +11,20 @@ function getSupabase() {
 
 export type StreamerStatus = "pending" | "approved" | "denied";
 
+export type StreamLink = {
+  url: string;
+  title: string;
+  platform: string;
+};
+
 export type Streamer = {
   id: string;
   discordId: string;
   username: string;
   avatarUrl?: string | null;
-  streamUrl: string;
-  streamTitle: string;
-  platform: string;
+  streamUrl: string; // Stored as JSON string of StreamLink[]
+  streamTitle: string; // Fallback title
+  platform: string; // Fallback platform
   status: StreamerStatus;
   appliedAt: string;
   updatedAt: string;
@@ -36,30 +42,63 @@ export async function applyAsStreamer(opts: {
   if (!sb) return { ok: false, error: "Database not configured." };
   const now = new Date().toISOString();
 
+  // Fetch the existing entry (there can only be one because of the unique constraint on discord_id)
   const { data: existing } = await sb
     .from(TABLE)
-    .select("id, status")
+    .select("*")
     .eq("discord_id", opts.discordId)
-    .single();
+    .maybeSingle();
+
+  const newLink: StreamLink = {
+    url: opts.streamUrl,
+    title: opts.streamTitle,
+    platform: opts.platform
+  };
 
   if (existing) {
-    // Update stream info but keep status
+    let links: StreamLink[] = [];
+    try {
+      // Try to parse existing links from stream_url
+      const parsed = JSON.parse(existing.stream_url);
+      links = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      // Fallback if it was a plain URL before
+      if (existing.stream_url) {
+        links = [{
+          url: existing.stream_url,
+          title: existing.stream_title || "Stream",
+          platform: existing.platform || "twitch"
+        }];
+      }
+    }
+
+    // Check if this URL already exists in the list to avoid duplicates
+    const alreadyExists = links.some(l => l.url === opts.streamUrl);
+    if (!alreadyExists) {
+      links.push(newLink);
+    } else {
+      // Update the existing link's title/platform
+      links = links.map(l => l.url === opts.streamUrl ? newLink : l);
+    }
+
     await sb.from(TABLE).update({
       username: opts.username,
       avatar_url: opts.avatarUrl ?? null,
-      stream_url: opts.streamUrl,
-      stream_title: opts.streamTitle,
-      platform: opts.platform,
+      stream_url: JSON.stringify(links),
+      stream_title: opts.streamTitle, // Keep last submitted as fallback
+      platform: opts.platform, // Keep last submitted as fallback
       updated_at: now,
     }).eq("discord_id", opts.discordId);
+    
     return { ok: true };
   }
 
+  // Create new entry with the link in a JSON array
   const { error } = await sb.from(TABLE).insert({
     discord_id: opts.discordId,
     username: opts.username,
     avatar_url: opts.avatarUrl ?? null,
-    stream_url: opts.streamUrl,
+    stream_url: JSON.stringify([newLink]),
     stream_title: opts.streamTitle,
     platform: opts.platform,
     status: "pending",

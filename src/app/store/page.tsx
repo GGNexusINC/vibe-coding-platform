@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/session";
 import { StoreClient } from "./store-client";
+import { CartProvider } from "./cart-context";
+import { PayPalProvider } from "./paypal-provider";
 
 export const metadata: Metadata = {
   title: "Store | NewHopeGGN",
@@ -19,5 +21,11 @@ export const metadata: Metadata = {
 export default async function StorePage() {
   const user = await getSession();
 
-  return <StoreClient user={user as any} />;
+  return (
+    <PayPalProvider>
+      <CartProvider>
+        <StoreClient user={user as any} />
+      </CartProvider>
+    </PayPalProvider>
+  );
 }

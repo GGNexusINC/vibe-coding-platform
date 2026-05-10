@@ -4,6 +4,7 @@ import { Heartbeat } from "@/app/_components/heartbeat";
 import { DeviceAuditBeacon } from "@/app/_components/device-audit-beacon";
 import { SiteChrome } from "@/app/_components/site-chrome";
 import { TicketStatusFloat } from "@/app/_components/ticket-status-float";
+import { BrawlEventFloat } from "@/app/_components/brawl-event-float";
 import { MayhemSync } from "@/app/_components/mayhem-sync";
 import "./globals.css";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
         <DeviceAuditBeacon />
         <SiteChrome>{children}</SiteChrome>
         <TicketStatusFloat />
+        <BrawlEventFloat />
         <Analytics />
       </body>
     </html>

@@ -37,10 +37,9 @@ export async function POST(req: Request) {
   const total = entries.length;
 
   const { getDynamicWebhookUrl } = await import("@/lib/webhooks");
-  const webhookUrl = await getDynamicWebhookUrl("script-hook");
-  const communityWebhookUrl = await getDynamicWebhookUrl("lottery-entries") || "";
+  const communityWebhookUrl = await getDynamicWebhookUrl("lottery-entries");
   
-  if (webhookUrl || communityWebhookUrl) {
+  if (communityWebhookUrl) {
     const payload = {
       username: "NewHopeGGN Lottery",
       embeds: [
@@ -61,12 +60,7 @@ export async function POST(req: Request) {
       ],
     };
 
-    if (webhookUrl) {
-      await sendDiscordWebhook(payload, { webhookUrl }).catch(() => null);
-    }
-    if (communityWebhookUrl) {
-      await sendDiscordWebhook(payload, { webhookUrl: communityWebhookUrl }).catch(() => null);
-    }
+    await sendDiscordWebhook(payload, { webhookUrl: communityWebhookUrl }).catch(() => null);
   }
 
   return NextResponse.json({ ok: true, totalEntries: total });

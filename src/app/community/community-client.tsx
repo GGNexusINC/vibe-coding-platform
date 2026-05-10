@@ -123,29 +123,39 @@ function DiscordIcon() {
 
 type WipeTimer = { wipeAt: string | null; label: string | null };
 
-function useWipeTimer() {
+function useTimers() {
   const [wipe, setWipe] = useState<WipeTimer>({ wipeAt: null, label: null });
+  const [brawl, setBrawl] = useState<WipeTimer>({ wipeAt: null, label: null });
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    fetch("/api/admin/wipe-timer")
-      .then(r => r.json())
-      .then(d => { if (d.ok) setWipe({ wipeAt: d.wipeAt, label: d.label }); })
-      .catch(() => {});
-    const poll = setInterval(() => {
+    const fetchTimers = () => {
       fetch("/api/admin/wipe-timer")
         .then(r => r.json())
         .then(d => { if (d.ok) setWipe({ wipeAt: d.wipeAt, label: d.label }); })
         .catch(() => {});
-    }, 60000);
+      fetch("/api/admin/brawl-timer")
+        .then(r => r.json())
+        .then(d => { if (d.ok) setBrawl({ wipeAt: d.wipeAt, label: d.label }); })
+        .catch(() => {});
+    };
+    fetchTimers();
+    const poll = setInterval(fetchTimers, 60000);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(poll); clearInterval(tick); };
   }, []);
 
-  if (!wipe.wipeAt) return null;
-  const ms = new Date(wipe.wipeAt).getTime() - now;
-  if (ms < -86400000) return null; // hide if >1 day past
-  return { ms, label: wipe.label ?? "Server Wipe" };
+  const process = (t: WipeTimer) => {
+    if (!t.wipeAt) return null;
+    const ms = new Date(t.wipeAt).getTime() - now;
+    if (ms < -86400000) return null;
+    return { ms, label: t.label ?? "Timer" };
+  };
+
+  return {
+    wipe: process(wipe),
+    brawl: process(brawl)
+  };
 }
 
 function WipeCountdown({ ms, label }: { ms: number; label: string }) {
@@ -161,12 +171,12 @@ function WipeCountdown({ ms, label }: { ms: number; label: string }) {
     <div className={`flex flex-wrap items-center gap-3 rounded-2xl border px-5 py-3 ${
       past ? "border-slate-500/30 bg-slate-500/10" :
       urgent ? "border-rose-500/40 bg-rose-500/10 animate-pulse" :
-      "border-amber-400/30 bg-amber-400/8"
+      label.toLowerCase().includes("brawl") ? "border-orange-500/40 bg-orange-500/10" : "border-amber-400/30 bg-amber-400/8"
     }`}>
-      <span className="text-xl">{past ? "💥" : urgent ? "🔴" : "⏳"}</span>
+      <span className="text-xl">{past ? "💥" : urgent ? "🔴" : label.toLowerCase().includes("brawl") ? "⚔️" : "⏳"}</span>
       <div>
         <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</div>
-        <div className={`text-lg font-black tabular-nums ${past ? "text-slate-400" : urgent ? "text-rose-300" : "text-amber-300"}`}>
+        <div className={`text-lg font-black tabular-nums ${past ? "text-slate-400" : urgent ? "text-rose-300" : label.toLowerCase().includes("brawl") ? "text-orange-300" : "text-amber-300"}`}>
           {past ? "WIPED" : parts.join(" ")}
         </div>
       </div>
@@ -175,7 +185,7 @@ function WipeCountdown({ ms, label }: { ms: number; label: string }) {
 }
 
 export default function CommunityClient() {
-  const wipeTimer = useWipeTimer();
+  const { wipe: wipeTimer, brawl: brawlTimer } = useTimers();
   const [widget, setWidget] = useState<Widget | null>(null);
   const [widgetError, setWidgetError] = useState(false);
   const [feed, setFeed] = useState<ActivityEntry[]>([]);
@@ -345,12 +355,15 @@ export default function CommunityClient() {
           <span className="hidden sm:inline">Join Our Discord</span>
         </a>
 
-        {/* Wipe Timer */}
-        {wipeTimer && (
-          <div className="mt-5">
+        {/* Wipe & Brawl Timers */}
+        <div className="mt-5 flex flex-wrap gap-4">
+          {wipeTimer && (
             <WipeCountdown ms={wipeTimer.ms} label={wipeTimer.label} />
-          </div>
-        )}
+          )}
+          {brawlTimer && (
+            <WipeCountdown ms={brawlTimer.ms} label={brawlTimer.label} />
+          )}
+        </div>
 
         {/* Widget disabled notice */}
         {widgetError && (

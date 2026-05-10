@@ -39,13 +39,9 @@ export async function POST(req: Request) {
     const userId = session?.discord_id || userIdFromCustomId || legacyUser?.discord_id || null;
     const username = session?.username || usernameFromCustomId || legacyUser?.username || "Unknown";
 
-    const resolvedPackSlug = packSlug || slugFromCustomId || "unknown";
-    const resolvedPackName = packName ||
-      (resolvedPackSlug.charAt(0).toUpperCase() + resolvedPackSlug.slice(1).replace(/-/g, " ") + " Package");
+    const resolvedPackSlug = (packSlug || slugFromCustomId || "unknown") as string;
     const resolvedAmount = String(amount || price || "0.00");
     const txnId = transactionId || orderId || "N/A";
-
-    console.log(`[store/success] ${resolvedPackName} for ${username} (${userId}). Txn: ${txnId}`);
 
     const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
     const { getCurrentWipeCycle } = await import("@/lib/reward-inventory");
@@ -53,64 +49,80 @@ export async function POST(req: Request) {
 
     const supabase = createSupabaseAdminClient();
 
+    // ── MULTI-ITEM PARSING ───────────────────────────────────────────────────
+    // Check if the packSlug contains multiple items (format: slug:qty,slug:qty)
+    const itemPairs = resolvedPackSlug.includes(",") 
+      ? resolvedPackSlug.split(",") 
+      : [resolvedPackSlug.includes(":") ? resolvedPackSlug : `${resolvedPackSlug}:1`];
+    
+    const itemsToFulfill = itemPairs.map((p: string) => {
+      const [slug, qtyStr] = p.split(":");
+      return { slug, quantity: parseInt(qtyStr || "1") };
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (userId) {
-      // ── IDEMPOTENCY CHECK ───────────────────────────────────────────────────
-      // If the webhook already fulfilled this, don't double-grant.
-      const { data: existing } = await supabase
-        .from("user_inventory")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("item_slug", resolvedPackSlug)
-        .contains("metadata", { transaction_id: txnId })
-        .maybeSingle();
+      for (const item of itemsToFulfill) {
+        for (let i = 0; i < item.quantity; i++) {
+          const itemName = item.slug.charAt(0).toUpperCase() + item.slug.slice(1).replace(/-/g, " ") + " Package";
+          
+          // ── IDEMPOTENCY CHECK ───────────────────────────────────────────────
+          const { data: existing } = await supabase
+            .from("user_inventory")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("item_slug", item.slug)
+            .contains("metadata", { transaction_id: txnId, instance: i }) // Use instance to distinguish multiple of same slug
+            .maybeSingle();
 
-      if (existing?.id) {
-        console.log(`[store/success] Already fulfilled txn ${txnId} — skipping duplicate`);
-        return NextResponse.json({ ok: true, message: "Already fulfilled", duplicate: true });
+          if (existing?.id) {
+            console.log(`[store/success] Already fulfilled item ${item.slug} instance ${i} — skipping`);
+            continue;
+          }
+          // ───────────────────────────────────────────────────────────────────
+
+          const { error: invError } = await supabase.from("user_inventory").insert({
+            user_id: userId,
+            item_type: "pack",
+            item_slug: item.slug,
+            item_name: itemName,
+            wipe_cycle: getCurrentWipeCycle(),
+            status: "available",
+            metadata: {
+              transaction_id: txnId,
+              instance: i,
+              order_id: orderId,
+              price: resolvedAmount,
+              referred_by: referredBy || null,
+              payer_email: payer?.email_address || null,
+              intent_id: intentId,
+              purchase_date: new Date().toISOString(),
+              source: "paypal_client_fallback",
+            },
+          });
+
+          if (!invError) {
+            try {
+              await supabase.from("package_logs").insert({
+                user_id: userId,
+                action: "user_purchased",
+                item_name: itemName,
+                item_type: "pack",
+                details: `Purchased via Cart ($${resolvedAmount}). Item ${i+1}/${item.quantity}. Txn: ${txnId}. Referrer: ${referredBy || "Direct"}`,
+                action_at: new Date().toISOString(),
+              });
+            } catch (e) {
+              console.warn("[store/success] Package log failed:", e);
+            }
+          }
+        }
       }
-      // ─────────────────────────────────────────────────────────────────────────
-
-      const { error: invError } = await supabase.from("user_inventory").insert({
-        user_id: userId,
-        item_type: "pack",
-        item_slug: resolvedPackSlug,
-        item_name: resolvedPackName,
-        wipe_cycle: getCurrentWipeCycle(),
-        status: "available",
-        metadata: {
-          transaction_id: txnId,
-          order_id: orderId,
-          price: resolvedAmount,
-          referred_by: referredBy || null,
-          payer_email: payer?.email_address || null,
-          intent_id: intentId,
-          purchase_date: new Date().toISOString(),
-          source: "paypal_client_fallback",
-        },
-      });
-
-      if (invError) {
-        console.error("[store/success] Inventory insert failed:", invError.message);
-        return NextResponse.json({ ok: false, error: "Fulfillment failed" }, { status: 500 });
-      }
-
-      try {
-        await supabase.from("package_logs").insert({
-          user_id: userId,
-          action: "user_purchased",
-          item_name: resolvedPackName,
-          item_type: "pack",
-          details: `Purchased via PayPal SDK client-side ($${resolvedAmount}). Txn: ${txnId}. Order: ${orderId}. Intent: ${intentId || "N/A"}. Referrer: ${referredBy || "Direct"}`,
-          action_at: new Date().toISOString(),
-        });
-      } catch { /* non-critical */ }
-
 
       await logActivity({
         type: "purchase_success",
         username,
         discordId: userId,
-        details: `PayPal Purchase (client confirmed): ${resolvedPackName} ($${resolvedAmount}). Txn: ${txnId}`,
+        details: `PayPal Cart Purchase (client confirmed): ${resolvedPackSlug} ($${resolvedAmount}). Txn: ${txnId}`,
         metadata: { txnId, orderId, amount: resolvedAmount, packSlug: resolvedPackSlug },
       }).catch(() => {});
     }
@@ -123,14 +135,14 @@ export async function POST(req: Request) {
         avatar_url: "https://www.paypalobjects.com/webstatic/icon/pp258.png",
         embeds: [{
           title: "💰 New Successful Sale!",
-          description: `**${resolvedPackName}** confirmed via PayPal SDK capture.`,
+          description: `**Cart Purchase** (${itemsToFulfill.length} items) confirmed via PayPal SDK capture.`,
           color: 0x22c55e,
           fields: [
             { name: "Amount", value: `**$${resolvedAmount} USD**`, inline: true },
             { name: "Status", value: "`CAPTURED`", inline: true },
             { name: "Source", value: "`client_sdk`", inline: true },
             { name: "User (Discord)", value: userId ? `<@${userId}> (${username})` : "Guest / Not Linked", inline: false },
-            { name: "Pack", value: `\`${resolvedPackSlug}\``, inline: true },
+            { name: "Items", value: `\`${resolvedPackSlug}\``, inline: true },
             { name: "Transaction ID", value: `\`${txnId}\``, inline: true },
             { name: "Order ID", value: `\`${orderId || "N/A"}\``, inline: true },
             { name: "Referrer", value: referredBy || "Direct", inline: true },
@@ -141,7 +153,7 @@ export async function POST(req: Request) {
       }, { webhookUrl: salesWebhookUrl }).catch(() => {});
     }
 
-    return NextResponse.json({ ok: true, message: "Pack granted successfully" });
+    return NextResponse.json({ ok: true, message: "Cart items granted successfully" });
   } catch (err: any) {
     console.error("[store/success] Unhandled error:", err);
     return NextResponse.json({ ok: false, error: "Internal server error" }, { status: 500 });

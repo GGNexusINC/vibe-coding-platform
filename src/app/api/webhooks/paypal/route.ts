@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     let parts = (customId || "").split("|");
     let userId = parts[0] || null;
     let username = parts[1] || null;
-    let packSlug = parts[2] || null;
+    let packSlug = (parts[2] || null) as string | null;
     let intentId = parts[3] || null;
 
     const isGuest = !userId || userId === "guest";
@@ -208,49 +208,66 @@ export async function POST(req: Request) {
         
         const supabase = createSupabaseAdminClient();
         
-        // Give the actual pack
-        const { error: invError } = await supabase.from("user_inventory").insert({
-          user_id: userId,
-          item_type: "pack",
-          item_slug: packSlug,
-          item_name: packName,
-          wipe_cycle: getCurrentWipeCycle(),
-          status: "available",
-          metadata: {
-            transaction_id: transactionId,
-            price: amount,
-            payer_email: buyerEmail,
-            purchase_date: new Date().toISOString(),
-            source: "paypal_webhook",
-          },
+        // ── MULTI-ITEM PARSING ───────────────────────────────────────────────
+        const resolvedSlug = packSlug as string;
+        const itemPairs = resolvedSlug.includes(",") 
+          ? resolvedSlug.split(",") 
+          : [resolvedSlug.includes(":") ? resolvedSlug : `${resolvedSlug}:1`];
+        
+        const itemsToFulfill = itemPairs.map((p: string) => {
+          const [slug, qtyStr] = p.split(":");
+          return { slug, quantity: parseInt(qtyStr || "1") };
         });
+        // ─────────────────────────────────────────────────────────────────────
 
-        if (invError && salesWebhookUrl) {
-          // LOG ERROR TO DISCORD IF FAILED
-          await sendDiscordWebhook({
-            username: "NewHope System Error",
-            embeds: [{
-              title: "❌ Fulfillment Error",
-              description: `Failed to add **${packName}** to user **${userId}**.`,
-              color: 0xef4444, // Red
-              fields: [
-                { name: "Database Error", value: `\`${invError.message}\`` },
-                { name: "Table", value: "`user_inventory`" }
-              ],
-              timestamp: new Date().toISOString()
-            }]
-          }, { webhookUrl: salesWebhookUrl }).catch(() => {});
+        for (const item of itemsToFulfill) {
+          for (let i = 0; i < item.quantity; i++) {
+            const itemName = item.slug.charAt(0).toUpperCase() + item.slug.slice(1).replace(/-/g, " ") + " Package";
+            
+            // Check if already fulfilled (idempotency)
+            const { data: existing } = await supabase
+              .from("user_inventory")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("item_slug", item.slug)
+              .contains("metadata", { transaction_id: transactionId, instance: i })
+              .maybeSingle();
+
+            if (existing?.id) continue;
+
+            const { error: invError } = await supabase.from("user_inventory").insert({
+              user_id: userId,
+              item_type: "pack",
+              item_slug: item.slug,
+              item_name: itemName,
+              wipe_cycle: getCurrentWipeCycle(),
+              status: "available",
+              metadata: {
+                transaction_id: transactionId,
+                instance: i,
+                price: amount,
+                payer_email: buyerEmail,
+                purchase_date: new Date().toISOString(),
+                source: "paypal_webhook",
+              },
+            });
+
+            if (!invError) {
+              try {
+                await supabase.from("package_logs").insert({
+                  user_id: userId,
+                  action: "user_purchased",
+                  item_name: itemName,
+                  item_type: "pack",
+                  details: `Purchased via Cart ($${amount}). Item ${i+1}/${item.quantity}. Txn: ${transactionId}`,
+                  action_at: new Date().toISOString(),
+                });
+              } catch (e) {
+                console.warn("[paypal-webhook] Package log failed:", e);
+              }
+            }
+          }
         }
-
-        // Log to package logs
-        await supabase.from("package_logs").insert({
-          user_id: userId,
-          action: "user_purchased",
-          item_name: packName,
-          item_type: "pack",
-          details: `Purchased via PayPal Webhook ($${amount}). Txn: ${transactionId}. Status: ${invError ? "FAILED: " + invError.message : "FULFILLED"}`,
-          action_at: new Date().toISOString(),
-        });
       } catch (err: any) {
         console.error("[paypal-webhook] Fulfillment/Logging error:", err);
         if (salesWebhookUrl) {
@@ -258,7 +275,7 @@ export async function POST(req: Request) {
             username: "NewHope Critical Error",
             embeds: [{
               title: "🚨 Critical Webhook Error",
-              description: `System crashed while fulfilling **${packName}**.`,
+              description: `System crashed while fulfilling cart **${packSlug}**.`,
               color: 0x991b1b,
               fields: [{ name: "Error", value: `\`${err.message || String(err)}\`` }],
               timestamp: new Date().toISOString()
@@ -266,8 +283,6 @@ export async function POST(req: Request) {
           }, { webhookUrl: salesWebhookUrl }).catch(() => {});
         }
       }
-    } else {
-      console.warn("[paypal-webhook] Could not fulfill: userId or packSlug missing from customId", { customId });
     }
 
     return NextResponse.json({ ok: true });

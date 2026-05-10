@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { BrawlEventPromo } from "./_components/brawl-event-promo";
 
 const translations = {
   en: {
@@ -671,7 +672,9 @@ export default function Home() {
   const [staff, setStaff] = useState<AdminEntry[]>([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [wipeMs, setWipeMs] = useState<number | null>(null);
+  const [brawlMs, setBrawlMs] = useState<number | null>(null);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
+  const [brawlLabel, setBrawlLabel] = useState("Brawl Event");
   const [now, setNow] = useState(Date.now());
   const [eggClicks, setEggClicks] = useState(0);
   const [eggActive, setEggActive] = useState(false);
@@ -718,8 +721,21 @@ export default function Home() {
           }
         }).catch(() => {});
     };
+    const fetchBrawl = () => {
+      fetch("/api/admin/brawl-timer", { cache: "no-store" })
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok && d.wipeAt) {
+            setBrawlMs(new Date(d.wipeAt).getTime());
+            setBrawlLabel(d.label ?? "Brawl Event");
+          } else if (d.ok && !d.wipeAt) {
+            setBrawlMs(null);
+          }
+        }).catch(() => {});
+    };
     fetchWipe();
-    const poll = setInterval(fetchWipe, 30000);
+    fetchBrawl();
+    const poll = setInterval(() => { fetchWipe(); fetchBrawl(); }, 30000);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(poll); clearInterval(tick); };
   }, []);
@@ -799,6 +815,9 @@ export default function Home() {
             <div className="mt-4 max-w-2xl rounded-2xl border border-lime-400/20 bg-lime-400/[0.07] px-4 py-3 text-sm leading-6 text-lime-100/80 shadow-[0_0_28px_rgba(132,204,22,0.10)]">
               Play the lottery for a chance to win wipe packs, rare rewards, and staff-verified prize claims.
             </div>
+
+            {/* Brawl Event Promotion */}
+            <BrawlEventPromo />
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {t.highlights.map((item) => (
@@ -948,6 +967,63 @@ export default function Home() {
                     </>
                   ) : (
                     <p className="text-xs font-semibold text-rose-200/70">New wipe timer will be set soon.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Brawl Timer */}
+        {brawlMs && (() => {
+          const ms = brawlMs - now;
+          const past = ms <= 0;
+          const abs = Math.abs(ms);
+          const d = Math.floor(abs / 86400000);
+          const h = Math.floor((abs % 86400000) / 3600000);
+          const m = Math.floor((abs % 3600000) / 60000);
+          const s = Math.floor((abs % 60000) / 1000);
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const segments = d > 0
+            ? [{ val: pad(d), label: "DAYS" }, { val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }]
+            : [{ val: pad(h), label: "HRS" }, { val: pad(m), label: "MIN" }, { val: pad(s), label: "SEC" }];
+          return (
+            <div className={`group relative mt-4 overflow-hidden rounded-[2.25rem] border shadow-[0_28px_90px_rgba(0,0,0,0.32)] ${past ? "border-slate-400/35 bg-gradient-to-br from-slate-900/55 via-slate-950/92 to-black" : "border-orange-500/35 bg-gradient-to-br from-orange-950/45 via-slate-950/92 to-black"}`}>
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(249,115,22,0.22),transparent_28%),radial-gradient(circle_at_84%_12%,rgba(251,191,36,0.13),transparent_26%),linear-gradient(135deg,rgba(249,115,22,0.08),transparent_58%)]" />
+              <div className="pointer-events-none absolute -left-20 top-1/2 h-48 w-48 -translate-y-1/2 rounded-full border border-orange-500/20 shadow-[0_0_70px_rgba(249,115,22,0.16)]" />
+              <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-orange-500/15 blur-3xl transition duration-700 group-hover:bg-amber-300/15" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px animate-pulse bg-gradient-to-r from-transparent via-orange-400 to-transparent" />
+              <div className="relative flex flex-col items-center justify-between gap-7 px-7 py-7 sm:flex-row">
+                <div className="min-w-0">
+                  <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${past ? "border-slate-500/30 bg-slate-500/10 text-slate-400" : "border-orange-400/30 bg-orange-400/10 text-orange-200"}`}>
+                    <span className={`h-2 w-2 rounded-full ${past ? "bg-slate-500" : "bg-orange-400 animate-pulse"}`} />
+                    {past ? "EVENT STARTED" : `⏳ ${brawlLabel}`}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {segments.map((seg, i) => (
+                      <div key={seg.label} className="flex items-center gap-2">
+                        {i > 0 && <span className={`mb-4 text-3xl font-black ${past ? "text-slate-400/45" : "text-orange-400/45"}`}>:</span>}
+                        <div className="flex flex-col items-center">
+                          <div className={`relative overflow-hidden rounded-2xl border px-3 py-2 font-mono text-5xl font-black leading-none tracking-tighter tabular-nums sm:text-6xl ${past ? "border-slate-500/25 bg-slate-500/10 text-slate-200 shadow-[0_0_24px_rgba(148,163,184,0.14)]" : "border-orange-400/25 bg-orange-500/10 text-orange-50 shadow-[0_0_28px_rgba(249,115,22,0.18)]"}`}>
+                            <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-white/[0.04]" />
+                            {seg.val}
+                          </div>
+                          <div className={`mt-2 text-[9px] font-black tracking-[0.26em] ${past ? "text-slate-500" : "text-orange-200/60"}`}>{seg.label}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-3 sm:items-end">
+                  {!past ? (
+                    <>
+                      <p className="max-w-xs text-center text-xs font-semibold leading-5 text-orange-100/70 sm:text-right">Prepare for the arena. Registration is open for the upcoming Brawl Event.</p>
+                      <a href="/support?subject=Brawl%20Event%20Registration" className="inline-flex items-center gap-2 rounded-2xl border border-orange-400/30 bg-orange-500/15 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-orange-100 shadow-[0_0_24px_rgba(249,115,22,0.14)] transition hover:-translate-y-0.5 hover:bg-orange-500/25">
+                        Register for Brawl
+                      </a>
+                    </>
+                  ) : (
+                    <p className="text-xs font-semibold text-slate-400">Stay tuned for the next brawl announcement.</p>
                   )}
                 </div>
               </div>

@@ -1000,10 +1000,14 @@ export function AdminPanelClient() {
   const [navScrolled, setNavScrolled] = useState(false);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const [wipeAt, setWipeAt] = useState("");
+  const [brawlAt, setBrawlAt] = useState("");
   const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null }[]>([]);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
+  const [brawlLabel, setBrawlLabel] = useState("Brawl Event");
   const [wipeSaving, setWipeSaving] = useState(false);
+  const [brawlSaving, setBrawlSaving] = useState(false);
   const [wipeStatus, setWipeStatus] = useState("");
+  const [brawlStatus, setBrawlStatus] = useState("");
   const [modActions, setModActions] = useState<ModAction[]>([]);
   const [pendingBans, setPendingBans] = useState<PendingBan[]>([]);
   const [modLoading, setModLoading] = useState(false);
@@ -1332,6 +1336,16 @@ export function AdminPanelClient() {
         const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         setWipeAt(local);
         setWipeLabel(d.label ?? "Server Wipe");
+      }
+    }).catch(() => {});
+
+    // Load brawl timer
+    fetch("/api/admin/brawl-timer").then(r => r.json()).then(d => {
+      if (d.ok && d.wipeAt) {
+        const dt = new Date(d.wipeAt);
+        const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        setBrawlAt(local);
+        setBrawlLabel(d.label ?? "Brawl Event");
       }
     }).catch(() => {});
 
@@ -5299,80 +5313,158 @@ export function AdminPanelClient() {
 
           {/* ════ WIPE TIMER ════ */}
           {activeTab === "wipe" && (
-            <div className="grid gap-5 max-w-md">
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Wipe Timer</h1>
-                <p className="mt-0.5 text-sm text-slate-500">Set a countdown shown on the Community page.</p>
-              </div>
-              <div className="rz-surface rz-panel-border rounded-2xl p-5 grid gap-4">
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Label</label>
-                  <input
-                    className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
-                    value={wipeLabel}
-                    onChange={e => setWipeLabel(e.target.value)}
-                    placeholder="e.g. Next Server Wipe"
-                    maxLength={80}
-                  />
+            <div className="grid gap-10 max-w-2xl lg:grid-cols-2">
+              <div className="grid gap-5">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Main Server Wipe</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Standard server reset countdown.</p>
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Wipe Date &amp; Time</label>
-                  <input
-                    type="datetime-local"
-                    className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
-                    value={wipeAt}
-                    onChange={e => setWipeAt(e.target.value)}
-                  />
+                <div className="rz-surface rz-panel-border rounded-2xl p-5 grid gap-4">
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Label</label>
+                    <input
+                      className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={wipeLabel}
+                      onChange={e => setWipeLabel(e.target.value)}
+                      placeholder="e.g. Next Server Wipe"
+                      maxLength={80}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Wipe Date &amp; Time</label>
+                    <input
+                      type="datetime-local"
+                      className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
+                      value={wipeAt}
+                      onChange={e => setWipeAt(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={wipeSaving || !wipeAt}
+                      onClick={async () => {
+                        setWipeSaving(true); setWipeStatus("");
+                        const res = await fetch("/api/admin/wipe-timer", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ wipeAt: new Date(wipeAt).toISOString(), label: wipeLabel }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        setWipeSaving(false);
+                        setWipeStatus(res.ok ? "✓ Wipe timer saved." : `Failed: ${data?.error ?? data?.code ?? res.status}`);
+                      }}
+                      className="h-11 flex-1 rounded-2xl bg-amber-400/15 text-sm font-bold text-amber-300 hover:bg-amber-400/25 disabled:opacity-50 transition"
+                    >
+                      {wipeSaving ? "Saving…" : "Set Timer"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={wipeSaving}
+                      onClick={async () => {
+                        setWipeSaving(true); setWipeStatus("");
+                        const res = await fetch("/api/admin/wipe-timer", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ wipeAt: null, label: wipeLabel }),
+                        });
+                        setWipeSaving(false);
+                        setWipeAt("");
+                        setWipeStatus(res.ok ? "✓ Timer cleared." : "Failed to clear.");
+                      }}
+                      className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50 transition"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {wipeStatus && (
+                    <div className="rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-slate-200">{wipeStatus}</div>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={wipeSaving || !wipeAt}
-                    onClick={async () => {
-                      setWipeSaving(true); setWipeStatus("");
-                      const res = await fetch("/api/admin/wipe-timer", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ wipeAt: new Date(wipeAt).toISOString(), label: wipeLabel }),
-                      });
-                      const data = await res.json().catch(() => ({}));
-                      setWipeSaving(false);
-                      setWipeStatus(res.ok ? "✓ Wipe timer saved. Community page updated." : `Failed: ${data?.error ?? data?.code ?? res.status}`);
-                    }}
-                    className="h-11 flex-1 rounded-2xl bg-amber-400/15 text-sm font-bold text-amber-300 hover:bg-amber-400/25 disabled:opacity-50 transition"
-                  >
-                    {wipeSaving ? "Saving…" : "Set Timer"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={wipeSaving}
-                    onClick={async () => {
-                      setWipeSaving(true); setWipeStatus("");
-                      const res = await fetch("/api/admin/wipe-timer", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ wipeAt: null, label: wipeLabel }),
-                      });
-                      setWipeSaving(false);
-                      setWipeAt("");
-                      setWipeStatus(res.ok ? "✓ Timer cleared." : "Failed to clear.");
-                    }}
-                    className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50 transition"
-                  >
-                    Clear
-                  </button>
-                </div>
-                {wipeStatus && (
-                  <div className="rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-slate-200">{wipeStatus}</div>
+                {wipeAt && (
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 px-5 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Preview</div>
+                    <div className="text-sm text-amber-300 font-semibold">{wipeLabel}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{new Date(wipeAt).toLocaleString()}</div>
+                  </div>
                 )}
               </div>
-              {wipeAt && (
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 px-5 py-3">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Preview</div>
-                  <div className="text-sm text-amber-300 font-semibold">{wipeLabel}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{new Date(wipeAt).toLocaleString()}</div>
+
+              <div className="grid gap-5">
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Brawl Event Timer</h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Event-specific countdown for the Brawl.</p>
                 </div>
-              )}
+                <div className="rz-surface rz-panel-border rounded-2xl p-5 grid gap-4 border-orange-500/30">
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Label</label>
+                    <input
+                      className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none placeholder:text-slate-500"
+                      value={brawlLabel}
+                      onChange={e => setBrawlLabel(e.target.value)}
+                      placeholder="e.g. Next Brawl Event"
+                      maxLength={80}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">Event Date &amp; Time</label>
+                    <input
+                      type="datetime-local"
+                      className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"
+                      value={brawlAt}
+                      onChange={e => setBrawlAt(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={brawlSaving || !brawlAt}
+                      onClick={async () => {
+                        setBrawlSaving(true); setBrawlStatus("");
+                        const res = await fetch("/api/admin/brawl-timer", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ wipeAt: new Date(brawlAt).toISOString(), label: brawlLabel }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        setBrawlSaving(false);
+                        setBrawlStatus(res.ok ? "✓ Brawl timer saved." : `Failed: ${data?.error ?? data?.code ?? res.status}`);
+                      }}
+                      className="h-11 flex-1 rounded-2xl bg-orange-500/15 text-sm font-bold text-orange-300 hover:bg-orange-500/25 disabled:opacity-50 transition"
+                    >
+                      {brawlSaving ? "Saving…" : "Set Brawl Timer"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={brawlSaving}
+                      onClick={async () => {
+                        setBrawlSaving(true); setBrawlStatus("");
+                        const res = await fetch("/api/admin/brawl-timer", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ wipeAt: null, label: brawlLabel }),
+                        });
+                        setBrawlSaving(false);
+                        setBrawlAt("");
+                        setBrawlStatus(res.ok ? "✓ Timer cleared." : "Failed to clear.");
+                      }}
+                      className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50 transition"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {brawlStatus && (
+                    <div className="rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-slate-200">{brawlStatus}</div>
+                  )}
+                </div>
+                {brawlAt && (
+                  <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 px-5 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Preview</div>
+                    <div className="text-sm text-orange-300 font-semibold">{brawlLabel}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{new Date(brawlAt).toLocaleString()}</div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

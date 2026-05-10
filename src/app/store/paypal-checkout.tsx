@@ -1,20 +1,26 @@
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import { useState, useEffect, useRef } from "react";
 
+type PayPalItem = {
+  slug: string;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
 type PayPalCheckoutProps = {
-  clientId: string;
-  packName: string;
-  packPrice: number;
-  packSlug: string;
+  items: PayPalItem[];
+  totalPrice: number;
   user: { discord_id: string; username?: string } | null;
+  referredBy: string;
   onSuccess: (details: any) => void;
 };
 
 export function PayPalCheckout({
-  packName,
-  packPrice,
-  packSlug,
+  items,
+  totalPrice,
   user,
+  referredBy,
   onSuccess
 }: PayPalCheckoutProps) {
   const [{ isPending, isResolved, isRejected }] = usePayPalScriptReducer();
@@ -33,8 +39,10 @@ export function PayPalCheckout({
     }
   }, [isRejected]);
 
-  // Build custom_id once — format: userId|username|packSlug|intentId
-  const customId = `${user?.discord_id || "guest"}|${user?.username || "guest"}|${packSlug}|${intentId.current}`;
+  // Build custom_id format: userId|username|cartSummary|intentId
+  // cartSummary will be a comma-separated list of slugs: slug:qty,slug:qty
+  const cartSummary = items.map(i => `${i.slug}:${i.quantity}`).join(",");
+  const customId = `${user?.discord_id || "guest"}|${user?.username || "guest"}|${cartSummary}|${intentId.current}`;
 
   return (
     <div className="w-full min-h-[150px] flex flex-col items-center justify-center">
@@ -70,11 +78,25 @@ export function PayPalCheckout({
                 purchase_units: [{
                   amount: {
                     currency_code: "USD",
-                    value: packPrice.toString(),
+                    value: totalPrice.toFixed(2),
+                    breakdown: {
+                      item_total: {
+                        currency_code: "USD",
+                        value: totalPrice.toFixed(2),
+                      }
+                    }
                   },
-                  description: `${packName} - NewHopeGGN`,
-                  // Include full custom_id with intentId so webhook + client can cross-reference
+                  description: `Cart Purchase (${items.length} items) - NewHopeGGN`,
                   custom_id: customId,
+                  items: items.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity.toString(),
+                    unit_amount: {
+                      currency_code: "USD",
+                      value: item.price.toFixed(2),
+                    },
+                    category: "DIGITAL_GOODS" as any,
+                  })),
                 }],
               });
             }}
@@ -82,30 +104,41 @@ export function PayPalCheckout({
               if (!actions.order) return;
               const details = await actions.order.capture();
 
-              // ── CLIENT-SIDE FULFILLMENT FALLBACK ──────────────────────────────
-              // After a successful capture, call our own API directly.
-              // This guarantees delivery even if the PayPal webhook is late or
-              // misses the custom_id (which happens on PAYMENT.CAPTURE.COMPLETED).
+              // Log the referral intent for each item or for the whole cart
               try {
+                await fetch("/api/store/referral", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    packName: items.map(i => i.name).join(", "),
+                    packSlug: cartSummary,
+                    price: totalPrice,
+                    referredBy,
+                    user,
+                    intentId: intentId.current,
+                  }),
+                }).catch(() => {});
+
+                // Client-side fulfillment fallback
                 await fetch("/api/store/success", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     orderId: details.id,
-                    packSlug,
-                    packName,
-                    amount: packPrice,
+                    packSlug: cartSummary,
+                    packName: items.map(i => i.name).join(", "),
+                    amount: totalPrice,
                     customId,
-                    user, // Pass full user object for identity resolution
+                    user,
+                    referredBy,
                     transactionId:
                       details.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
                       details.id,
                   }),
                 });
               } catch (e) {
-                console.warn("[paypal-checkout] Client-side fulfillment fallback failed:", e);
+                console.warn("[paypal-checkout] Post-purchase logic failed:", e);
               }
-              // ─────────────────────────────────────────────────────────────────
 
               onSuccess(details);
             }}

@@ -8,9 +8,15 @@ import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const subject = String(body?.subject ?? "").trim();
   const message = String(body?.message ?? "").trim();
   const inGameName = String(body?.inGameName ?? "").trim();
+  const isBrawlEvent = Boolean(body?.isBrawlEvent);
+  let subject = String(body?.subject ?? "").trim();
+  
+  if (isBrawlEvent) {
+    subject = `[BRAWL EVENT] ${subject}`;
+  }
+
   const fullMessage = inGameName ? `**In-Game Name:** ${inGameName}\n\n${message}` : message;
 
   if (!subject || !message) {

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { BuyButton } from "./buy-button";
+import { CartView } from "./cart-view";
+import { useCart } from "./cart-context";
 
 const products = [
   {
@@ -92,6 +94,8 @@ export function StoreClient({ user }: { user: User | null }) {
   const [wipeMs, setWipeMs] = useState<number | null>(null);
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [now, setNow] = useState(Date.now());
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { totalItems } = useCart();
 
   useEffect(() => {
     fetchInsuranceStatus();
@@ -384,7 +388,6 @@ export function StoreClient({ user }: { user: User | null }) {
                       packName={product.name} 
                       packPrice={product.price} 
                       packSlug={product.slug}
-                      buyUrl={product.buyUrl} 
                       user={user} 
                     />
                   ) : (
@@ -399,6 +402,29 @@ export function StoreClient({ user }: { user: User | null }) {
         })}
       </section>
       </div>
+
+      {/* Floating Cart Button */}
+      {totalItems > 0 && (
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-8 right-8 z-[9999] flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-500 text-white shadow-[0_0_40px_rgba(217,70,239,0.5)] transition hover:scale-110 active:scale-95 animate-in fade-in zoom-in duration-500"
+        >
+          <span className="relative">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-black shadow-lg">
+              {totalItems}
+            </span>
+          </span>
+        </button>
+      )}
+
+      <CartView 
+        user={user} 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+      />
     </div>
   );
 }

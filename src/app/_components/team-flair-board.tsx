@@ -9,7 +9,7 @@ type TeamFlairBoardProps = {
 
 const owners = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Jon", "Cortez"];
 const comingBack = ["Encriptado"];
-const mods = ["BÛTTÊR", "reda", "Rem", "♠Zenon♠", "Whiispperss"];
+const mods = ["BÛTTÊR", "reda", "Rem", "Whiispperss"];
 
 const ownerStyles: Record<string, { border: string; bg: string; glow: string; text: string; badge: string }> = {
   Kilo:      { border: "rgba(250,204,21,0.5)",  bg: "rgba(250,204,21,0.08)",  glow: "rgba(250,204,21,0.2)",  text: "#fde047", badge: "👑 Owner" },
@@ -25,7 +25,6 @@ const staffStyles: Record<string, { text: string; border: string; bg: string; gl
   "BÛTTÊR":     { text: "#93c5fd", border: "rgba(147,197,253,0.4)", bg: "rgba(147,197,253,0.07)", glow: "rgba(147,197,253,0.15)", badge: "🎫 Support" },
   "reda":        { text: "#6ee7b7", border: "rgba(110,231,183,0.4)", bg: "rgba(110,231,183,0.07)", glow: "rgba(110,231,183,0.15)", badge: "🎮 In-Game Support" },
   "Rem":         { text: "#c4b5fd", border: "rgba(196,181,253,0.4)", bg: "rgba(196,181,253,0.07)", glow: "rgba(196,181,253,0.15)", badge: "🛡️ Discord Mod" },
-  "♠Zenon♠":    { text: "#fca5a5", border: "rgba(252,165,165,0.4)", bg: "rgba(252,165,165,0.07)", glow: "rgba(252,165,165,0.15)", badge: "🎫 Support" },
   "Whiispperss": { text: "#d8b4fe", border: "rgba(216,180,254,0.4)", bg: "rgba(216,180,254,0.07)", glow: "rgba(216,180,254,0.15)", badge: "🛡️ Discord Mod" },
 };
 

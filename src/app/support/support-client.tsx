@@ -21,16 +21,18 @@ type Widget = {
 
 export default function SupportClient() {
   const supportStaff = ["Kilo", "Buzzworthy", "Zeus", "Hope", "Encriptado", "Jon", "Cortez"];
-  const modStaff = ["BÛTTÊR", "reda", "Rem", "♠Zenon♠", "Whiispperss"];
+  const modStaff = ["BÛTTÊR", "reda", "Rem", "Whiispperss"];
   const [onlineStaff, setOnlineStaff] = useState<Set<string>>(new Set());
   const [loadingStaff, setLoadingStaff] = useState(true);
 
   const searchParams = useSearchParams();
-  const [subject, setSubject] = useState(searchParams.get("subject") ?? "");
+  const initialSubject = searchParams.get("subject") ?? "";
+  const [subject, setSubject] = useState(initialSubject);
   const [inGameName, setInGameName] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [isBrawlEvent, setIsBrawlEvent] = useState(initialSubject.toLowerCase().includes("brawl"));
   const [activeTicket, setActiveTicket] = useState<{id: string, channelId: string} | null>(null);
 
   // Fetch real Discord online status
@@ -90,7 +92,7 @@ export default function SupportClient() {
     const res = await fetch("/api/support/ticket", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject, message, inGameName }),
+      body: JSON.stringify({ subject, message, inGameName, isBrawlEvent }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -322,6 +324,33 @@ export default function SupportClient() {
                 className="w-full resize-none rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
               />
               <div className="text-[10px] text-slate-600 text-right">{message.length}/2000</div>
+            </div>
+
+            {/* Brawl Event Toggle */}
+            <div 
+              onClick={() => setIsBrawlEvent(!isBrawlEvent)}
+              className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
+                isBrawlEvent 
+                  ? "border-orange-500/40 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.1)]" 
+                  : "border-white/10 bg-slate-950/50 hover:border-white/20"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+                  isBrawlEvent ? "bg-orange-500 text-black" : "bg-white/5 text-slate-400"
+                }`}>
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">Brawl Event Related?</div>
+                  <div className="text-[11px] text-slate-500">Toggle this if your ticket is about the Once Human Brawl</div>
+                </div>
+              </div>
+              <div className={`relative h-6 w-11 rounded-full transition-colors ${isBrawlEvent ? "bg-orange-500" : "bg-slate-800"}`}>
+                <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isBrawlEvent ? "translate-x-5" : "translate-x-0"}`} />
+              </div>
             </div>
 
             {/* Submit Button */}
