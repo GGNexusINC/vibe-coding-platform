@@ -1,17 +1,35 @@
 // Discord Bot API helper for creating tickets
 import { env } from "./env";
 import { brandDiscordWebhookPayload, NEWHOPE_LOGO_URL } from "./discord";
+import { getRoster } from "./admin-roster";
 
 const BOT_TOKEN = env.discordBotToken();
 const GUILD_ID = env.discordGuildId();
 
-// Admin IDs who can see ticket channels
-const ADMIN_IDS = [
+// Base Admin IDs who can see ticket channels
+const BASE_ADMIN_IDS = [
   "940804710267486249",   // Kilo
   "1310794181190352997",  // Buzzworthy
   "145278391166173185",   // Hope
   "767783306166665227",   // Butter
+  "1371515316433059932",  // New Staff
+  "177080510428872724",   // New Support User
 ];
+
+async function getActiveAdminIds(): Promise<string[]> {
+  try {
+    const roster = await getRoster();
+    const approved = roster.filter(r => r.status === "approved").map(r => r.discordId);
+    const denied = new Set(roster.filter(r => r.status === "denied").map(r => r.discordId));
+    
+    // Combine base admins with approved admins, and filter out any denied admins
+    return Array.from(new Set([...BASE_ADMIN_IDS, ...approved]))
+      .filter(id => !denied.has(id));
+  } catch (e) {
+    console.error("[discord-bot] Failed to fetch admin roster", e);
+    return BASE_ADMIN_IDS;
+  }
+}
 
 // Also allow the bot itself if needed
 const BOT_ID = "1494210689806368798"; // NEWHOPEGGN bot
@@ -40,6 +58,9 @@ export async function createTicketChannel(
   const channelName = `website-ticket-${ticketNum}`;
   
   try {
+    const adminIds = await getActiveAdminIds();
+    const adminOverwrites = adminIds.map(id => ({ id, type: 1, allow: 1024, deny: 0 }));
+
     // 1. Create the channel
     const createRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/channels`, {
       method: "POST",
@@ -58,10 +79,7 @@ export async function createTicketChannel(
           // Allow bot
           { id: BOT_ID, type: 1, allow: 1024, deny: 0 },
           // Allow individual admins (type 1 = user)
-          { id: "940804710267486249", type: 1, allow: 1024, deny: 0 },
-          { id: "1310794181190352997", type: 1, allow: 1024, deny: 0 },
-          { id: "145278391166173185", type: 1, allow: 1024, deny: 0 },
-          { id: "767783306166665227", type: 1, allow: 1024, deny: 0 },
+          ...adminOverwrites,
         ],
       }),
     });
@@ -113,13 +131,9 @@ export async function sendTicketMessage(
       footer: { text: "Ticket System • Reply here to respond" },
     };
 
-    // Ping all admins including Butter
-    const adminMentions = [
-      "<@767783306166665227>",   // Butter
-      "<@940804710267486249>",   // Kilo
-      "<@1310794181190352997>",  // Buzzworthy
-      "<@145278391166173185>",   // Hope
-    ].join(" ");
+    // Ping all active admins
+    const adminIds = await getActiveAdminIds();
+    const adminMentions = adminIds.map(id => `<@${id}>`).join(" ");
 
     // Add close button for admins
     const components = [{
