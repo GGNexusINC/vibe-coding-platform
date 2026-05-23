@@ -16,7 +16,7 @@ const defaultSettings = {
     enabled: false,
     targetLang: "auto",
     channelIds: [],
-    includeBotMessages: false,
+    includeBotMessages: true,
   },
   ai: {
     enabled: false,

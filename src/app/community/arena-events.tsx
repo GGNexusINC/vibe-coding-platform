@@ -129,6 +129,26 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
   const [voting, setVoting] = useState<string | null>(null);
   const [showVoting, setShowVoting] = useState(false);
 
+  // Brawl Timer state
+  const [brawlMs, setBrawlMs] = useState<number | null>(null);
+  const [brawlLabel, setBrawlLabel] = useState("Brawl Mode");
+  const [now, setNow] = useState(Date.now());
+
+  const fetchBrawl = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/brawl-timer", { cache: "no-store" });
+      const d = await res.json();
+      if (d.ok && d.wipeAt) {
+        setBrawlMs(new Date(d.wipeAt).getTime());
+        setBrawlLabel(d.label ?? "Brawl Mode");
+      } else {
+        setBrawlMs(null);
+      }
+    } catch (e) {
+      console.error("Failed to fetch brawl timer:", e);
+    }
+  }, []);
+
   const fetchEvents = useCallback(async () => {
     try {
       const res = await fetch("/api/arena/events");
@@ -171,9 +191,17 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
 
   useEffect(() => {
     fetchEvents();
-    const interval = setInterval(fetchEvents, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
-  }, [fetchEvents]);
+    fetchBrawl();
+    const interval = setInterval(() => {
+      fetchEvents();
+      fetchBrawl();
+    }, 30000); // Refresh every 30s
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(tick);
+    };
+  }, [fetchEvents, fetchBrawl]);
 
   useEffect(() => {
     if (selectedEvent) {
@@ -401,6 +429,55 @@ export function ArenaEventsWidget({ session }: { session: UserSession | null }) 
           {events.length} Active
         </span>
       </div>
+      
+      {/* Brawl Timer Banner */}
+      {brawlMs && (() => {
+        const ms = brawlMs - now;
+        const past = ms <= 0;
+        const abs = Math.abs(ms);
+        const d = Math.floor(abs / 86400000);
+        const h = Math.floor((abs % 86400000) / 3600000);
+        const m = Math.floor((abs % 3600000) / 60000);
+        const s = Math.floor((abs % 60000) / 1000);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const display = d > 0
+          ? `${d}d ${pad(h)}h ${pad(m)}m`
+          : `${pad(h)}:${pad(m)}:${pad(s)}`;
+        
+        return (
+          <div className={`px-4 py-3 border-b border-white/5 bg-gradient-to-r ${
+            past ? "from-rose-500/20 to-transparent" : "from-orange-500/20 to-transparent"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                  past ? "bg-rose-500/20 border-rose-500/30 text-rose-300" : "bg-orange-500/20 border-orange-500/30 text-orange-300"
+                }`}>
+                  <span className="text-xl">{past ? "💥" : "⚔️"}</span>
+                </div>
+                <div>
+                  <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                    past ? "text-rose-400" : "text-orange-400"
+                  }`}>
+                    {past ? "MODE ACTIVE" : `Upcoming ${brawlLabel}`}
+                  </div>
+                  <div className="text-lg font-black text-white tabular-nums leading-none mt-0.5">
+                    {past ? "THE BATTLE HAS BEGUN" : display}
+                  </div>
+                </div>
+              </div>
+              {!past && (
+                <a 
+                  href="/support?subject=Brawl%20Mode%20Registration"
+                  className="hidden sm:flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-xs font-bold text-orange-950 hover:bg-orange-400 transition shadow-[0_0_15px_rgba(249,115,22,0.3)]"
+                >
+                  Register Now
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Events List */}
       <div className="divide-y divide-white/5">

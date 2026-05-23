@@ -66,6 +66,22 @@ export default function MinigameClient() {
   const [result, setResult] = useState<OnceHumanPrize | null>(null);
   const [error, setError] = useState("");
 
+  // Leaderboard state
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
+
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/minigame/leaderboard", { cache: "no-store" });
+      const d = await res.json();
+      if (d.ok) setLeaderboard(d.scores || []);
+    } catch (e) {
+      console.error("Failed to fetch leaderboard:", e);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  }, []);
+
   const moleTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const gameTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const scoreRef = useRef(0);
@@ -130,7 +146,8 @@ export default function MinigameClient() {
         setLastPrize(d.lastPrize ?? "");
         setCheckLoading(false);
       });
-  }, []);
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
 
   useEffect(() => {
     if (msLeft <= 0) return;
@@ -223,6 +240,7 @@ export default function MinigameClient() {
       setCanPlay(false);
       setMsLeft(7 * 24 * 60 * 60 * 1000);
       window.dispatchEvent(new Event("newhope:inventory-refresh"));
+      fetchLeaderboard();
     }
     setPhase("done");
   }
@@ -521,6 +539,56 @@ export default function MinigameClient() {
                 </div>
               );
             })()}
+
+            {/* ── Leaderboard ── */}
+            <div className="w-full mt-6">
+              <div className="rounded-[2rem] border border-white/5 bg-slate-900/40 overflow-hidden">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5 bg-gradient-to-r from-emerald-500/10 to-transparent">
+                  <span className="text-xl">🏆</span>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Top Survivors</h3>
+                    <p className="text-[10px] text-slate-500">All-time highest whacking scores</p>
+                  </div>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {loadingLeaderboard ? (
+                    <div className="p-8 text-center text-xs text-slate-500 animate-pulse">Scanning database...</div>
+                  ) : leaderboard.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-600 italic">No scores recorded yet. Be the first!</div>
+                  ) : (
+                    leaderboard.map((entry, idx) => (
+                      <div key={`${entry.discord_id}-${entry.spun_at}`} className="flex items-center gap-4 px-6 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div className="w-6 text-xs font-black text-slate-500">{idx + 1}.</div>
+                        <div className="relative">
+                          {entry.avatar_url ? (
+                            <img src={entry.avatar_url} alt="" className="h-8 w-8 rounded-full border border-white/10" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[10px] font-black text-emerald-400">
+                              {entry.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          {idx < 3 && (
+                            <div className="absolute -top-1 -right-1 text-[10px]">
+                              {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-white truncate">{entry.username}</div>
+                          <div className="text-[10px] text-slate-500 truncate">
+                            Won {entry.prize_name}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-black text-emerald-400 leading-none">{entry.score}</div>
+                          <div className="text-[9px] text-slate-600 uppercase font-bold mt-1">Hits</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── Side panel ── */}
@@ -580,4 +648,3 @@ export default function MinigameClient() {
     </div>
   );
 }
-

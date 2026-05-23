@@ -11,12 +11,7 @@ function scoreToPrize(score: number): OnceHumanPrize {
   return scoreToWhackAMolePrize(score);
 }
 
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -26,7 +21,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const score = typeof body?.score === "number" ? Math.max(0, Math.floor(body.score)) : 0;
-  const sb = getSupabase();
+  const sb = createSupabaseAdminClient();
 
   if (sb) {
     const { data: existing } = await sb
@@ -57,8 +52,7 @@ export async function POST(req: Request) {
   const prize = scoreToPrize(score);
   const now = new Date().toISOString();
 
-  if (sb) {
-    await sb.from("minigame_spins").insert({
+    const insertRes = await sb.from("minigame_spins").insert({
       discord_id: session.discord_id,
       username: session.username,
       avatar_url: session.avatar_url ?? null,
@@ -67,6 +61,11 @@ export async function POST(req: Request) {
       score,
       spun_at: now,
     });
+
+    if (insertRes.error) {
+      console.error("[minigame-spin] DB Insert Failed:", insertRes.error);
+      return NextResponse.json({ ok: false, error: "Database error: Score could not be recorded. " + insertRes.error.message }, { status: 500 });
+    }
 
     if (prize.rarity !== "none") {
       const rewardItem = buildRewardInventoryItem({
@@ -125,7 +124,6 @@ export async function POST(req: Request) {
           status: rewardRow?.status,
           expires_at: rewardRow?.expires_at ?? rewardRow?.metadata?.reward_claim_expires_at,
         });
-      }
     }
   }
 
@@ -184,8 +182,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, canSpin: false, error: "Not signed in." });
   }
 
-  const sb = getSupabase();
-  if (!sb) return NextResponse.json({ ok: true, canSpin: true, msLeft: 0 });
+  const sb = createSupabaseAdminClient();
 
   const { data: existing } = await sb
     .from("minigame_spins")

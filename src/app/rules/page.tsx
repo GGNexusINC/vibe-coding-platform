@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "Rules | NewHopeGGN",
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: ["https://newhopeggn.vercel.app/opengraph-image"] },
 };
 
-const rules = [
+const defaultRules = [
   {
     id: "01",
     emoji: "🤝",
@@ -74,11 +76,22 @@ const rules = [
     id: "10",
     emoji: "🏰",
     title: "Alliance Restrictions",
-    copy: "No alliances are permitted for raiding other players or territories. However, forming alliances for defensive purposes is allowed and encouraged.",
+    copy: "No alliances are permitted under any circumstances. This includes raiding, defending, or territory management. Every hive/player must operate independently.",
   },
 ];
 
-export default function RulesPage() {
+export default async function RulesPage() {
+  let activeRules = defaultRules;
+  try {
+    const supabase = createClient(env.supabaseUrl(), env.supabaseAnonKey());
+    const { data } = await supabase.from('site_settings').select('value').eq('key', 'server_rules').single();
+    if (data?.value?.rules && Array.isArray(data.value.rules) && data.value.rules.length > 0) {
+      activeRules = data.value.rules;
+    }
+  } catch (e) {
+    console.error("Failed to fetch dynamic rules", e);
+  }
+
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
       <section className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
@@ -92,7 +105,7 @@ export default function RulesPage() {
         </p>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          {rules.map((rule) => (
+          {activeRules.map((rule: any) => (
             <div
               key={rule.id}
               className={`rounded-[1.5rem] border p-5 transition-all ${

@@ -48,7 +48,7 @@ const defaultGuildSettings = {
     enabled: false,
     targetLang: "auto",
     channelIds: [] as string[],
-    includeBotMessages: false,
+    includeBotMessages: true,
   },
   premium: defaultBotPremium("free"),
 };
@@ -585,7 +585,7 @@ export async function POST(req: Request) {
       const language = String(slashOption(body, "language") || "auto").toLowerCase().trim();
       const rawChannelId = slashOption(body, "channel");
       const channelId = typeof rawChannelId === "string" ? rawChannelId : "";
-      const botMessages = String(slashOption(body, "bot_messages") || "").toLowerCase().trim();
+      const botMessages = String(slashOption(body, "bot_messages") || "on").toLowerCase().trim();
 
       if (!guildId) {
         return NextResponse.json({
