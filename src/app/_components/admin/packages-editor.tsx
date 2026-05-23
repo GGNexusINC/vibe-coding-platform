@@ -129,12 +129,14 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
   }
 
   function addPackage() {
-    const newSlug = "pack_" + Date.now();
-    setPackages([...packages, { 
+    const newSlug = "pack_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+    const newPack: StorePackage = { 
       slug: newSlug, badge: "New Pack", name: "Custom Package", price: 5, 
       summary: "Short description of the pack", bullets: ["Item 1", "Item 2"], 
       addons: [], featured: false, themeColor: "cyan" 
-    }]);
+    };
+    setPackages([newPack, ...packages]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function updatePackage(index: number, field: keyof StorePackage, value: any) {
@@ -208,15 +210,15 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
               style={{ backgroundColor: THEME_COLORS.find(c => c.id === pkg.themeColor)?.hex }} 
             />
 
-            <div className="absolute right-4 top-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-              <button onClick={() => movePackage(i, -1)} disabled={i === 0} className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 bg-black/50 rounded border border-white/10">
+            <div className="absolute right-4 top-4 flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity z-10">
+              <button type="button" onClick={() => movePackage(i, -1)} disabled={i === 0} className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 bg-black/50 rounded border border-white/10">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
               </button>
-              <button onClick={() => movePackage(i, 1)} disabled={i === packages.length - 1} className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 bg-black/50 rounded border border-white/10">
+              <button type="button" onClick={() => movePackage(i, 1)} disabled={i === packages.length - 1} className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 bg-black/50 rounded border border-white/10">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </button>
               <div className="w-px h-4 bg-white/10 mx-1"></div>
-              <button onClick={() => deletePackage(i)} className="p-1.5 text-rose-400 hover:text-rose-300 bg-black/50 rounded border border-white/10">
+              <button type="button" onClick={() => deletePackage(i)} className="p-1.5 text-rose-400 hover:text-rose-300 bg-black/50 rounded border border-white/10">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
               </button>
             </div>
