@@ -3,6 +3,10 @@ import { getSession } from "@/lib/session";
 import { StoreClient } from "./store-client";
 import { CartProvider } from "./cart-context";
 import { PayPalProvider } from "./paypal-provider";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Store | NewHopeGGN",
@@ -21,10 +25,21 @@ export const metadata: Metadata = {
 export default async function StorePage() {
   const user = await getSession();
 
+  let initialPackages = null;
+  try {
+    const supabase = createClient(env.supabaseUrl(), env.supabaseAnonKey());
+    const { data } = await supabase.from('site_settings').select('value').eq('key', 'store_packages').single();
+    if (data?.value?.packages && Array.isArray(data.value.packages) && data.value.packages.length > 0) {
+      initialPackages = data.value.packages;
+    }
+  } catch (e) {
+    console.error("Failed to fetch dynamic store packages", e);
+  }
+
   return (
     <PayPalProvider>
       <CartProvider>
-        <StoreClient user={user as any} />
+        <StoreClient user={user as any} initialPackages={initialPackages} />
       </CartProvider>
     </PayPalProvider>
   );

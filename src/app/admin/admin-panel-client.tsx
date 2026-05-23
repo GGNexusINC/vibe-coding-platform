@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WHACK_A_MOLE_PRIZES } from "@/lib/once-human-items";
 import { BotSection } from "@/app/_components/bot-control/bot-section";
 import { RulesEditor } from "@/app/_components/admin/rules-editor";
+import { PackagesEditor } from "@/app/_components/admin/packages-editor";
 
 type ActivityEntry = {
   id: string;
@@ -983,7 +984,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta" | "webhooks" | "rules">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta" | "webhooks" | "rules" | "packages">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -2293,6 +2294,7 @@ export function AdminPanelClient() {
     { id: "streamers" as const, label: "Streamers",  icon: "◇", badge: pendingStreamers },
     { id: "wipe"      as const, label: "Wipe",       icon: "⏳" },
     { id: "rules"     as const, label: "Rules",      icon: "📋" },
+    { id: "packages"  as const, label: "Packages",   icon: "🛍️" },
   ] as const;
 
   const supportTabs = [
@@ -5317,6 +5319,12 @@ export function AdminPanelClient() {
           {activeTab === "rules" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
               <RulesEditor mayhemMode={mayhemMode} />
+            </div>
+          )}
+
+          {activeTab === "packages" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
+              <PackagesEditor mayhemMode={mayhemMode} />
             </div>
           )}
 

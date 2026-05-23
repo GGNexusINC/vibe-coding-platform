@@ -84,7 +84,8 @@ type User = {
   avatar?: string | null;
 };
 
-export function StoreClient({ user }: { user: User | null }) {
+export function StoreClient({ user, initialPackages }: { user: User | null, initialPackages?: any[] | null }) {
+  const activeProducts = initialPackages && initialPackages.length > 0 ? initialPackages : products;
   const [insuranceStatus, setInsuranceStatus] = useState<{
     available: boolean;
     hours_remaining?: number;
@@ -285,25 +286,48 @@ export function StoreClient({ user }: { user: User | null }) {
       )}
 
       <section className="mt-12 grid gap-8 md:grid-cols-2">
-        {products.map((product) => {
+        {activeProducts.map((product) => {
           const isInsurance = product.slug === "insurance";
           const isDisabled = isInsurance && !insuranceStatus.available;
 
           let cardBg = "bg-indigo-500/5";
-          if (product.slug === "construction") cardBg = "bg-amber-500/5";
-          if (product.slug === "defense") cardBg = "bg-slate-500/5";
-          if (product.slug === "tactical") cardBg = "bg-rose-500/5";
-          if (product.slug === "clan") cardBg = "bg-indigo-500/5";
-          if (product.slug === "vip") cardBg = "bg-emerald-500/5";
+          let themeColorHex = "#6366f1";
+          if (product.themeColor === "cyan") { cardBg = "bg-cyan-500/5"; themeColorHex = "#06b6d4"; }
+          else if (product.themeColor === "fuchsia") { cardBg = "bg-fuchsia-500/5"; themeColorHex = "#d946ef"; }
+          else if (product.themeColor === "rose") { cardBg = "bg-rose-500/5"; themeColorHex = "#f43f5e"; }
+          else if (product.themeColor === "emerald") { cardBg = "bg-emerald-500/5"; themeColorHex = "#10b981"; }
+          else if (product.themeColor === "amber") { cardBg = "bg-amber-500/5"; themeColorHex = "#f59e0b"; }
+          else if (product.themeColor === "slate") { cardBg = "bg-slate-500/5"; themeColorHex = "#64748b"; }
+          
+          // Legacy fallbacks if themeColor is missing
+          if (!product.themeColor) {
+            if (product.slug === "construction") cardBg = "bg-amber-500/5";
+            if (product.slug === "defense") cardBg = "bg-slate-500/5";
+            if (product.slug === "tactical") cardBg = "bg-rose-500/5";
+            if (product.slug === "clan") cardBg = "bg-indigo-500/5";
+            if (product.slug === "vip") cardBg = "bg-emerald-500/5";
+          }
 
           return (
             <article
               key={product.slug}
-              className={`group relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:border-cyan-500/50 hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.2)] ${
+              className={`group relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${
                 isDisabled ? "opacity-50 pointer-events-none" : ""
               }`}
+              style={{
+                borderColor: product.themeColor ? `${themeColorHex}40` : 'rgba(255,255,255,0.1)',
+              }}
             >
+              {product.customBgUrl && (
+                 <div className="absolute inset-0 -z-20 opacity-20 transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${product.customBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) grayscale(50%)' }} />
+              )}
               <div className={`absolute inset-0 -z-10 ${cardBg}`} />
+              {product.themeColor && (
+                 <div 
+                   className="absolute top-0 right-0 w-[400px] h-[400px] opacity-20 pointer-events-none blur-[100px] rounded-full transition-opacity duration-500 group-hover:opacity-40" 
+                   style={{ backgroundColor: themeColorHex }} 
+                 />
+              )}
               
               <div className="relative">
                 <div className="flex items-center justify-between">
@@ -319,7 +343,7 @@ export function StoreClient({ user }: { user: User | null }) {
                 <p className="mt-3 text-sm font-medium leading-relaxed text-slate-400">{product.summary}</p>
 
                 <div className="mt-8 space-y-3">
-                  {product.bullets.map((item) => {
+                  {product.bullets.map((item: string) => {
                     const lItem = item.toLowerCase();
                     let styleClass = "bg-white/5 border-white/10 text-slate-200";
                     let dotColor = "text-cyan-400";
@@ -368,7 +392,7 @@ export function StoreClient({ user }: { user: User | null }) {
                       Supplemental Hardware
                     </div>
                     <div className="mt-4 grid gap-3">
-                      {product.addons.map((addon) => (
+                      {product.addons.map((addon: string) => (
                         <div key={addon} className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-tight">
                           <span className="h-1 w-1 rounded-full bg-slate-600" />
                           {addon}
