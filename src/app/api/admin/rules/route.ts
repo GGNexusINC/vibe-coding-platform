@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
@@ -51,6 +52,9 @@ export async function POST(req: Request) {
     console.error("[rules-api] Error saving rules:", error);
     return NextResponse.json({ ok: false, error: "Failed to save rules." }, { status: 500 });
   }
+
+  // Tell Next.js to purge the cache for the rules page so changes are visible instantly
+  revalidatePath("/rules");
 
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Rules | NewHopeGGN",
   description: "Community rules and guidelines for NewHopeGGN Once Human server. Respect, safety, and fair play policies.",
