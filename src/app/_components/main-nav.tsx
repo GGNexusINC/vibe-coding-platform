@@ -22,11 +22,7 @@ export function MainNav() {
 
   const activeLinks = isPve 
     ? [
-        { href: "/dashboard", label: "Dashboard" },
         { href: "/pve", label: "PvE Server" },
-        { href: "/support?pve=1", label: "Support" },
-        { href: "/community", label: "Community" },
-        { href: "/rules", label: "Rules" },
       ]
     : navLinks;
 

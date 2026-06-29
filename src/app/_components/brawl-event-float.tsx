@@ -10,11 +10,12 @@ export function BrawlEventFloat() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Hide on home page (has big banner) and support page (where you register)
+    // Hide on home page (has big banner), support page, and PvE page
     const isHome = pathname === "/" || pathname === "/en" || pathname === "/es";
     const isSupport = pathname.startsWith("/support");
+    const isPve = pathname.startsWith("/pve");
 
-    if (isHome || isSupport || dismissed) {
+    if (isHome || isSupport || isPve || dismissed) {
       setVisible(false);
       return;
     }
