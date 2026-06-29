@@ -14,44 +14,61 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative z-10 min-h-screen flex flex-col">
       {/* Header – hidden on /bot and /dashboard */}
-      {!hideChrome && (
-        <header className="sticky top-0 z-40 border-b border-line bg-background/80 backdrop-blur-2xl">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="relative h-10 w-10 overflow-hidden rounded-2xl border border-orange-400/30 bg-orange-400/10 shadow-[0_0_32px_rgba(249,115,22,0.18)]">
-                <Image
-                  src="/raidzone-bg.png"
-                  alt="NewHopeGGN"
-                  fill
-                  sizes="40px"
-                  className="object-cover opacity-90"
-                  priority
-                />
-                <div className="absolute inset-0 bg-slate-950/25" />
-              </div>
-              <div className="leading-tight">
-                <div className="font-[family:var(--font-brand-display)] text-sm font-semibold uppercase tracking-[0.28em] text-orange-100">
-                  NewHope<span className="text-lime-400">GGN</span>
+      {!hideChrome && (() => {
+        const isPve = pathname.startsWith("/pve");
+        return (
+          <header className={`sticky top-0 z-40 border-b bg-background/80 backdrop-blur-2xl transition-colors ${
+            isPve ? "border-emerald-500/20" : "border-line"
+          }`}>
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
+              <Link href="/" className="flex items-center gap-3">
+                <div className={`relative h-10 w-10 overflow-hidden rounded-2xl border transition-all ${
+                  isPve
+                    ? "border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_32px_rgba(16,185,129,0.18)]"
+                    : "border-orange-400/30 bg-orange-400/10 shadow-[0_0_32px_rgba(249,115,22,0.18)]"
+                }`}>
+                  <Image
+                    src="/raidzone-bg.png"
+                    alt="NewHopeGGN"
+                    fill
+                    sizes="40px"
+                    className="object-cover opacity-90"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-slate-950/25" />
                 </div>
-                <div className="text-xs text-orange-200/60">Once Human Community</div>
-              </div>
-            </Link>
-
-            <MainNav />
-
-            <div className="flex items-center gap-3">
-              {pathname.startsWith("/admin") && <ThemeSwitcher />}
-              <Link
-                href="/store"
-                className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.03] sm:inline-flex"
-              >
-                Store
+                <div className="leading-tight">
+                  <div className={`font-[family:var(--font-brand-display)] text-sm font-semibold uppercase tracking-[0.28em] transition-colors ${
+                    isPve ? "text-emerald-100" : "text-orange-100"
+                  }`}>
+                    NewHope<span className={isPve ? "text-cyan-400" : "text-lime-400"}>GGN</span>
+                  </div>
+                  <div className={`text-xs transition-colors ${isPve ? "text-emerald-200/60" : "text-orange-200/60"}`}>
+                    Once Human Community
+                  </div>
+                </div>
               </Link>
-              <MobileNav />
+
+              <MainNav />
+
+              <div className="flex items-center gap-3">
+                {pathname.startsWith("/admin") && <ThemeSwitcher />}
+                <Link
+                  href={isPve ? "/store?tab=pve" : "/store"}
+                  className={`hidden h-10 items-center justify-center rounded-full px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.03] sm:inline-flex ${
+                    isPve
+                      ? "bg-[linear-gradient(135deg,#10b981,#06b6d4)]"
+                      : "bg-[linear-gradient(135deg,#f97316,#fbbf24)]"
+                  }`}
+                >
+                  Store
+                </Link>
+                <MobileNav />
+              </div>
             </div>
-          </div>
-        </header>
-      )}
+          </header>
+        );
+      })()}
 
       <main className="relative flex-1 overflow-hidden">
         {/* Dark Background Base - hidden on home to show home video */}

@@ -32,8 +32,12 @@ export default function SupportClient() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [isBrawlEvent, setIsBrawlEvent] = useState(initialSubject.toLowerCase().includes("brawl"));
-  const [isPveRelated, setIsPveRelated] = useState(initialSubject.toLowerCase().includes("pve"));
+  const [isPveRelated, setIsPveRelated] = useState(
+    initialSubject.toLowerCase().includes("pve") || searchParams.get("pve") === "1"
+  );
+  const [isBrawlEvent, setIsBrawlEvent] = useState(
+    !initialSubject.toLowerCase().includes("pve") && searchParams.get("pve") !== "1" && initialSubject.toLowerCase().includes("brawl")
+  );
   const [activeTicket, setActiveTicket] = useState<{id: string, channelId: string} | null>(null);
 
   // Fetch real Discord online status
