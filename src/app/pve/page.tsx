@@ -9,7 +9,7 @@ export default function PveServerPage() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    fetch("/api/admin/wipe-timer", { cache: "no-store" })
+    fetch("/api/admin/pve-wipe-timer", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && d.wipeAt) {
@@ -46,7 +46,7 @@ export default function PveServerPage() {
         </div>
 
         {/* Wipe Countdown Timer Banner */}
-        {wipeMs && (() => {
+        {wipeMs ? (() => {
           const ms = wipeMs - now;
           const past = ms <= 0;
           const abs = Math.abs(ms);
@@ -71,7 +71,21 @@ export default function PveServerPage() {
               </div>
             </div>
           );
-        })()}
+        })() : (
+          <div className="mb-12 rounded-[2rem] border border-emerald-500/20 bg-emerald-500/5 p-8 backdrop-blur-xl shadow-[0_0_30px_-10px_rgba(16,185,129,0.08)] flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 text-left">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-2xl">🛡️</div>
+              <div>
+                <div className="text-lg font-black tracking-tight text-emerald-100 uppercase">Season Status: Stable & Active</div>
+                <div className="text-sm text-slate-400 font-medium">No Wipe Scheduled. The PvE server wipe cycle will only happen when announced by Admins.</div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center md:items-end gap-1">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Next Season Reset</div>
+              <div className="font-mono text-lg font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-4 py-1.5 rounded-lg border border-emerald-500/20">Pending Admin Call</div>
+            </div>
+          </div>
+        )}
 
         {/* Server specifications grid */}
         <div className="grid gap-6 md:grid-cols-3 mb-16">
