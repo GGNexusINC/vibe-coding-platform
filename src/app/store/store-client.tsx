@@ -125,13 +125,23 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
         })
         .catch(() => {});
     }
-    fetch("/api/admin/wipe-timer", { cache: "no-store" })
-      .then(r => r.json())
-      .then(d => { if (d.ok && d.wipeAt) { setWipeMs(new Date(d.wipeAt).getTime()); setWipeLabel(d.label ?? "Server Wipe"); } })
-      .catch(() => {});
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
+
+  useEffect(() => {
+    setWipeMs(null);
+    const timerApi = storeType === "pve" ? "/api/admin/pve-wipe-timer" : "/api/admin/wipe-timer";
+    fetch(timerApi, { cache: "no-store" })
+      .then(r => r.json())
+      .then(d => { 
+        if (d.ok && d.wipeAt) { 
+          setWipeMs(new Date(d.wipeAt).getTime()); 
+          setWipeLabel(d.label ?? (storeType === "pve" ? "PvE Season Reset" : "Server Wipe")); 
+        } 
+      })
+      .catch(() => {});
+  }, [storeType]);
 
   async function fetchInsuranceStatus() {
     try {
@@ -158,30 +168,46 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
 
       {/* Hive Bonus Banner */}
       {userHive && (
-        <div className="mb-6 flex items-center gap-4 rounded-[2rem] border border-amber-500/30 bg-amber-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl">🐝</div>
+        <div className={`mb-6 flex items-center gap-4 rounded-[2rem] border p-6 backdrop-blur-xl transition-all ${
+          storeType === "pve"
+            ? "border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)]"
+            : "border-amber-500/30 bg-amber-500/10 shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]"
+        }`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-2xl ${
+            storeType === "pve" ? "bg-emerald-500/20" : "bg-amber-500/20"
+          }`}>🐝</div>
           <div>
-            <div className="text-lg font-black tracking-tight text-amber-100 uppercase">Hive Bonus Active</div>
-            <div className="text-sm text-amber-300/80 font-medium">You are receiving a +15% point bonus on all store purchases for being in {userHive.name}!</div>
+            <div className={`text-lg font-black tracking-tight uppercase ${
+              storeType === "pve" ? "text-emerald-100" : "text-amber-100"
+            }`}>Hive Bonus Active</div>
+            <div className={`text-sm font-medium ${
+              storeType === "pve" ? "text-emerald-300/80" : "text-amber-300/80"
+            }`}>You are receiving a +15% point bonus on all store purchases for being in {userHive.name}!</div>
           </div>
         </div>
       )}
 
       {/* Hive Supply Drop */}
       {supplyDrop && (
-        <div className="mb-12 rounded-[2.5rem] border border-cyan-500/30 bg-slate-900/40 p-1">
+        <div className={`mb-12 rounded-[2.5rem] border p-1 transition-all ${
+          storeType === "pve" ? "border-emerald-500/30 bg-slate-900/40" : "border-cyan-500/30 bg-slate-900/40"
+        }`}>
           <div className="rounded-[2.5rem] border border-white/5 bg-slate-950 p-6 lg:p-10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-20 text-8xl pointer-events-none">🚁</div>
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 mb-4">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Exclusive Hive Drop</span>
+                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 mb-4 ${
+                  storeType === "pve" ? "border-emerald-500/30 bg-emerald-500/10" : "border-cyan-500/30 bg-cyan-500/10"
+                }`}>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                    storeType === "pve" ? "text-emerald-400" : "text-cyan-400"
+                  }`}>Exclusive Hive Drop</span>
                 </div>
                 <h3 className="text-3xl font-black text-white tracking-tight uppercase mb-2">{supplyDrop.name}</h3>
                 <ul className="text-sm text-slate-400 space-y-1 mb-4">
                   {supplyDrop.items.map((item, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <span className="text-cyan-400">▹</span> {item}
+                      <span className={storeType === "pve" ? "text-emerald-400" : "text-cyan-400"}>▹</span> {item}
                     </li>
                   ))}
                 </ul>
@@ -194,7 +220,11 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
                     addToCart(item);
                     setIsCartOpen(true);
                   }}
-                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 px-8 py-3 font-black text-white hover:scale-105 transition shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  className={`rounded-xl px-8 py-3 font-black text-white hover:scale-105 transition shadow-lg ${
+                    storeType === "pve"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/20"
+                      : "bg-gradient-to-r from-cyan-500 to-emerald-500 shadow-cyan-500/20"
+                  }`}
                 >
                   Add to Cart
                 </button>
@@ -205,7 +235,22 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
       )}
 
       {/* Wipe status banner */}
-      {wipeMs && (() => {
+      {(() => {
+        if (!wipeMs) {
+          if (storeType === "pve") {
+            return (
+              <div className="mb-8 flex items-center gap-4 rounded-[2rem] border border-emerald-500/30 bg-emerald-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-2xl">🛡️</div>
+                <div>
+                  <div className="text-lg font-black tracking-tight text-emerald-100 uppercase">Season Status: Stable & Active</div>
+                  <div className="text-sm text-emerald-300/80 font-medium">No Wipe Scheduled. The PvE server wipe cycle will only happen when announced by Admins.</div>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        }
+
         const ms = wipeMs - now;
         const past = ms <= 0;
         const abs = Math.abs(ms);
@@ -214,6 +259,33 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
         const m = Math.floor((abs % 3600000) / 60000);
         const pad = (n: number) => String(n).padStart(2, "0");
         const display = d > 0 ? `${pad(d)}d ${pad(h)}h ${pad(m)}m` : `${pad(h)}h ${pad(m)}m`;
+        
+        if (storeType === "pve") {
+          return past ? (
+            <div className="mb-8 flex items-center gap-4 rounded-[2rem] border border-emerald-500/30 bg-emerald-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-2xl">⚠️</div>
+              <div>
+                <div className="text-lg font-black tracking-tight text-emerald-100 uppercase">Season Reset Initiated</div>
+                <div className="text-sm text-emerald-300/80 font-medium">PvE Server wipe cycle has occurred. New packs apply to the current new cycle.</div>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-[2rem] border border-emerald-500/30 bg-emerald-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)]">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-2xl">⏳</div>
+                <div>
+                  <div className="text-lg font-black tracking-tight text-emerald-100 uppercase">PvE Realm Shift Status</div>
+                  <div className="text-sm text-emerald-300/80 font-medium">Secure your wipe pack before the next seasonal shift.</div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400/60">{wipeLabel} starting in</div>
+                <div className="font-mono text-3xl font-black text-emerald-200 tabular-nums drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]">{display}</div>
+              </div>
+            </div>
+          );
+        }
+
         return past ? (
           <div className="mb-8 flex items-center gap-4 rounded-[2rem] border border-rose-500/30 bg-rose-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(244,63,94,0.2)]">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-2xl">⚠️</div>
