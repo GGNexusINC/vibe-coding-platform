@@ -272,6 +272,76 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
     }
   }
 
+  // Preview card element to reuse in grid or stacked view
+  const previewCardElement = activePkg && (
+    <div 
+      className={`relative overflow-hidden rounded-[2.5rem] p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 group text-left ${borderClasses}`}
+      style={{
+        ...borderStyles,
+      }}
+    >
+      {activePkg.customBgUrl && (
+         <div className="absolute inset-0 -z-20 opacity-20" style={{ backgroundImage: `url(${activePkg.customBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) grayscale(50%)' }} />
+      )}
+      <div className="absolute inset-0 -z-10 bg-slate-500/5" />
+      {activePkg.themeColor && (
+         <div 
+           className="absolute top-0 right-0 w-[200px] h-[200px] opacity-25 pointer-events-none blur-[70px] rounded-full" 
+           style={{ backgroundColor: themeColorHex }} 
+         />
+      )}
+      
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-cyan-300">
+            {activePkg.badge || "DEPLOY READY"}
+          </div>
+          <div className="flex items-center gap-2">
+            {activePkg.originalPrice && activePkg.originalPrice > activePkg.price && (
+              <span className="text-xs line-through text-slate-500 font-mono">${activePkg.originalPrice}</span>
+            )}
+            <div className="text-2xl font-black text-white tracking-tighter">
+              ${activePkg.price}
+            </div>
+          </div>
+        </div>
+
+        <h2 className="mt-5 text-xl font-black leading-tight text-white tracking-tight uppercase">{activePkg.name || "Custom Package"}</h2>
+        <p className="mt-2 text-xs font-medium leading-relaxed text-slate-400 truncate-2-lines">{activePkg.summary || "Short description summary..."}</p>
+
+        <div className="mt-5 space-y-2">
+          {(activePkg.bullets || []).slice(0, 3).map((item) => (
+            <div key={item} className="flex items-center gap-3 rounded-xl border border-white/5 bg-slate-900/40 p-3">
+               <span className="flex h-1.5 w-1.5 rounded-full shrink-0 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+               <span className="text-[10px] font-black tracking-tight uppercase truncate">{item}</span>
+            </div>
+          ))}
+          {activePkg.bullets && activePkg.bullets.length > 3 && (
+            <div className="text-[10px] font-bold text-cyan-500 pl-4">+ {activePkg.bullets.length - 3} more items...</div>
+          )}
+        </div>
+
+        {activePkg.limit !== undefined && (
+          <div className="mt-3 text-[10px] text-amber-500 font-bold bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/10 inline-block uppercase tracking-wider">
+            ⚠️ Limit: {activePkg.limit} per account
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+           <div className="flex flex-col">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Points</span>
+              <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
+                ✨ {activePkg.pointsOverride || Math.floor(activePkg.price * 100)} Pts
+              </span>
+           </div>
+           <button className="rounded-xl bg-white/10 px-5 py-2 text-[10px] font-black text-white hover:bg-white/20 uppercase tracking-[0.1em]">
+             Select
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Upper header */}
@@ -304,10 +374,10 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
       {error && <div className="rounded-xl bg-rose-500/20 border border-rose-500/50 p-4 text-rose-200 text-sm font-medium">{error}</div>}
       {success && <div className="rounded-xl bg-emerald-500/20 border border-emerald-500/50 p-4 text-emerald-200 text-sm font-medium">Packages successfully pushed to the live database!</div>}
 
-      <div className="grid gap-8 lg:grid-cols-[2fr_3fr_2fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.5fr_2.5fr_2fr] lg:grid-cols-[1.8fr_3.2fr] grid-cols-1">
         
         {/* Left Column: Sidebar package switcher */}
-        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 space-y-3 h-[75vh] overflow-y-auto">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 space-y-3 h-[75vh] overflow-y-auto scrollbar-none">
           <div className="text-xs font-black text-slate-500 uppercase tracking-wider px-2">Store Items ({packages.length})</div>
           <div className="space-y-2">
             {packages.map((pkg, idx) => {
@@ -334,7 +404,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         ? "text-rose-400 bg-rose-500/10 border-rose-500/20" 
                         : "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
                     }`}>
-                      {pkg.storeType || "pve"}
+                      {pkg.storeType || "pvp"}
                     </span>
                     <span className="text-[10px] text-slate-500 truncate">{pkg.badge || "No badge"}</span>
                   </div>
@@ -370,15 +440,15 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
 
         {/* Center Column: Form Editor */}
         {activePkg ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 flex flex-col h-[75vh] justify-between relative">
+          <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 flex flex-col h-[75vh] justify-between relative overflow-y-auto custom-scrollbar">
             
             {/* Header / Tabs */}
             <div>
               <div className="flex border-b border-white/10 pb-3 gap-2">
                 {[
-                  { id: "details", label: "📝 Details" },
-                  { id: "items", label: "🎒 Items List" },
-                  { id: "styling", label: "🎨 Style" }
+                  { id: "details", label: "Details" },
+                  { id: "items", label: "Items List" },
+                  { id: "styling", label: "Style" }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -396,9 +466,9 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
 
               {/* Tab: Details */}
               {editorTab === "details" && (
-                <div className="space-y-4 mt-4 overflow-y-auto max-h-[50vh] pr-2 scrollbar-none">
+                <div className="space-y-4 mt-4 text-left">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Package Name</label>
                       <input 
                         type="text" 
@@ -407,7 +477,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-sm font-semibold text-white outline-none focus:border-cyan-500/50"
                       />
                     </div>
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Unique ID / Slug</label>
                       <input 
                         type="text" 
@@ -419,7 +489,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Store Price ($)</label>
                       <input 
                         type="number" 
@@ -428,7 +498,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-sm font-bold text-white outline-none focus:border-cyan-500/50"
                       />
                     </div>
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Original Price (Sale)</label>
                       <input 
                         type="number" 
@@ -438,21 +508,21 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-sm font-semibold text-slate-400 outline-none focus:border-cyan-500/50"
                       />
                     </div>
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Store Placement</label>
                       <select 
-                        value={activePkg.storeType || "pve"} 
+                        value={activePkg.storeType || "pvp"} 
                         onChange={(e) => updateActivePackage("storeType", e.target.value)}
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs font-bold text-cyan-300 outline-none"
                       >
-                        <option value="pve">PvE Store</option>
                         <option value="pvp">PvP Store</option>
+                        <option value="pve">PvE Store</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Badge Ribbon</label>
                       <input 
                         type="text" 
@@ -462,7 +532,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs text-slate-300 outline-none focus:border-cyan-500/50"
                       />
                     </div>
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Points Override</label>
                       <input 
                         type="number" 
@@ -475,7 +545,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Purchase Cooldown</label>
                       <input 
                         type="text" 
@@ -485,7 +555,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                         className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs text-slate-300 outline-none focus:border-cyan-500/50"
                       />
                     </div>
-                    <div className="flex flex-col text-left">
+                    <div className="flex flex-col">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Stock Limit per User</label>
                       <input 
                         type="number" 
@@ -497,7 +567,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     </div>
                   </div>
 
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Summary Description</label>
                     <textarea 
                       value={activePkg.summary} 
@@ -511,7 +581,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
 
               {/* Tab: Items */}
               {editorTab === "items" && (
-                <div className="space-y-4 mt-4 overflow-y-auto max-h-[50vh] pr-2 scrollbar-none">
+                <div className="space-y-4 mt-4 text-left">
                   {/* Preset Injector */}
                   <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Item Preset Quick Insert</span>
@@ -525,25 +595,25 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     </select>
                   </div>
 
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Bullet Items (One per line)</label>
                     <textarea 
                       value={activePkg.bullets.join("\n")} 
                       onChange={(e) => updateActivePackage("bullets", e.target.value.split("\n").filter(x => x.trim()))}
-                      className="min-h-[160px] rounded-lg border border-white/10 bg-black/50 p-3 text-xs text-slate-300 outline-none focus:border-cyan-500/50 font-mono resize-y"
+                      className="min-h-[140px] rounded-lg border border-white/10 bg-black/50 p-3 text-xs text-slate-300 outline-none focus:border-cyan-500/5 font-mono resize-y"
                     />
                   </div>
 
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Addons / Supplemental Hardware (One per line)</label>
                     <textarea 
                       value={(activePkg.addons || []).join("\n")} 
                       onChange={(e) => updateActivePackage("addons", e.target.value.split("\n").filter(x => x.trim()))}
-                      className="min-h-[100px] rounded-lg border border-white/10 bg-black/50 p-3 text-xs text-slate-400 outline-none focus:border-cyan-500/50 font-mono resize-y"
+                      className="min-h-[90px] rounded-lg border border-white/10 bg-black/50 p-3 text-xs text-slate-400 outline-none focus:border-cyan-500/5 font-mono resize-y"
                     />
                   </div>
 
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Extra Banner Offer text</label>
                     <input 
                       type="text" 
@@ -558,9 +628,9 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
 
               {/* Tab: Styling */}
               {editorTab === "styling" && (
-                <div className="space-y-4 mt-4 overflow-y-auto max-h-[50vh] pr-2 scrollbar-none">
+                <div className="space-y-4 mt-4 text-left">
                   {/* Theme Selectors */}
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Theme Accent Glow</label>
                     <div className="flex items-center gap-3">
                       {THEME_COLORS.map(c => (
@@ -575,7 +645,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                   </div>
 
                   {/* Border Style Dropdown */}
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Custom Border Accent</label>
                     <select
                       value={activePkg.borderStyle || "default"}
@@ -591,7 +661,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                   </div>
 
                   {/* Picture Live Editor / Upload */}
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Package Banner Picture</label>
                     <div className="relative group/img rounded-xl border border-white/10 bg-black/40 overflow-hidden h-28 flex items-center justify-center">
                       {activePkg.customBgUrl ? (
@@ -662,9 +732,15 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
               )}
             </div>
 
+            {/* Stacked preview for smaller viewports (hidden on XL) */}
+            <div className="xl:hidden mt-6 pt-6 border-t border-white/10 text-left">
+              <div className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Live Storefront Card Preview</div>
+              {previewCardElement}
+            </div>
+
             {/* Indicator of changes */}
-            <div className="border-t border-white/10 pt-4 flex justify-between items-center text-xs text-slate-500">
-              <span>Selected Pack: <b className="text-slate-300">{activePkg.slug}</b></span>
+            <div className="border-t border-white/10 pt-4 mt-6 flex justify-between items-center text-xs text-slate-500">
+              <span className="truncate max-w-[200px]">Selected: <b className="text-slate-300 font-mono text-[10px]">{activePkg.slug}</b></span>
               <span>Changes stage in local memory. Publish when ready.</span>
             </div>
 
@@ -675,77 +751,10 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
           </div>
         )}
 
-        {/* Right Column: Real-time Live Preview */}
-        <div className="space-y-4">
+        {/* Right Column: Real-time Live Preview (only on wide screens) */}
+        <div className="hidden xl:block space-y-4">
           <div className="text-xs font-black text-slate-500 uppercase tracking-wider text-left">Live Storefront Card Preview</div>
-          {activePkg ? (
-            <div 
-              className={`relative overflow-hidden rounded-[2.5rem] p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 group text-left ${borderClasses}`}
-              style={{
-                ...borderStyles,
-              }}
-            >
-              {activePkg.customBgUrl && (
-                 <div className="absolute inset-0 -z-20 opacity-20" style={{ backgroundImage: `url(${activePkg.customBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) grayscale(50%)' }} />
-              )}
-              <div className="absolute inset-0 -z-10 bg-slate-500/5" />
-              {activePkg.themeColor && (
-                 <div 
-                   className="absolute top-0 right-0 w-[200px] h-[200px] opacity-25 pointer-events-none blur-[70px] rounded-full" 
-                   style={{ backgroundColor: THEME_COLORS.find(c => c.id === activePkg.themeColor)?.hex }} 
-                 />
-              )}
-              
-              <div className="relative">
-                <div className="flex items-center justify-between">
-                  <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-cyan-300">
-                    {activePkg.badge || "DEPLOY READY"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {activePkg.originalPrice && activePkg.originalPrice > activePkg.price && (
-                      <span className="text-xs line-through text-slate-500 font-mono">${activePkg.originalPrice}</span>
-                    )}
-                    <div className="text-2xl font-black text-white tracking-tighter">
-                      ${activePkg.price}
-                    </div>
-                  </div>
-                </div>
-
-                <h2 className="mt-5 text-xl font-black leading-tight text-white tracking-tight uppercase">{activePkg.name || "Custom Package"}</h2>
-                <p className="mt-2 text-xs font-medium leading-relaxed text-slate-400 truncate-2-lines">{activePkg.summary || "Short description summary..."}</p>
-
-                <div className="mt-5 space-y-2">
-                  {(activePkg.bullets || []).slice(0, 3).map((item) => (
-                    <div key={item} className="flex items-center gap-3 rounded-xl border border-white/5 bg-slate-900/40 p-3">
-                       <span className="flex h-1.5 w-1.5 rounded-full shrink-0 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                       <span className="text-[10px] font-black tracking-tight uppercase truncate">{item}</span>
-                    </div>
-                  ))}
-                  {activePkg.bullets && activePkg.bullets.length > 3 && (
-                    <div className="text-[10px] font-bold text-cyan-500 pl-4">+ {activePkg.bullets.length - 3} more items...</div>
-                  )}
-                </div>
-
-                {activePkg.limit !== undefined && (
-                  <div className="mt-3 text-[10px] text-amber-500 font-bold bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/10 inline-block uppercase tracking-wider">
-                    ⚠️ Limit: {activePkg.limit} per account
-                  </div>
-                )}
-
-                <div className="mt-6 flex items-center justify-between gap-4 pt-4 border-t border-white/10">
-                   <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Points</span>
-                      <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
-                        ✨ {activePkg.pointsOverride || Math.floor(activePkg.price * 100)} Pts
-                      </span>
-                   </div>
-                   <button className="rounded-xl bg-white/10 px-5 py-2 text-[10px] font-black text-white hover:bg-white/20 uppercase tracking-[0.1em]">
-                     Select
-                   </button>
-                </div>
-              </div>
-            </div>
-          ) : (
+          {previewCardElement || (
             <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-8 h-48 flex items-center justify-center text-slate-500">
               No preview available.
             </div>
