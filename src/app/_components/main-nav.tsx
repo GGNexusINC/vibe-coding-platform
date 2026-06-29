@@ -24,7 +24,6 @@ export function MainNav() {
     ? [
         { href: "/dashboard", label: "Dashboard" },
         { href: "/pve", label: "PvE Server" },
-        { href: "/store?tab=pve", label: "Store" },
         { href: "/support?pve=1", label: "Support" },
         { href: "/community", label: "Community" },
         { href: "/rules", label: "Rules" },
