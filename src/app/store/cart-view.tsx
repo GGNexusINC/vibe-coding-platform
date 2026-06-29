@@ -17,6 +17,8 @@ const STAFF_LIST = [
   { name: "Rem",         emoji: "🛡️" },
   { name: "Shark",       emoji: "🦈" },
   { name: "Whiispperss", emoji: "🛡️" },
+  { name: "Thano",       emoji: "⚔️" },
+  { name: "Tim",         emoji: "🎯" },
 ];
 
 export function CartView({ user, isOpen, onClose }: { user: any; isOpen: boolean; onClose: () => void }) {

@@ -14,6 +14,7 @@ export type HiveRecord = {
   description: string | null;
   owner_id: string;
   owner_username: string;
+  image_url: string | null;
   map_label: string;
   map_x: number;
   map_y: number;
@@ -96,6 +97,7 @@ export async function createHive(sb: SupabaseClient, opts: {
     description: opts.description?.trim() || null,
     owner_id: opts.user.discord_id,
     owner_username: opts.user.username,
+    image_url: null,
     map_label: opts.mapLabel.trim() || "Unmarked territory",
     map_x: Math.min(100, Math.max(0, opts.mapX)),
     map_y: Math.min(100, Math.max(0, opts.mapY)),

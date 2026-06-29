@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, getActiveWindowMinutes } from "@/lib/admin-auth";
+import { getAdminSession, getActiveWindowMinutes, isAdminDiscordId } from "@/lib/admin-auth";
 import { getActivitySummary, getRecentActivities } from "@/lib/activity-log";
 import { getRoster } from "@/lib/admin-roster";
 import { getPresenceMap } from "@/lib/presence";
@@ -219,9 +219,7 @@ export async function GET() {
     return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
   });
 
-  const isOwner = KNOWN_ADMINS.some(
-    (a) => a.discordId === admin.discord_id && a.role === "owner"
-  );
+  const isOwner = isAdminDiscordId(admin.discord_id || "");
   const activeListeners = botStatus?.snapshot?.voice.activeListeners ?? 0;
 
   return NextResponse.json({

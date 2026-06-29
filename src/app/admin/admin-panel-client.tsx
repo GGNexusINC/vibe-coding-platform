@@ -5,6 +5,7 @@ import { WHACK_A_MOLE_PRIZES } from "@/lib/once-human-items";
 import { BotSection } from "@/app/_components/bot-control/bot-section";
 import { RulesEditor } from "@/app/_components/admin/rules-editor";
 import { PackagesEditor } from "@/app/_components/admin/packages-editor";
+import { BorrowMoneySection } from "@/app/admin/_components/borrow-money-section";
 
 type ActivityEntry = {
   id: string;
@@ -984,7 +985,7 @@ export function AdminPanelClient() {
   const [webhookStatus, setWebhookStatus] = useState("");
   const [tutorialVideoMode, setTutorialVideoMode] = useState<"voiceover" | "silent">("voiceover");
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta" | "webhooks" | "rules" | "packages">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "roster" | "members" | "broadcast" | "bot" | "guild-configs" | "streamers" | "lottery" | "modlog" | "wipe" | "arena" | "inventory" | "tickets" | "sales" | "files" | "beta" | "webhooks" | "rules" | "packages" | "borrow-money">(
     () => (typeof window !== "undefined" ? (localStorage.getItem("adminTab") as any) ?? "dashboard" : "dashboard")
   );
   const [tickets, setTickets] = useState<{id:string;subject:string;message:string;guest_username:string;status:string;discord_channel_id:string|null;created_at:string}[]>([]);
@@ -1172,6 +1173,21 @@ export function AdminPanelClient() {
     filteredMembers.find((member) => member.discordId === selectedMemberId) ??
     filteredMembers[0] ??
     null;
+
+  const [memberPoints, setMemberPoints] = useState<number | null>(null);
+  const [showSendPointsModal, setShowSendPointsModal] = useState(false);
+  const [sendPointsAmount, setSendPointsAmount] = useState<number>(0);
+  const [sendPointsReason, setSendPointsReason] = useState("");
+  const [sendPointsLoading, setSendPointsLoading] = useState(false);
+
+  useEffect(() => {
+    setMemberPoints(null);
+    if (!selectedMember?.discordId) return;
+    fetch(`/api/admin/points?id=${selectedMember.discordId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.ok) setMemberPoints(d.points ?? 0); })
+      .catch(() => {});
+  }, [selectedMember?.discordId]);
 
   const selectedMemberProfileJson = selectedMember?.profile
     ? JSON.stringify(selectedMember.profile, null, 2)
@@ -2301,6 +2317,7 @@ export function AdminPanelClient() {
     { id: "tickets"   as const, label: "Tickets",    icon: "🎫", badge: openTickets },
     { id: "modlog"    as const, label: "Mod Log",    icon: "⚑" },
     { id: "sales"     as const, label: "Sales",      icon: "💰" },
+    { id: "borrow-money" as const, label: "GGNexus Bank", icon: "🏦" },
     { id: "webhooks"  as const, label: "Webhooks",   icon: "🔗" },
     { id: "files"     as const, label: "Files",      icon: "📁" },
   ] as const;
@@ -3176,6 +3193,7 @@ export function AdminPanelClient() {
                             return [h > 0 && `${h}h`, (mins > 0 || h === 0) && `${mins}m`].filter(Boolean).join(" ");
                           })() },
                           { label: "Last Seen", val: new Date(selectedMember.lastActiveAt).toLocaleDateString() },
+                          { label: "✨ Points", val: memberPoints !== null ? String(memberPoints) : "…" },
                         ].map((s) => (
                           <div key={s.label} className="rounded-lg border border-white/6 bg-slate-950/60 px-3 py-1.5">
                             <div className="text-slate-600">{s.label}</div>
@@ -5656,6 +5674,16 @@ export function AdminPanelClient() {
                 <p className="text-slate-400">Manage where logs and notifications are sent across the platform.</p>
               </div>
               <WebhooksManager />
+            </div>
+          )}
+
+          {activeTab === "borrow-money" && (
+            <div className="animate-fade-in">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold tracking-tight text-white mb-2">🏦 GGNexus Bank (Staff Credits)</h2>
+                <p className="text-slate-400">Request credit loans, sign Promissory Notes, and manage repayment schedules.</p>
+              </div>
+              <BorrowMoneySection viewer={stats?.viewer} />
             </div>
           )}
 

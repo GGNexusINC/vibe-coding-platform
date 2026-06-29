@@ -22,6 +22,7 @@ const products = [
     ],
     extra: "300 chips or deviant selector (your choice)",
     featured: false,
+    storeType: "pve",
   },
   {
     slug: "defense",
@@ -40,6 +41,7 @@ const products = [
     ],
     extra: "300 chips or special meals (your choice)",
     featured: false,
+    storeType: "pve",
   },
   {
     slug: "tactical",
@@ -59,6 +61,7 @@ const products = [
     ],
     extra: "300 chips or Masamune Katana",
     featured: true,
+    storeType: "pvp",
   },
   {
     slug: "insurance",
@@ -74,6 +77,7 @@ const products = [
     ],
     extra: "VIP role during the corresponding wipe",
     featured: false,
+    storeType: "pve",
   },
 ];
 
@@ -85,7 +89,9 @@ type User = {
 };
 
 export function StoreClient({ user, initialPackages }: { user: User | null, initialPackages?: any[] | null }) {
-  const activeProducts = initialPackages && initialPackages.length > 0 ? initialPackages : products;
+  const [storeType, setStoreType] = useState<"pve" | "pvp">("pve");
+  const activeProducts = (initialPackages && initialPackages.length > 0 ? initialPackages : products)
+    .filter(p => (p.storeType || "pve") === storeType);
   const [insuranceStatus, setInsuranceStatus] = useState<{
     available: boolean;
     hours_remaining?: number;
@@ -96,10 +102,26 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
   const [wipeLabel, setWipeLabel] = useState("Server Wipe");
   const [now, setNow] = useState(Date.now());
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { totalItems, addToCart } = useCart();
+  const [userHive, setUserHive] = useState<{ id: string; name: string; level: number } | null>(null);
+  const [supplyDrop, setSupplyDrop] = useState<{ slug: string; name: string; price: number; items: string[] } | null>(null);
 
   useEffect(() => {
     fetchInsuranceStatus();
+    if (user?.discord_id) {
+      fetch("/api/user/hive")
+        .then(r => r.json())
+        .then(d => { 
+          if (d.ok && d.hive) {
+            setUserHive(d.hive);
+            fetch("/api/hives/supply-drop")
+              .then(r => r.json())
+              .then(d2 => { if (d2.ok && d2.drop) setSupplyDrop(d2.drop); })
+              .catch(() => {});
+          } 
+        })
+        .catch(() => {});
+    }
     fetch("/api/admin/wipe-timer", { cache: "no-store" })
       .then(r => r.json())
       .then(d => { if (d.ok && d.wipeAt) { setWipeMs(new Date(d.wipeAt).getTime()); setWipeLabel(d.label ?? "Server Wipe"); } })
@@ -130,6 +152,54 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
     <div className="relative min-h-screen w-full overflow-hidden text-slate-200">
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+
+      {/* Hive Bonus Banner */}
+      {userHive && (
+        <div className="mb-6 flex items-center gap-4 rounded-[2rem] border border-amber-500/30 bg-amber-500/10 p-6 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl">🐝</div>
+          <div>
+            <div className="text-lg font-black tracking-tight text-amber-100 uppercase">Hive Bonus Active</div>
+            <div className="text-sm text-amber-300/80 font-medium">You are receiving a +15% point bonus on all store purchases for being in {userHive.name}!</div>
+          </div>
+        </div>
+      )}
+
+      {/* Hive Supply Drop */}
+      {supplyDrop && (
+        <div className="mb-12 rounded-[2.5rem] border border-cyan-500/30 bg-slate-900/40 p-1">
+          <div className="rounded-[2.5rem] border border-white/5 bg-slate-950 p-6 lg:p-10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-20 text-8xl pointer-events-none">🚁</div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 mb-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Exclusive Hive Drop</span>
+                </div>
+                <h3 className="text-3xl font-black text-white tracking-tight uppercase mb-2">{supplyDrop.name}</h3>
+                <ul className="text-sm text-slate-400 space-y-1 mb-4">
+                  {supplyDrop.items.map((item, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="text-cyan-400">▹</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex flex-col items-end gap-4 bg-black/40 p-6 rounded-3xl border border-white/5">
+                <div className="text-4xl font-black text-white">${supplyDrop.price}</div>
+                <button
+                  onClick={() => {
+                    const item = { slug: supplyDrop.slug, name: supplyDrop.name, price: supplyDrop.price, quantity: 1 };
+                    addToCart(item);
+                    setIsCartOpen(true);
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 px-8 py-3 font-black text-white hover:scale-105 transition shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wipe status banner */}
       {wipeMs && (() => {
@@ -285,10 +355,43 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
         </div>
       )}
 
-      <section className="mt-12 grid gap-8 md:grid-cols-2">
-        {activeProducts.map((product) => {
-          const isInsurance = product.slug === "insurance";
-          const isDisabled = isInsurance && !insuranceStatus.available;
+      {/* PvP / PvE Store Toggle */}
+      <div className="mt-12 flex justify-center">
+        <div className="inline-flex rounded-full border border-white/10 bg-slate-900/60 p-1.5 backdrop-blur-xl">
+          <button
+            onClick={() => setStoreType("pve")}
+            className={`rounded-full px-8 py-3 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              storeType === "pve"
+                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            PvE Store
+          </button>
+          <button
+            onClick={() => setStoreType("pvp")}
+            className={`rounded-full px-8 py-3 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              storeType === "pvp"
+                ? "bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            PvP Store
+          </button>
+        </div>
+      </div>
+
+      {activeProducts.length === 0 ? (
+        <div className="mt-12 flex flex-col items-center justify-center rounded-[2.5rem] border border-white/5 bg-slate-900/20 py-20 text-center">
+          <div className="text-5xl opacity-40 mb-4">📦</div>
+          <h3 className="text-xl font-bold text-white uppercase tracking-wider">No Packages Available</h3>
+          <p className="text-sm text-slate-500 mt-2 max-w-sm">There are currently no items deployed in this section of the store. Check back later!</p>
+        </div>
+      ) : (
+        <section className="mt-12 grid gap-8 md:grid-cols-2">
+          {activeProducts.map((product) => {
+            const isInsurance = product.slug === "insurance";
+            const isDisabled = isInsurance && !insuranceStatus.available;
 
           let cardBg = "bg-indigo-500/5";
           let themeColorHex = "#6366f1";
@@ -334,8 +437,13 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
                   <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
                     {product.badge}
                   </div>
-                  <div className="text-3xl font-black text-white tracking-tighter">
-                    ${product.price}
+                  <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                            ✨ Earn {Math.floor(product.price * 100 * (userHive ? 1.15 : 1))} Pts {userHive && <span className="text-amber-400 border-l border-amber-500/30 pl-1.5 ml-1">+15% Hive Bonus</span>}
+                          </div>
+                    <div className="text-3xl font-black text-white tracking-tighter">
+                      ${product.price}
+                    </div>
                   </div>
                 </div>
 
@@ -422,9 +530,10 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
                 </div>
               </div>
             </article>
-          );
-        })}
-      </section>
+            );
+          })}
+        </section>
+      )}
       </div>
 
       {/* Floating Cart Button */}

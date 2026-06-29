@@ -150,6 +150,28 @@ export async function POST(req: Request) {
 
 
     // 1. Log to Discord immediately if we have a URL
+    let basePoints = Math.floor(parseFloat(amount) * 100);
+    let pointsEarned = basePoints;
+    let hiveBonus = 0;
+    let hiveName = "";
+
+    try {
+      if (userId && userId !== "guest") {
+        const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+        const { listHives } = await import("@/lib/hive-store");
+        const sb = createSupabaseAdminClient();
+        const hives = await listHives(sb);
+        const userHive = hives.find(h => h.members.some(m => m.discord_id === userId));
+        if (userHive) {
+          hiveBonus = Math.floor(basePoints * 0.15);
+          pointsEarned = basePoints + hiveBonus;
+          hiveName = userHive.name;
+        }
+      }
+    } catch (e) {
+      console.error("[paypal-webhook] Failed to check hive bonus:", e);
+    }
+
     if (salesWebhookUrl) {
       const isTest = transactionId.includes("TEST") || transactionId.includes("SIMULATED");
       const isRecovered = isGuest && userId && userId !== "guest";
@@ -162,6 +184,7 @@ export async function POST(req: Request) {
         color: isRecovered ? 0x06b6d4 : (isTest ? 0x6366f1 : 0x22c55e), // Cyan for recovered, Indigo for test, Emerald for real
         fields: [
           { name: "Amount", value: `**$${amount} ${currency}**`, inline: true },
+          { name: "Points Earned", value: `**✨ ${pointsEarned}**${hiveBonus > 0 ? ` (+${hiveBonus} 🐝 Hive Bonus)` : ""}`, inline: true },
           { name: "Status", value: `\`${status}\``, inline: true },
           { name: "Buyer", value: buyerEmail, inline: true },
           { name: "User (Discord)", value: (userId && userId !== "guest") ? `<@${userId}> (${username || "Unknown"})` : "Guest / Not Linked", inline: false },
@@ -207,6 +230,49 @@ export async function POST(req: Request) {
         const { getCurrentWipeCycle } = await import("@/lib/reward-inventory");
         
         const supabase = createSupabaseAdminClient();
+        
+        // ── POINTS FULFILLMENT ───────────────────────────────────────────────
+        if (pointsEarned > 0) {
+          try {
+            // Check idempotency for points using transactionId
+            const { data: existingLedger } = await supabase
+              .from("points_ledger")
+              .select("id")
+              .eq("discord_id", userId)
+              .contains("metadata", { transaction_id: transactionId })
+              .maybeSingle();
+
+            if (!existingLedger?.id) {
+              // Fetch current points
+              const { data: profile } = await supabase
+                .from("user_profiles")
+                .select("points")
+                .eq("discord_id", userId)
+                .maybeSingle();
+              
+              const currentPoints = profile?.points || 0;
+              const newPoints = currentPoints + pointsEarned;
+              
+              // Update user points
+              await supabase
+                .from("user_profiles")
+                .update({ points: newPoints })
+                .eq("discord_id", userId);
+              
+              // Record in ledger
+              await supabase
+                .from("points_ledger")
+                .insert({
+                  discord_id: userId,
+                  amount: pointsEarned,
+                  reason: `Earned from purchase: ${packName}`,
+                  metadata: { transaction_id: transactionId, source: "paypal_webhook" }
+                });
+            }
+          } catch (e) {
+            console.warn("[paypal-webhook] Points fulfillment failed:", e);
+          }
+        }
         
         // ── MULTI-ITEM PARSING ───────────────────────────────────────────────
         const resolvedSlug = packSlug as string;

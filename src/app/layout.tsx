@@ -6,6 +6,7 @@ import { SiteChrome } from "@/app/_components/site-chrome";
 import { TicketStatusFloat } from "@/app/_components/ticket-status-float";
 import { BrawlEventFloat } from "@/app/_components/brawl-event-float";
 import { MayhemSync } from "@/app/_components/mayhem-sync";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -47,12 +48,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const store = await cookies();
+  const theme = store.get("nh_theme")?.value || "forest";
+
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="rz-corporate-shell min-h-full flex flex-col bg-[#0a0d06]">
+      <body className={`rz-corporate-shell min-h-full flex flex-col bg-background text-foreground theme-${theme}`}>
         <MayhemSync />
         <Heartbeat />
         <DeviceAuditBeacon />

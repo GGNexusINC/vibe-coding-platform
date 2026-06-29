@@ -53,6 +53,7 @@ export default function StreamersClient() {
   const [entries, setEntries] = useState<StreamerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLink, setActiveLink] = useState<{ url: string; platform: string; title: string } | null>(null);
+  const [avatarErrors, setAvatarErrors] = useState<Record<string, boolean>>({});
 
   const [applyMode, setApplyMode] = useState(false);
   const [streamUrl, setStreamUrl] = useState("");
@@ -124,6 +125,16 @@ export default function StreamersClient() {
       case "twitch": return "👾";
       case "youtube": return "🔴";
       case "kick": return "🟢";
+      case "discord": return (
+        <svg
+          className="w-[1.25em] h-[1.25em] inline-block align-middle fill-current"
+          viewBox="0 0 127.14 96.36"
+          style={{ fill: "#5865F2" }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,52.8,6.83,77.19,77.19,0,0,0,49.5,0,105.15,105.15,0,0,0,19.06,8.07C2.75,32.33-1.69,55.95,.53,79.12a105.29,105.29,0,0,0,32.44,17.24,80.12,80.12,0,0,0,6.86-11.45,68.49,68.49,0,0,1-10.87-5.3c.92-.68,1.83-1.39,2.7-2.12a75.14,75.14,0,0,0,71.18,0c.87,.73,1.78,1.44,2.7,2.12a68.49,68.49,0,0,1-10.87,5.3,80.12,80.12,0,0,0,6.86,11.45,105.29,105.29,0,0,0,32.44-17.24C129.47,48.29,124.62,24.89,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z" />
+        </svg>
+      );
       case "tiktok": return "📱";
       case "twitter":
       case "x": return "✖️";
@@ -179,6 +190,7 @@ export default function StreamersClient() {
                     <option value="twitch">Twitch</option>
                     <option value="youtube">YouTube</option>
                     <option value="kick">Kick</option>
+                    <option value="discord">Discord</option>
                     <option value="tiktok">TikTok</option>
                     <option value="x">X / Twitter</option>
                     <option value="instagram">Instagram</option>
@@ -311,8 +323,13 @@ export default function StreamersClient() {
                   <div className="relative h-full rz-surface rz-panel-border rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 flex flex-col">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="relative shrink-0">
-                        {s.avatarUrl ? (
-                          <img src={s.avatarUrl} alt={s.username} className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl object-cover ring-2 ring-white/5" />
+                        {s.avatarUrl && !avatarErrors[s.discordId] ? (
+                          <img
+                            src={s.avatarUrl}
+                            alt={s.username}
+                            onError={() => setAvatarErrors((prev) => ({ ...prev, [s.discordId]: true }))}
+                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl object-cover ring-2 ring-white/5"
+                          />
                         ) : (
                           <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-lg sm:text-xl font-black text-white">
                             {s.username[0]?.toUpperCase()}

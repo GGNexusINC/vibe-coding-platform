@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MobileNav } from "@/app/_components/mobile-nav";
 import { MainNav } from "@/app/_components/main-nav";
+import { ThemeSwitcher } from "@/app/_components/theme-switcher";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,7 +15,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     <div className="relative z-10 min-h-screen flex flex-col">
       {/* Header – hidden on /bot and /dashboard */}
       {!hideChrome && (
-        <header className="sticky top-0 z-40 border-b border-orange-900/30 bg-[#0d110a]/80 backdrop-blur-2xl">
+        <header className="sticky top-0 z-40 border-b border-line bg-background/80 backdrop-blur-2xl">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="relative h-10 w-10 overflow-hidden rounded-2xl border border-orange-400/30 bg-orange-400/10 shadow-[0_0_32px_rgba(249,115,22,0.18)]">
@@ -38,7 +39,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
             <MainNav />
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {pathname.startsWith("/admin") && <ThemeSwitcher />}
               <Link
                 href="/store"
                 className="hidden h-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-5 text-sm font-bold text-stone-950 transition hover:scale-[1.03] sm:inline-flex"
@@ -53,7 +55,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
       <main className="relative flex-1 overflow-hidden">
         {/* Dark Background Base - hidden on home to show home video */}
-        <div className={`pointer-events-none absolute inset-0 bg-[#0a0d06] ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
+        <div className={`pointer-events-none absolute inset-0 bg-background ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
 
         {/* Global Background Video for all pages EXCEPT Home */}
         {pathname !== "/" && (
@@ -88,12 +90,15 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             />
             {/* Visual enhancements */}
             <div className="absolute inset-0 rz-bg opacity-[0.06] rz-drift mix-blend-overlay" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0d06]/60 via-transparent to-[#0a0d06]/90" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/90" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(10,13,6,0.3)_100%)]" />
           </div>
         )}
 
-        <div className={`pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,4,0.7),rgba(10,13,6,0.9))] ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
+        <div 
+          className={`pointer-events-none absolute inset-0 ${pathname === "/" ? "opacity-0" : "opacity-100"}`}
+          style={{ backgroundImage: "var(--overlay-gradient)" }}
+        />
 
         <div className="rz-parallax-galaxy pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(99,102,241,0.12),transparent_38%),radial-gradient(circle_at_82%_22%,rgba(34,211,238,0.09),transparent_34%),radial-gradient(circle_at_50%_84%,rgba(16,185,129,0.07),transparent_40%)]" />
         <div className="rz-starfield pointer-events-none">
@@ -125,7 +130,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
       {/* Footer – hidden on /bot and /dashboard */}
       {!hideChrome && (
-        <footer className="border-t border-orange-900/25 bg-[#0d110a]/80 backdrop-blur-xl">
+        <footer className="border-t border-line bg-background/80 backdrop-blur-xl">
           <div className="mx-auto w-full max-w-6xl px-4 py-12">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
               <div className="max-w-xs">

@@ -753,10 +753,10 @@ export default function Home() {
       />
       <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
       <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,16,24,0.55),rgba(4,16,24,0.7),rgba(4,16,24,0.97))]" />
-      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-orange-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-orange-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "var(--home-overlay)" }} />
+      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-1)" }} />
+      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-2)" }} />
+      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-3)" }} />
 
       <section className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:py-24">
         {/* Language Toggle */}
@@ -776,7 +776,7 @@ export default function Home() {
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
+          <div className="rz-surface rz-neon-border rounded-[2rem] p-7 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <div
               className="rz-chip rz-float cursor-pointer select-none"
               onClick={handleChipClick}
@@ -787,8 +787,8 @@ export default function Home() {
             {eggActive && <EasterEggOverlay onClose={() => setEggActive(false)} />}
 
             <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-4xl font-semibold uppercase tracking-[0.06em] text-white sm:text-5xl xl:text-6xl">
-              NewHope<span className="text-lime-400">GGN</span>
-              <span className="mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
+              NewHope<span className="text-lime-400 drop-shadow-[0_0_12px_rgba(163,230,53,0.3)]">GGN</span>
+              <span className="mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(249,115,22,0.15)]">
                 {t.subtitle}
               </span>
             </h1>
@@ -800,13 +800,13 @@ export default function Home() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/store"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-6 text-sm font-bold text-stone-950 transition hover:scale-[1.02] shadow-[0_0_28px_rgba(249,115,22,0.4)]"
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-6 text-sm font-bold text-stone-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_28px_rgba(249,115,22,0.4)]"
               >
                 {t.storeBtn}
               </a>
               <a
                 href="/lottery"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-lime-400/30 bg-lime-400/10 px-6 text-sm font-bold text-lime-100 transition hover:scale-[1.02] hover:bg-lime-400/15 shadow-[0_0_22px_rgba(132,204,22,0.16)]"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-lime-400/30 bg-lime-400/10 px-6 text-sm font-bold text-lime-100 transition hover:scale-[1.02] hover:-translate-y-0.5 hover:bg-lime-400/15 shadow-[0_0_22px_rgba(132,204,22,0.16)]"
               >
                 {t.staffBtn}
               </a>
@@ -821,8 +821,11 @@ export default function Home() {
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {t.highlights.map((item) => (
-                <div key={item.title} className="rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-4">
-                  <div className="text-sm font-semibold text-white">{item.title}</div>
+                <div key={item.title} className="rz-pop-card rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-5 backdrop-blur-md">
+                  <div className="text-base font-semibold text-white flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-lime-400 animate-pulse" />
+                    {item.title}
+                  </div>
                   <div className="mt-2 text-sm leading-6 text-slate-400">{item.copy}</div>
                 </div>
               ))}
@@ -1093,28 +1096,28 @@ export default function Home() {
         </div>
 
         {/* Staff & Admin Team Section */}
-        <div className="hidden mt-12 rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-10">
+        <div className="mt-16 rz-surface rz-neon-border rounded-[2.25rem] p-8 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.5)]">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-white">{t.staffTitle}</h2>
+              <h2 className="text-2xl font-bold text-white tracking-wide">👥 {t.staffTitle}</h2>
               <p className="mt-1 text-sm text-slate-400">{t.staffDescription}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs text-slate-400">{staff.filter(s => s.activeNow).length} {t.online}</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                <span className="text-xs font-semibold text-slate-350">{staff.filter(s => s.activeNow).length} {t.online}</span>
               </div>
               <div className="h-3 w-px bg-white/10" />
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-slate-600" />
-                <span className="text-xs text-slate-500">{staff.filter(s => !s.activeNow).length} {t.offline}</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-600" />
+                <span className="text-xs font-semibold text-slate-500">{staff.filter(s => !s.activeNow).length} {t.offline}</span>
               </div>
             </div>
           </div>
 
           {staffLoading ? (
-            <div className="flex items-center justify-center py-12 text-slate-500">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mr-3" />
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400 mr-3" />
               {t.loadingStaff}
             </div>
           ) : staff.length === 0 ? (
@@ -1124,10 +1127,10 @@ export default function Home() {
               {staff.map((member) => (
                 <div
                   key={member.discordId}
-                  className={`flex items-center gap-3 rounded-[1.25rem] border p-4 transition hover:scale-[1.02] ${
+                  className={`rz-pop-card flex items-center gap-3 rounded-[1.25rem] border p-4 backdrop-blur-md transition-all duration-300 ${
                     member.role === "owner"
-                      ? "border-amber-400/30 bg-gradient-to-r from-amber-500/10 to-transparent"
-                      : "border-white/10 bg-slate-950/40"
+                      ? "border-amber-400/40 bg-gradient-to-r from-amber-500/10 via-slate-950/60 to-transparent shadow-[0_0_24px_rgba(251,191,36,0.1)]"
+                      : "border-slate-800/60 bg-slate-950/60 hover:border-lime-500/40"
                   }`}
                 >
                   <div className="relative shrink-0">
@@ -1152,27 +1155,27 @@ export default function Home() {
                       </div>
                     )}
                     {/* Online status dot on avatar */}
-                    <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900 ${
-                      member.activeNow ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" : "bg-slate-600"
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-slate-900 ${
+                      member.activeNow ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-slate-600"
                     }`} />
                     {member.role === "owner" && (
-                      <span className="absolute -top-1 -right-1 text-xs">👑</span>
+                      <span className="absolute -top-1.5 -right-1.5 text-xs drop-shadow-md">👑</span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-white truncate">{member.username}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       {member.role === "owner" ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-300 bg-amber-400/15 px-1.5 py-0.5 rounded border border-amber-400/20">
                           {t.ownerBadge}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-400/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-cyan-300 bg-cyan-400/15 px-1.5 py-0.5 rounded border border-cyan-400/20">
                           {t.adminBadge}
                         </span>
                       )}
                       {/* Online/Offline indicator */}
-                      <span className={`text-[10px] font-medium ${member.activeNow ? "text-emerald-400" : "text-slate-500"}`}>
+                      <span className={`text-[9px] font-bold ${member.activeNow ? "text-emerald-400" : "text-slate-500"}`}>
                         {member.activeNow ? "● " + t.online : "● " + t.offline}
                       </span>
                     </div>
@@ -1184,7 +1187,7 @@ export default function Home() {
         </div>
 
         {/* Quick Links Footer */}
-        <div className="hidden mt-10 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-4">
           {[
             { href: "/store",     label: "🛒 Store" },
             { href: "/community", label: "👥 Community" },
@@ -1194,7 +1197,7 @@ export default function Home() {
             { href: "/rules",     label: "📋 Rules" },
           ].map(link => (
             <a key={link.href} href={link.href}
-              className="rounded-full border border-white/8 bg-white/3 px-4 py-1.5 text-xs font-semibold text-slate-400 hover:bg-white/8 hover:text-white transition">
+              className="rz-pop-card inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-5 py-2 text-xs font-bold text-slate-350 hover:bg-orange-500/15 hover:text-orange-200 hover:border-orange-500/40 transition-all duration-300 backdrop-blur-md">
               {link.label}
             </a>
           ))}

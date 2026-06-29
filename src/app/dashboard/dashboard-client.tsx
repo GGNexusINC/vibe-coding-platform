@@ -48,6 +48,7 @@ export default function DashboardClient({
   const [savedUid, setSavedUid] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
+  const [avatarError, setAvatarError] = useState(false);
   const isAdmin = Boolean(user && (user as any).isAdmin);
 
   useEffect(() => {
@@ -207,8 +208,13 @@ export default function DashboardClient({
                   <div className="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
                   
                   <div className="flex items-center gap-5 mb-8">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="" className="h-16 w-16 rounded-2xl ring-4 ring-indigo-500/20 object-cover" />
+                    {user?.avatar && !avatarError ? (
+                      <img
+                        src={user.avatar}
+                        alt=""
+                        onError={() => setAvatarError(true)}
+                        className="h-16 w-16 rounded-2xl ring-4 ring-indigo-500/20 object-cover"
+                      />
                     ) : (
                       <div className="h-16 w-16 rounded-2xl bg-indigo-400/15 ring-4 ring-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl font-black">
                         {user?.username?.[0]?.toUpperCase() ?? "?"}

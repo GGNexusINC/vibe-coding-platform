@@ -14,6 +14,7 @@ export type StorePackage = {
   featured: boolean;
   themeColor: "cyan" | "fuchsia" | "rose" | "emerald" | "amber" | "indigo" | "slate";
   customBgUrl?: string;
+  storeType?: "pve" | "pvp";
 };
 
 const DEFAULT_PACKAGES: StorePackage[] = [
@@ -28,6 +29,7 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "300 chips or deviant selector (your choice)",
     featured: false,
     themeColor: "amber",
+    storeType: "pve",
   },
   {
     slug: "defense",
@@ -39,6 +41,7 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "300 chips or special meals (your choice)",
     featured: false,
     themeColor: "slate",
+    storeType: "pve",
   },
   {
     slug: "tactical",
@@ -50,6 +53,7 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "300 chips or Masamune Katana",
     featured: true,
     themeColor: "rose",
+    storeType: "pvp",
   },
   {
     slug: "insurance",
@@ -61,6 +65,7 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "VIP role during the corresponding wipe",
     featured: false,
     themeColor: "indigo",
+    storeType: "pve",
   },
 ];
 
@@ -133,7 +138,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
     const newPack: StorePackage = { 
       slug: newSlug, badge: "New Pack", name: "Custom Package", price: 5, 
       summary: "Short description of the pack", bullets: ["Item 1", "Item 2"], 
-      addons: [], featured: false, themeColor: "cyan" 
+      addons: [], featured: false, themeColor: "cyan", storeType: "pve"
     };
     setPackages([newPack, ...packages]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -248,7 +253,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                   </div>
 
                   <div className="flex gap-4">
-                     <div className="flex flex-col w-1/3">
+                     <div className="flex flex-col w-1/4">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Badge</label>
                         <input 
                            type="text" 
@@ -256,6 +261,17 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                            onChange={(e) => updatePackage(i, "badge", e.target.value)}
                            className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs font-bold text-cyan-300 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 uppercase tracking-widest"
                         />
+                     </div>
+                     <div className="flex flex-col w-1/4">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Store Type</label>
+                        <select 
+                           value={pkg.storeType || "pve"} 
+                           onChange={(e) => updatePackage(i, "storeType", e.target.value)}
+                           className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs font-bold text-cyan-300 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50"
+                        >
+                           <option value="pve" className="bg-slate-950 text-slate-200">PvE Store</option>
+                           <option value="pvp" className="bg-slate-950 text-slate-200">PvP Store</option>
+                        </select>
                      </div>
                      <div className="flex flex-col flex-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Unique Slug (ID)</label>

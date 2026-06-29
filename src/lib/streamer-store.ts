@@ -115,8 +115,31 @@ export async function getStreamers(statusFilter?: StreamerStatus): Promise<Strea
   if (!sb) return [];
   let query = sb.from(TABLE).select("*").order("applied_at", { ascending: false });
   if (statusFilter) query = query.eq("status", statusFilter);
-  const { data } = await query;
-  return (data ?? []).map(mapRow);
+  const { data: streamersData } = await query;
+  if (!streamersData) return [];
+
+  // Fetch fresh synced avatars from guild_members to prevent expired URL links
+  const discordIds = streamersData.map((s) => s.discord_id).filter(Boolean);
+  if (discordIds.length > 0) {
+    const { data: membersData } = await sb
+      .from("guild_members")
+      .select("discord_id, avatar_url")
+      .in("discord_id", discordIds);
+
+    if (membersData && membersData.length > 0) {
+      const avatarMap = new Map(membersData.map((m) => [m.discord_id, m.avatar_url]));
+      return streamersData.map((r) => {
+        const mapped = mapRow(r);
+        const freshAvatar = avatarMap.get(mapped.discordId);
+        if (freshAvatar) {
+          mapped.avatarUrl = freshAvatar;
+        }
+        return mapped;
+      });
+    }
+  }
+
+  return streamersData.map(mapRow);
 }
 
 export async function updateStreamerStatus(discordId: string, status: StreamerStatus): Promise<boolean> {
