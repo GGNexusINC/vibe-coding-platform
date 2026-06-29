@@ -21,14 +21,25 @@ type TicketItem = {
 
 export function PveClient({ 
   user,
-  storePackages 
+  storePackages,
+  pveRules 
 }: { 
   user: User | null; 
   storePackages?: any[] | null;
+  pveRules?: any[] | null;
 }) {
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab") || "server";
   const [activeTab, setActiveTab] = useState(requestedTab);
+
+  const DEFAULT_PVE_RULES = [
+    { id: "01", emoji: "🛣️", title: "Base Placement & Roadways", copy: "Base building must keep public roads, paths, and bridges completely clear. Do not construct bases directly blocking natural resource spawn clusters or dungeons. Maintain a minimum buffer of 100 meters from neighbors." },
+    { id: "02", emoji: "🛒", title: "Economy & Vending Etiquette", copy: "Player vendors are strictly limited to designated trade markets or personal territories. Selling quest items or anomalous items at hyper-inflated prices is discouraged. Advertising vendors in general chat is limited to once every 15 minutes." },
+    { id: "03", emoji: "⚔️", title: "World Events & Boss Raids", copy: "Triggering Prime Wars should be coordinated with regional chats. Let all waiting players join the raid team before beginning silo dungeons. Griefing or trolling team compositions inside raids will result in a ban." },
+    { id: "04", emoji: "🤝", title: "General Interaction & Fair Play", copy: "Safe-zone containers should be left unlocked if empty or containing junk. No exploiting structural base mechanics to block monster pathfinding. Submit bugs and rule breakers directly to staff via the Live Support tab." }
+  ];
+
+  const activeRules = pveRules && pveRules.length > 0 ? pveRules : DEFAULT_PVE_RULES;
 
   // Sync state with URL search param
   useEffect(() => {
@@ -66,11 +77,13 @@ export function PveClient({
     const nameLower = (item.item_name || "").toLowerCase();
     const slugLower = (item.item_slug || "").toLowerCase();
 
-    if (nameLower.includes("pvp") || slugLower.includes("pvp") || nameLower.includes("brawl") || slugLower.includes("brawl") || nameLower.includes("tactical") || slugLower.includes("tactical")) {
-      return false;
-    }
+    // Strict inclusion check: must explicitly mention PvE keywords to avoid PvP items leaking
+    const isPve = nameLower.includes("pve") || slugLower.includes("pve") ||
+                  nameLower.includes("construction") || slugLower.includes("construction") ||
+                  nameLower.includes("defense") || slugLower.includes("defense") ||
+                  nameLower.includes("insurance") || slugLower.includes("insurance");
 
-    return true;
+    return isPve;
   });
 
   // Support States
@@ -441,15 +454,19 @@ export function PveClient({
                       {pveInventory.map((item: any, i: number) => (
                         <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4 text-left">
                           <div>
-                            <div className="font-black text-white text-xs uppercase tracking-wide">{item.name || "Purchased Reward"}</div>
-                            <div className="text-[10px] text-slate-500 mt-1">Slug: <span className="font-mono">{item.slug}</span> | Date: {item.purchased_at ? new Date(item.purchased_at).toLocaleDateString() : "Classified"}</div>
+                            <div className="font-black text-white text-xs uppercase tracking-wide">{item.item_name || "Purchased Reward"}</div>
+                            <div className="text-[10px] text-slate-500 mt-1">Slug: <span className="font-mono">{item.item_slug}</span> | Date: {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : "Classified"}</div>
                           </div>
                           <span className={`shrink-0 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-wider ${
-                            item.status === "delivered" 
+                            item.status === "used" 
                               ? "border-emerald-400/20 bg-emerald-400/15 text-emerald-300"
-                              : "border-amber-400/20 bg-amber-400/15 text-amber-300"
+                              : item.status === "saved"
+                                ? "border-cyan-400/20 bg-cyan-400/15 text-cyan-300"
+                                : item.status === "expired"
+                                  ? "border-rose-400/20 bg-rose-400/15 text-rose-300"
+                                  : "border-amber-400/20 bg-amber-400/15 text-amber-300"
                           }`}>
-                            {item.status || "Pending Support Link"}
+                            {item.status || "available"}
                           </span>
                         </div>
                       ))}
@@ -602,58 +619,31 @@ export function PveClient({
               </p>
 
               <div className="grid gap-6 md:grid-cols-2">
-                {[
-                  {
-                    num: "01",
-                    title: "Base Placement & Roadways",
-                    rules: [
-                      "Base building must keep public roads, paths, and bridges completely clear.",
-                      "Do not construct bases directly blocking natural resource spawn clusters or dungeons.",
-                      "Maintain a minimum buffer of 100 meters from existing neighboring player bases."
-                    ]
-                  },
-                  {
-                    num: "02",
-                    title: "Economy & Vending Etiquette",
-                    rules: [
-                      "Player vendors are strictly limited to designated trade markets or personal territories.",
-                      "Selling quest items or anomalous items at hyper-inflated prices is discouraged.",
-                      "Advertising vendors in general chat is limited to once every 15 minutes."
-                    ]
-                  },
-                  {
-                    num: "03",
-                    title: "World Events & Boss Raids",
-                    rules: [
-                      "Triggering Prime Wars should be coordinated with regional chats.",
-                      "Let all waiting players join the raid team before beginning silo dungeons.",
-                      "Griefing or trolling team compositions inside raids will result in a ban."
-                    ]
-                  },
-                  {
-                    num: "04",
-                    title: "General Interaction & Fair Play",
-                    rules: [
-                      "Safe-zone containers should be left unlocked if empty or containing junk.",
-                      "No exploiting structural base mechanics to block monster pathfinding.",
-                      "Submit bugs and rule breakers directly to staff via the Live Support tab."
-                    ]
-                  }
-                ].map((sec) => (
-                  <div key={sec.num} className="p-6 rounded-xl border border-white/5 bg-black/20 text-left relative overflow-hidden">
-                    <span className="absolute top-2 right-4 text-4xl font-black text-emerald-500/5 font-mono">{sec.num}</span>
-                    <h3 className="text-sm font-black text-emerald-300 uppercase tracking-wide mb-4 flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-                      {sec.title}
-                    </h3>
-                    <ul className="space-y-2">
-                      {sec.rules.map((rule, idx) => (
-                        <li key={idx} className="flex gap-2 items-start text-[11px] text-slate-400 leading-relaxed font-medium">
-                          <span className="text-emerald-500 font-bold shrink-0">•</span>
-                          <span>{rule}</span>
-                        </li>
-                      ))}
-                    </ul>
+                {activeRules.map((rule: any) => (
+                  <div 
+                    key={rule.id} 
+                    className={`relative rounded-[2rem] border p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
+                      rule.highlight 
+                        ? "border-rose-500/30 bg-rose-500/5 shadow-[0_0_50px_-10px_rgba(244,63,94,0.15)]" 
+                        : "border-emerald-500/10 bg-slate-900/40 hover:border-emerald-500/30"
+                    }`}
+                  >
+                    {rule.highlight && (
+                      <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-rose-500 to-red-500 px-4 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-lg shadow-rose-500/30">
+                        Critical Directive
+                      </div>
+                    )}
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl ${
+                        rule.highlight ? "bg-rose-500/20" : "bg-emerald-500/10 text-emerald-400"
+                      }`}>
+                        {rule.emoji || "📋"}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black tracking-tight text-white uppercase">{rule.title}</h3>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-400 font-medium">{rule.copy}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

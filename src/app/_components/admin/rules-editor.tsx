@@ -74,7 +74,35 @@ const DEFAULT_RULES: Rule[] = [
   },
 ];
 
+const DEFAULT_PVE_RULES: Rule[] = [
+  {
+    id: "01",
+    emoji: "🛣️",
+    title: "Base Placement & Roadways",
+    copy: "Base building must keep public roads, paths, and bridges completely clear. Do not construct bases directly blocking natural resource spawn clusters or dungeons. Maintain a minimum buffer of 100 meters from neighbors.",
+  },
+  {
+    id: "02",
+    emoji: "🛒",
+    title: "Economy & Vending Etiquette",
+    copy: "Player vendors are strictly limited to designated trade markets or personal territories. Selling quest items or anomalous items at hyper-inflated prices is discouraged. Advertising vendors in general chat is limited to once every 15 minutes.",
+  },
+  {
+    id: "03",
+    emoji: "⚔️",
+    title: "World Events & Boss Raids",
+    copy: "Triggering Prime Wars should be coordinated with regional chats. Let all waiting players join the raid team before beginning silo dungeons. Griefing or trolling team compositions inside raids will result in a ban.",
+  },
+  {
+    id: "04",
+    emoji: "🤝",
+    title: "General Interaction & Fair Play",
+    copy: "Safe-zone containers should be left unlocked if empty or containing junk. No exploiting structural base mechanics to block monster pathfinding. Submit bugs and rule breakers directly to staff via the Live Support tab.",
+  },
+];
+
 export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
+  const [rulesType, setRulesType] = useState<"pvp" | "pve">("pvp");
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,23 +110,25 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
   const [success, setSuccess] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchRules();
+    fetchRules(rulesType);
   }, []);
 
-  async function fetchRules() {
+  async function fetchRules(type: "pvp" | "pve") {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/rules");
+      const res = await fetch(`/api/admin/rules?type=${type}`);
       const data = await res.json();
       if (data.ok) {
-        setRules(data.rules.length > 0 ? data.rules : DEFAULT_RULES);
+        const defaultSet = type === "pve" ? DEFAULT_PVE_RULES : DEFAULT_RULES;
+        setRules(data.rules.length > 0 ? data.rules : defaultSet);
       } else {
         setError(data.error || "Failed to fetch rules");
-        setRules(DEFAULT_RULES);
+        setRules(type === "pve" ? DEFAULT_PVE_RULES : DEFAULT_RULES);
       }
     } catch (e) {
       setError("Network error fetching rules");
-      setRules(DEFAULT_RULES);
+      setRules(type === "pve" ? DEFAULT_PVE_RULES : DEFAULT_RULES);
     } finally {
       setLoading(false);
     }
@@ -112,7 +142,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
       const res = await fetch("/api/admin/rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules })
+        body: JSON.stringify({ rules, type: rulesType })
       });
       const data = await res.json();
       if (data.ok) {
@@ -176,6 +206,34 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
           <p className="text-sm text-slate-400 mt-1">
             Configure the public server rules. Updates here immediately sync to the live website.
           </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => {
+                setRulesType("pvp");
+                fetchRules("pvp");
+              }}
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all ${
+                rulesType === "pvp"
+                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                  : "bg-slate-900/40 text-slate-400 border border-white/5 hover:text-white"
+              }`}
+            >
+              PvP Server Rules
+            </button>
+            <button
+              onClick={() => {
+                setRulesType("pve");
+                fetchRules("pve");
+              }}
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all ${
+                rulesType === "pve"
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                  : "bg-slate-900/40 text-slate-400 border border-white/5 hover:text-white"
+              }`}
+            >
+              PvE Server Rules
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -202,7 +260,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
           <div key={rule.id} className={`group relative rounded-xl border p-5 transition-all duration-300 ${
             rule.highlight 
               ? "border-rose-500/40 bg-rose-950/20 shadow-[inset_0_0_20px_rgba(244,63,94,0.05)]" 
-              : "border-white/10 bg-slate-950/40 hover:border-cyan-500/30"
+              : `border-white/10 bg-slate-950/40 ${rulesType === "pve" ? "hover:border-emerald-500/30" : "hover:border-cyan-500/30"}`
           }`}>
             
             <div className="absolute right-4 top-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -222,7 +280,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">ID</label>
-                  <div className={`text-sm font-black ${rule.highlight ? "text-rose-400" : "text-cyan-400"} flex h-10 items-center justify-center rounded-lg border border-white/5 bg-black/50 px-3 w-14`}>
+                  <div className={`text-sm font-black ${rule.highlight ? "text-rose-400" : rulesType === "pve" ? "text-emerald-400" : "text-cyan-400"} flex h-10 items-center justify-center rounded-lg border border-white/5 bg-black/50 px-3 w-14`}>
                     {rule.id}
                   </div>
                 </div>
@@ -232,7 +290,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     type="text" 
                     value={rule.emoji} 
                     onChange={(e) => updateRule(i, "emoji", e.target.value)}
-                    className="h-10 w-14 rounded-lg border border-white/10 bg-black/50 text-center text-xl text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50"
+                    className={`h-10 w-14 rounded-lg border border-white/10 bg-black/50 text-center text-xl text-white outline-none focus:ring-1 ${rulesType === "pve" ? "focus:border-emerald-500/50 focus:ring-emerald-500/50" : "focus:border-cyan-500/50 focus:ring-cyan-500/50"}`}
                   />
                 </div>
               </div>
@@ -258,7 +316,13 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     type="text" 
                     value={rule.title} 
                     onChange={(e) => updateRule(i, "title", e.target.value)}
-                    className={`h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-sm font-bold text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 ${rule.highlight ? 'focus:border-rose-500/50 focus:ring-rose-500/50' : ''}`}
+                    className={`h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-sm font-bold text-white outline-none focus:ring-1 ${
+                      rule.highlight 
+                        ? 'focus:border-rose-500/50 focus:ring-rose-500/50' 
+                        : rulesType === "pve" 
+                          ? 'focus:border-emerald-500/50 focus:ring-emerald-500/50' 
+                          : 'focus:border-cyan-500/50 focus:ring-cyan-500/50'
+                    }`}
                   />
                 </div>
                 <div className="flex flex-col">
@@ -267,7 +331,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     value={rule.copy} 
                     onChange={(e) => updateRule(i, "copy", e.target.value)}
                     rows={3}
-                    className="rounded-lg border border-white/10 bg-black/50 p-3 text-sm text-slate-300 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 resize-none"
+                    className={`rounded-lg border border-white/10 bg-black/50 p-3 text-sm text-slate-300 outline-none focus:ring-1 resize-none ${rulesType === "pve" ? "focus:border-emerald-500/50 focus:ring-emerald-500/50" : "focus:border-cyan-500/50 focus:ring-cyan-500/50"}`}
                   />
                 </div>
               </div>
@@ -279,7 +343,7 @@ export function RulesEditor({ mayhemMode }: { mayhemMode: boolean }) {
           <div className="flex flex-col items-center justify-center py-12 border border-dashed border-white/10 rounded-xl bg-slate-950/30">
             <div className="text-4xl mb-4 opacity-50">📋</div>
             <p className="text-slate-400 text-sm font-semibold tracking-wide">NO PROTOCOLS DEFINED</p>
-            <button onClick={addRule} className="mt-4 text-cyan-400 text-sm font-bold hover:text-cyan-300 underline underline-offset-4 decoration-cyan-500/30">
+            <button onClick={addRule} className={`mt-4 text-sm font-bold underline underline-offset-4 ${rulesType === "pve" ? "text-emerald-400 hover:text-emerald-300 decoration-emerald-500/30" : "text-cyan-400 hover:text-cyan-300 decoration-cyan-500/30"}`}>
               Add the first rule
             </button>
           </div>
