@@ -33,6 +33,7 @@ export default function SupportClient() {
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isBrawlEvent, setIsBrawlEvent] = useState(initialSubject.toLowerCase().includes("brawl"));
+  const [isPveRelated, setIsPveRelated] = useState(initialSubject.toLowerCase().includes("pve"));
   const [activeTicket, setActiveTicket] = useState<{id: string, channelId: string} | null>(null);
 
   // Fetch real Discord online status
@@ -92,7 +93,7 @@ export default function SupportClient() {
     const res = await fetch("/api/support/ticket", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject, message, inGameName, isBrawlEvent }),
+      body: JSON.stringify({ subject, message, inGameName, isBrawlEvent, isPveRelated }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -328,7 +329,10 @@ export default function SupportClient() {
 
             {/* Brawl Mode Toggle */}
             <div 
-              onClick={() => setIsBrawlEvent(!isBrawlEvent)}
+              onClick={() => {
+                setIsBrawlEvent(!isBrawlEvent);
+                if (!isBrawlEvent) setIsPveRelated(false);
+              }}
               className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
                 isBrawlEvent 
                   ? "border-orange-500/40 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.1)]" 
@@ -350,6 +354,36 @@ export default function SupportClient() {
               </div>
               <div className={`relative h-6 w-11 rounded-full transition-colors ${isBrawlEvent ? "bg-orange-500" : "bg-slate-800"}`}>
                 <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isBrawlEvent ? "translate-x-5" : "translate-x-0"}`} />
+              </div>
+            </div>
+
+            {/* PvE Server Related Toggle */}
+            <div 
+              onClick={() => {
+                setIsPveRelated(!isPveRelated);
+                if (!isPveRelated) setIsBrawlEvent(false);
+              }}
+              className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
+                isPveRelated 
+                  ? "border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
+                  : "border-white/10 bg-slate-950/50 hover:border-white/20"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+                  isPveRelated ? "bg-emerald-500 text-black" : "bg-white/5 text-slate-400"
+                }`}>
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">PvE Server Related?</div>
+                  <div className="text-[11px] text-slate-500">Toggle this if your ticket is about the Once Human PvE Server</div>
+                </div>
+              </div>
+              <div className={`relative h-6 w-11 rounded-full transition-colors ${isPveRelated ? "bg-emerald-500" : "bg-slate-800"}`}>
+                <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isPveRelated ? "translate-x-5" : "translate-x-0"}`} />
               </div>
             </div>
 

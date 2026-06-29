@@ -144,7 +144,7 @@ export default function PveServerPage() {
               <div className="space-y-3 bg-black/40 p-5 rounded-2xl border border-white/5 font-mono text-xs mb-6">
                 <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-slate-500 uppercase">Realm:</span>
-                  <span className="text-emerald-400 font-bold">NewHopeGGN [PvE]</span>
+                  <span className="text-emerald-400 font-bold">Nexus Vitalis [PvE]</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-slate-500 uppercase">Region:</span>

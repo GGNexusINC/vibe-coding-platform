@@ -11,10 +11,13 @@ export async function POST(req: Request) {
   const message = String(body?.message ?? "").trim();
   const inGameName = String(body?.inGameName ?? "").trim();
   const isBrawlEvent = Boolean(body?.isBrawlEvent);
+  const isPveRelated = Boolean(body?.isPveRelated);
   let subject = String(body?.subject ?? "").trim();
   
   if (isBrawlEvent) {
     subject = `[BRAWL MODE] ${subject}`;
+  } else if (isPveRelated) {
+    subject = `[PVE SERVER] ${subject}`;
   }
 
   const fullMessage = inGameName ? `**In-Game Name:** ${inGameName}\n\n${message}` : message;
