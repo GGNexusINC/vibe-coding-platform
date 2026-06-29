@@ -188,26 +188,20 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
       )}
 
       {/* Hive Supply Drop */}
-      {supplyDrop && (
-        <div className={`mb-12 rounded-[2.5rem] border p-1 transition-all ${
-          storeType === "pve" ? "border-emerald-500/30 bg-slate-900/40" : "border-cyan-500/30 bg-slate-900/40"
-        }`}>
+      {supplyDrop && storeType === "pvp" && (
+        <div className="mb-12 rounded-[2.5rem] border border-cyan-500/30 bg-slate-900/40 p-1">
           <div className="rounded-[2.5rem] border border-white/5 bg-slate-950 p-6 lg:p-10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-20 text-8xl pointer-events-none">🚁</div>
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 mb-4 ${
-                  storeType === "pve" ? "border-emerald-500/30 bg-emerald-500/10" : "border-cyan-500/30 bg-cyan-500/10"
-                }`}>
-                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                    storeType === "pve" ? "text-emerald-400" : "text-cyan-400"
-                  }`}>Exclusive Hive Drop</span>
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 mb-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Exclusive Hive Drop</span>
                 </div>
                 <h3 className="text-3xl font-black text-white tracking-tight uppercase mb-2">{supplyDrop.name}</h3>
                 <ul className="text-sm text-slate-400 space-y-1 mb-4">
                   {supplyDrop.items.map((item, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <span className={storeType === "pve" ? "text-emerald-400" : "text-cyan-400"}>▹</span> {item}
+                      <span className="text-cyan-400">▹</span> {item}
                     </li>
                   ))}
                 </ul>
@@ -220,11 +214,7 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
                     addToCart(item);
                     setIsCartOpen(true);
                   }}
-                  className={`rounded-xl px-8 py-3 font-black text-white hover:scale-105 transition shadow-lg ${
-                    storeType === "pve"
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/20"
-                      : "bg-gradient-to-r from-cyan-500 to-emerald-500 shadow-cyan-500/20"
-                  }`}
+                  className="rounded-xl px-8 py-3 font-black text-white hover:scale-105 transition shadow-lg bg-gradient-to-r from-cyan-500 to-emerald-500 shadow-cyan-500/20"
                 >
                   Add to Cart
                 </button>
