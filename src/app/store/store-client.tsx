@@ -89,9 +89,9 @@ type User = {
 };
 
 export function StoreClient({ user, initialPackages }: { user: User | null, initialPackages?: any[] | null }) {
-  const [storeType, setStoreType] = useState<"pve" | "pvp">("pve");
+  const [storeType, setStoreType] = useState<"pve" | "pvp">("pvp");
   const activeProducts = (initialPackages && initialPackages.length > 0 ? initialPackages : products)
-    .filter(p => (p.storeType || "pve") === storeType);
+    .filter(p => (p.storeType || "pvp") === storeType);
   const [insuranceStatus, setInsuranceStatus] = useState<{
     available: boolean;
     hours_remaining?: number;
@@ -359,24 +359,24 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
       <div className="mt-12 flex justify-center">
         <div className="inline-flex rounded-full border border-white/10 bg-slate-900/60 p-1.5 backdrop-blur-xl">
           <button
-            onClick={() => setStoreType("pve")}
+            onClick={() => setStoreType("pvp")}
             className={`rounded-full px-8 py-3 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-              storeType === "pve"
+              storeType === "pvp"
                 ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            PvE Store
+            PvP Store
           </button>
           <button
-            onClick={() => setStoreType("pvp")}
+            onClick={() => setStoreType("pve")}
             className={`rounded-full px-8 py-3 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-              storeType === "pvp"
+              storeType === "pve"
                 ? "bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            PvP Store
+            PvE Store
           </button>
         </div>
       </div>
@@ -411,14 +411,41 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
             if (product.slug === "vip") cardBg = "bg-emerald-500/5";
           }
 
+          const borderStyle = product.borderStyle || "default";
+          let borderClasses = "";
+          let borderStyles: React.CSSProperties = {};
+
+          if (borderStyle === "default") {
+            borderClasses = "border-white/10";
+            if (product.themeColor) {
+              borderStyles.borderColor = `${themeColorHex}40`;
+            } else {
+              borderStyles.borderColor = "rgba(255,255,255,0.1)";
+            }
+          } else if (borderStyle === "glowing") {
+            borderClasses = "animate-pulse";
+            borderStyles.borderColor = themeColorHex;
+            borderStyles.boxShadow = `0 0 25px ${themeColorHex}60`;
+          } else if (borderStyle === "animated") {
+            borderClasses = "rz-neon-border";
+          } else if (borderStyle === "cyberpunk") {
+            borderClasses = "border-2 border-double";
+            borderStyles.borderColor = "#06b6d4";
+            borderStyles.boxShadow = `inset 0 0 10px rgba(6, 182, 212, 0.2)`;
+          } else if (borderStyle === "royal") {
+            borderClasses = "border-2 border-amber-500/50";
+            borderStyles.borderColor = "#fbbf24";
+            borderStyles.boxShadow = `0 0 30px rgba(251, 191, 36, 0.25), inset 0 0 15px rgba(251, 191, 36, 0.1)`;
+          }
+
           return (
             <article
               key={product.slug}
-              className={`group relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${
+              className={`group relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${borderClasses} ${
                 isDisabled ? "opacity-50 pointer-events-none" : ""
               }`}
               style={{
-                borderColor: product.themeColor ? `${themeColorHex}40` : 'rgba(255,255,255,0.1)',
+                ...borderStyles,
               }}
             >
               {product.customBgUrl && (

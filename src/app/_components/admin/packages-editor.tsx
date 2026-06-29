@@ -19,6 +19,7 @@ export type StorePackage = {
   limit?: number;
   cooldown?: string;
   pointsOverride?: number;
+  borderStyle?: "default" | "glowing" | "animated" | "cyberpunk" | "royal";
 };
 
 const DEFAULT_PACKAGES: StorePackage[] = [
@@ -33,7 +34,8 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "300 chips or deviant selector (your choice)",
     featured: false,
     themeColor: "amber",
-    storeType: "pve",
+    storeType: "pvp",
+    borderStyle: "default",
   },
   {
     slug: "defense",
@@ -45,7 +47,8 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "300 chips or special meals (your choice)",
     featured: false,
     themeColor: "slate",
-    storeType: "pve",
+    storeType: "pvp",
+    borderStyle: "default",
   },
   {
     slug: "tactical",
@@ -58,6 +61,7 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     featured: true,
     themeColor: "rose",
     storeType: "pvp",
+    borderStyle: "animated",
   },
   {
     slug: "insurance",
@@ -69,7 +73,8 @@ const DEFAULT_PACKAGES: StorePackage[] = [
     extra: "VIP role during the corresponding wipe",
     featured: false,
     themeColor: "indigo",
-    storeType: "pve",
+    storeType: "pvp",
+    borderStyle: "default",
   },
 ];
 
@@ -106,6 +111,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
   const [success, setSuccess] = useState<boolean>(false);
   const [activePkgIndex, setActivePkgIndex] = useState<number>(0);
   const [editorTab, setEditorTab] = useState<"details" | "items" | "styling">("details");
+  const [uploading, setUploading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchPackages();
@@ -160,7 +166,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
     const newPack: StorePackage = { 
       slug: newSlug, badge: "New Pack", name: "Custom Package", price: 5, 
       summary: "Short description of the pack", bullets: ["Item 1", "Item 2"], 
-      addons: [], featured: false, themeColor: "cyan", storeType: "pve"
+      addons: [], featured: false, themeColor: "cyan", storeType: "pvp", borderStyle: "default"
     };
     setPackages([newPack, ...packages]);
     setActivePkgIndex(0);
@@ -195,6 +201,33 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
     setActivePkgIndex(index + dir);
   }
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.ok && data.url) {
+        updateActivePackage("customBgUrl", data.url);
+      } else {
+        setError(data.error || "Failed to upload image.");
+      }
+    } catch (err) {
+      setError("Network error uploading image.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function handlePresetSelect(presetVal: string) {
     if (!presetVal) return;
     const currentPkg = packages[activePkgIndex];
@@ -211,6 +244,33 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
   }
 
   const activePkg = packages[activePkgIndex];
+
+  // Resolve Live Preview styles dynamically
+  const borderStyle = activePkg?.borderStyle || "default";
+  let borderClasses = "";
+  let borderStyles: React.CSSProperties = {};
+  const themeColorHex = THEME_COLORS.find(c => c.id === activePkg?.themeColor)?.hex || "#6366f1";
+
+  if (activePkg) {
+    if (borderStyle === "default") {
+      borderClasses = "border-white/10";
+      borderStyles.borderColor = `${themeColorHex}40`;
+    } else if (borderStyle === "glowing") {
+      borderClasses = "animate-pulse";
+      borderStyles.borderColor = themeColorHex;
+      borderStyles.boxShadow = `0 0 25px ${themeColorHex}60`;
+    } else if (borderStyle === "animated") {
+      borderClasses = "rz-neon-border";
+    } else if (borderStyle === "cyberpunk") {
+      borderClasses = "border-2 border-double";
+      borderStyles.borderColor = "#06b6d4";
+      borderStyles.boxShadow = `inset 0 0 10px rgba(6, 182, 212, 0.2)`;
+    } else if (borderStyle === "royal") {
+      borderClasses = "border-2 border-amber-500/50";
+      borderStyles.borderColor = "#fbbf24";
+      borderStyles.boxShadow = `0 0 30px rgba(251, 191, 36, 0.25), inset 0 0 15px rgba(251, 191, 36, 0.1)`;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -498,7 +558,7 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
 
               {/* Tab: Styling */}
               {editorTab === "styling" && (
-                <div className="space-y-5 mt-4 overflow-y-auto max-h-[50vh] pr-2 scrollbar-none">
+                <div className="space-y-4 mt-4 overflow-y-auto max-h-[50vh] pr-2 scrollbar-none">
                   {/* Theme Selectors */}
                   <div className="flex flex-col text-left">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Theme Accent Glow</label>
@@ -514,23 +574,76 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
                     </div>
                   </div>
 
-                  {/* Background URL */}
+                  {/* Border Style Dropdown */}
                   <div className="flex flex-col text-left">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Custom Background Image URL</label>
-                    <input 
-                      type="text" 
-                      placeholder="https://example.com/background.jpg"
-                      value={activePkg.customBgUrl || ""} 
-                      onChange={(e) => updateActivePackage("customBgUrl", e.target.value)}
-                      className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs font-mono text-slate-300 outline-none focus:border-cyan-500/50"
-                    />
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Custom Border Accent</label>
+                    <select
+                      value={activePkg.borderStyle || "default"}
+                      onChange={(e) => updateActivePackage("borderStyle", e.target.value)}
+                      className="h-10 rounded-lg border border-white/10 bg-black/50 px-3 text-xs font-bold text-cyan-300 outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="default">Default Border</option>
+                      <option value="glowing">Neon Pulse Glow</option>
+                      <option value="animated">Rotating Rainbow Outline</option>
+                      <option value="cyberpunk">Double Tech Border</option>
+                      <option value="royal">Imperial Gold Shiny</option>
+                    </select>
+                  </div>
+
+                  {/* Picture Live Editor / Upload */}
+                  <div className="flex flex-col text-left">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Package Banner Picture</label>
+                    <div className="relative group/img rounded-xl border border-white/10 bg-black/40 overflow-hidden h-28 flex items-center justify-center">
+                      {activePkg.customBgUrl ? (
+                        <>
+                          <img 
+                            src={activePkg.customBgUrl} 
+                            alt="Background Preview" 
+                            className="absolute inset-0 w-full h-full object-cover opacity-50"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                            <label className="cursor-pointer bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-lg text-xs font-black text-white uppercase tracking-wider transition">
+                              {uploading ? "Uploading..." : "Change Image"}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleImageUpload} 
+                                className="hidden" 
+                                disabled={uploading}
+                              />
+                            </label>
+                            <button
+                              onClick={() => updateActivePackage("customBgUrl", undefined)}
+                              className="bg-rose-600 hover:bg-rose-500 px-4 py-2 rounded-lg text-xs font-black text-white uppercase tracking-wider transition"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-500 text-xs">
+                          <span className="text-3xl mb-1">🖼️</span>
+                          <span>No Image Loaded</span>
+                          <label className="cursor-pointer bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 px-4 py-1.5 rounded-lg text-[10px] font-black text-cyan-300 uppercase tracking-wider transition mt-2">
+                            {uploading ? "Uploading..." : "Upload Picture"}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleImageUpload} 
+                              className="hidden" 
+                              disabled={uploading}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Featured */}
-                  <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
+                  <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
                     <div className="text-left">
                       <span className="text-xs font-black text-white uppercase tracking-wider block">Featured Package Card</span>
-                      <span className="text-[10px] text-slate-500 mt-1">Highlights the package with a border animation.</span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Highlights the package with a border animation.</span>
                     </div>
                     <button
                       onClick={() => updateActivePackage("featured", !activePkg.featured)}
@@ -567,9 +680,9 @@ export function PackagesEditor({ mayhemMode }: { mayhemMode: boolean }) {
           <div className="text-xs font-black text-slate-500 uppercase tracking-wider text-left">Live Storefront Card Preview</div>
           {activePkg ? (
             <div 
-              className={`relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 group text-left`}
+              className={`relative overflow-hidden rounded-[2.5rem] p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 group text-left ${borderClasses}`}
               style={{
-                borderColor: activePkg.themeColor ? `${THEME_COLORS.find(c => c.id === activePkg.themeColor)?.hex}40` : 'rgba(255,255,255,0.1)',
+                ...borderStyles,
               }}
             >
               {activePkg.customBgUrl && (
