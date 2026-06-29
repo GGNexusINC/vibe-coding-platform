@@ -438,11 +438,16 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
                     {product.badge}
                   </div>
                   <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-400">
-                            ✨ Earn {Math.floor(product.price * 100 * (userHive ? 1.15 : 1))} Pts {userHive && <span className="text-amber-400 border-l border-amber-500/30 pl-1.5 ml-1">+15% Hive Bonus</span>}
-                          </div>
-                    <div className="text-3xl font-black text-white tracking-tighter">
-                      ${product.price}
+                    <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                      ✨ Earn {product.pointsOverride !== undefined && product.pointsOverride !== null ? product.pointsOverride : Math.floor(product.price * 100 * (userHive ? 1.15 : 1))} Pts {userHive && !product.pointsOverride && <span className="text-amber-400 border-l border-amber-500/30 pl-1.5 ml-1">+15% Hive Bonus</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="text-sm line-through text-slate-500 font-mono">${product.originalPrice}</span>
+                      )}
+                      <div className="text-3xl font-black text-white tracking-tighter">
+                        ${product.price}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -512,8 +517,18 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
 
                 <div className="mt-8 flex items-center justify-between gap-4 pt-6 border-t border-white/10">
                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Status</span>
-                      <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">{isDisabled ? "Protocol Locked" : "System Ready"}</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                        {product.limit || product.cooldown ? "Rule / Limit" : "Status"}
+                      </span>
+                      {product.limit || product.cooldown ? (
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
+                          {product.limit ? `Limit: ${product.limit}` : ""}
+                          {product.limit && product.cooldown ? " · " : ""}
+                          {product.cooldown || ""}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">{isDisabled ? "Protocol Locked" : "System Ready"}</span>
+                      )}
                    </div>
                    {user && !isDisabled ? (
                     <BuyButton 
