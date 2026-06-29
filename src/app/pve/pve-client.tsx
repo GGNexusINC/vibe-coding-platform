@@ -19,7 +19,13 @@ type TicketItem = {
   created_at: string;
 };
 
-export function PveClient({ user }: { user: User | null }) {
+export function PveClient({ 
+  user,
+  storePackages 
+}: { 
+  user: User | null; 
+  storePackages?: any[] | null;
+}) {
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab") || "server";
   const [activeTab, setActiveTab] = useState(requestedTab);
@@ -41,6 +47,31 @@ export function PveClient({ user }: { user: User | null }) {
   const [saveStatus, setSaveStatus] = useState("");
   const [userInventory, setUserInventory] = useState<any[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
+
+  const defaultProducts = [
+    { slug: "construction", name: "Construction Package", storeType: "pve" },
+    { slug: "defense", name: "Defense Package", storeType: "pve" },
+    { slug: "tactical", name: "Tactical Package", storeType: "pvp" },
+    { slug: "insurance", name: "Anti Raid Insurance", storeType: "pve" },
+  ];
+
+  const pveInventory = userInventory.filter((item: any) => {
+    const matchingPack = (storePackages && storePackages.length > 0 ? storePackages : defaultProducts)
+      .find((p: any) => p.slug === item.item_slug);
+    
+    if (matchingPack) {
+      return matchingPack.storeType === "pve";
+    }
+
+    const nameLower = (item.item_name || "").toLowerCase();
+    const slugLower = (item.item_slug || "").toLowerCase();
+
+    if (nameLower.includes("pvp") || slugLower.includes("pvp") || nameLower.includes("brawl") || slugLower.includes("brawl") || nameLower.includes("tactical") || slugLower.includes("tactical")) {
+      return false;
+    }
+
+    return true;
+  });
 
   // Support States
   const [subject, setSubject] = useState("");
@@ -405,9 +436,9 @@ export function PveClient({ user }: { user: User | null }) {
                   
                   {loadingInventory ? (
                     <div className="text-xs text-emerald-400 animate-pulse py-6 text-center font-mono">LOADING PVE STAGE INVENTORY...</div>
-                  ) : userInventory.length > 0 ? (
+                  ) : pveInventory.length > 0 ? (
                     <div className="grid gap-3">
-                      {userInventory.map((item: any, i: number) => (
+                      {pveInventory.map((item: any, i: number) => (
                         <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4 text-left">
                           <div>
                             <div className="font-black text-white text-xs uppercase tracking-wide">{item.name || "Purchased Reward"}</div>
@@ -425,7 +456,7 @@ export function PveClient({ user }: { user: User | null }) {
                     </div>
                   ) : (
                     <div className="text-xs text-slate-500 py-6 text-center">
-                      No active packages found. Link your UID and buy items in the Store to see them here.
+                      No active PvE packages found. Link your UID and buy items in the Store to see them here.
                     </div>
                   )}
                 </div>
