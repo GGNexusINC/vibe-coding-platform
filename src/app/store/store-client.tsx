@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { BuyButton } from "./buy-button";
 import { CartView } from "./cart-view";
 import { useCart } from "./cart-context";
@@ -89,7 +90,9 @@ type User = {
 };
 
 export function StoreClient({ user, initialPackages }: { user: User | null, initialPackages?: any[] | null }) {
-  const [storeType, setStoreType] = useState<"pve" | "pvp">("pvp");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "pve" ? "pve" : "pvp";
+  const [storeType, setStoreType] = useState<"pve" | "pvp">(initialTab);
   const activeProducts = (initialPackages && initialPackages.length > 0 ? initialPackages : products)
     .filter(p => (p.storeType || "pvp") === storeType);
   const [insuranceStatus, setInsuranceStatus] = useState<{

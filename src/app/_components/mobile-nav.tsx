@@ -10,6 +10,7 @@ const sections = [
     links: [
       { href: "/", emoji: "Home", label: "Home" },
       { href: "/dashboard", emoji: "Dash", label: "Dashboard" },
+      { href: "/pve", emoji: "Tree", label: "PvE Server" },
       { href: "/store", emoji: "Shop", label: "Wipe Store" },
       { href: "/support", emoji: "Help", label: "Support" },
       { href: "/about", emoji: "Info", label: "About" },

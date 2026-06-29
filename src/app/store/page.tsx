@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: ["https://newhopeggn.vercel.app/opengraph-image"] },
 };
 
+import { Suspense } from "react";
+
 export default async function StorePage() {
   const user = await getSession();
 
@@ -39,7 +41,9 @@ export default async function StorePage() {
   return (
     <PayPalProvider>
       <CartProvider>
-        <StoreClient user={user as any} initialPackages={initialPackages} />
+        <Suspense fallback={<div className="py-20 text-center animate-pulse text-slate-500 font-bold italic">Loading store...</div>}>
+          <StoreClient user={user as any} initialPackages={initialPackages} />
+        </Suspense>
       </CartProvider>
     </PayPalProvider>
   );
