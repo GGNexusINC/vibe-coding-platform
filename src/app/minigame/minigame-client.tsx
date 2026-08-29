@@ -293,7 +293,7 @@ export default function MinigameClient() {
 
       <div className="relative">
         {/* ── Header ── */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="rz-enter flex items-center gap-2 mb-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400/80 border border-emerald-400/20 bg-emerald-400/5 rounded-full px-3 py-1">☣ Once Human</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Weekly Challenge</span>
         </div>
@@ -552,7 +552,18 @@ export default function MinigameClient() {
                 </div>
                 <div className="divide-y divide-white/5">
                   {loadingLeaderboard ? (
-                    <div className="p-8 text-center text-xs text-slate-500 animate-pulse">Scanning database...</div>
+                    <div className="space-y-0 divide-y divide-white/5">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex items-center gap-4 px-6 py-3">
+                          <div className="rz-skeleton h-3 w-4 rounded-full" />
+                          <div className="rz-skeleton h-8 w-8 rounded-full" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="rz-skeleton h-3 w-32 rounded-full" />
+                            <div className="rz-skeleton h-2.5 w-20 rounded-full" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : leaderboard.length === 0 ? (
                     <div className="p-8 text-center text-xs text-slate-600 italic">No scores recorded yet. Be the first!</div>
                   ) : (

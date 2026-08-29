@@ -68,7 +68,7 @@ export default function LotteryClient() {
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {/* Prize Card */}
-          <div className="rz-surface rz-panel-border rounded-[2rem] p-7">
+          <div className="rz-surface rz-panel-border rz-enter rz-enter-1 rounded-[2rem] p-7">
             <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Current Prize</div>
             <div className="mt-3 text-xl font-bold text-white">{CURRENT_PRIZE}</div>
             <div className="mt-2 text-sm text-slate-400">One winner drawn randomly from all entries.</div>
@@ -117,7 +117,7 @@ export default function LotteryClient() {
           </div>
 
           {/* How it works */}
-          <div className="rz-surface rz-panel-border rounded-[2rem] p-7">
+          <div className="rz-surface rz-panel-border rz-enter rz-enter-2 rounded-[2rem] p-7">
             <div className="text-xs font-semibold uppercase tracking-widest text-cyan-400">How It Works</div>
             <ul className="mt-4 space-y-4">
               {[
@@ -140,7 +140,7 @@ export default function LotteryClient() {
         </div>
 
         {/* Past Winners — always shown, live updates */}
-        <div className="mt-10">
+        <div className="rz-enter rz-enter-3 mt-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Past Winners</div>
             <div className="flex items-center gap-1">
@@ -155,7 +155,7 @@ export default function LotteryClient() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {draws.map((d, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3">
+                <div key={i} className="rz-enter flex items-center gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
                   <span className="text-2xl">🏆</span>
                   <div>
                     <div className="text-sm font-semibold text-white">{d.winnerUsername}</div>

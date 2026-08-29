@@ -43,7 +43,7 @@ export default function PoliciesPage() {
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
+        <div className="rz-surface rz-panel-border rz-enter rz-enter-1 rounded-[2rem] p-7 sm:p-9">
           <div className="rz-chip">Site Policies</div>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
             Professional policies for purchases, community trust, and enforcement.
@@ -66,7 +66,7 @@ export default function PoliciesPage() {
           </div>
         </div>
 
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
+        <div className="rz-surface rz-panel-border rz-enter rz-enter-2 rounded-[2rem] p-7 sm:p-9">
           <div className="rz-chip">Enforcement</div>
           <h2 className="mt-4 text-3xl font-semibold text-white">Zero confusion. Clear consequences.</h2>
           <div className="mt-6 grid gap-3">

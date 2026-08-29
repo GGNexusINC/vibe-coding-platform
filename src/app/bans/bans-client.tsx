@@ -41,7 +41,7 @@ export default function BanListPage() {
         <div className="mb-2 flex items-center gap-2">
           <Link href="/" className="text-[11px] text-slate-600 hover:text-slate-400 transition">← Home</Link>
         </div>
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+        <div className="rz-enter flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-400/80 border border-rose-400/20 bg-rose-400/5 rounded-full px-3 py-1">🔨 Enforcement</span>
@@ -57,7 +57,7 @@ export default function BanListPage() {
         </div>
 
         {/* Search */}
-        <div className="mb-5">
+        <div className="rz-enter rz-enter-1 mb-5">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -67,9 +67,20 @@ export default function BanListPage() {
         </div>
 
         {/* Table */}
-        <div className="rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
+        <div className="rz-enter rz-enter-2 rounded-2xl border border-white/6 bg-gradient-to-b from-slate-900/80 to-slate-950/80 overflow-hidden">
           {loading ? (
-            <div className="py-16 text-center text-sm text-slate-500 animate-pulse">Loading ban records…</div>
+            <div className="divide-y divide-white/4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-4 items-center">
+                  <div className="space-y-2">
+                    <div className="rz-skeleton h-3.5 w-40 rounded-full" />
+                    <div className="rz-skeleton h-3 w-56 rounded-full" />
+                  </div>
+                  <div className="rz-skeleton h-3 w-16 rounded-full justify-self-end" />
+                  <div className="rz-skeleton h-3 w-20 rounded-full justify-self-end" />
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-600">
               {search ? "No bans match your search." : "No bans recorded yet."}
@@ -82,8 +93,8 @@ export default function BanListPage() {
                 <span className="text-right">Admin</span>
                 <span className="text-right">Date</span>
               </div>
-              {filtered.map((ban) => (
-                <div key={ban.id} className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-4 items-start hover:bg-white/2 transition">
+              {filtered.map((ban, banIndex) => (
+                <div key={ban.id} className="rz-enter grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-4 items-start hover:bg-white/2 transition" style={{ animationDelay: `${Math.min(banIndex, 10) * 40}ms` }}>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-black text-rose-400">🔨</span>

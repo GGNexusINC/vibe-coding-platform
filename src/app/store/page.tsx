@@ -41,7 +41,30 @@ export default async function StorePage() {
   return (
     <PayPalProvider>
       <CartProvider>
-        <Suspense fallback={<div className="py-20 text-center animate-pulse text-slate-500 font-bold italic">Loading store...</div>}>
+        <Suspense fallback={
+          <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+            <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8">
+                <div className="rz-skeleton h-5 w-40 rounded-full" />
+                <div className="rz-skeleton mt-6 h-12 w-3/4 rounded-2xl" />
+                <div className="rz-skeleton mt-3 h-12 w-1/2 rounded-2xl" />
+                <div className="rz-skeleton mt-6 h-4 w-full max-w-lg rounded-full" />
+                <div className="mt-10 grid gap-6 sm:grid-cols-3">
+                  {[0, 1, 2].map((i) => <div key={i} className="rz-skeleton h-24 rounded-2xl" />)}
+                </div>
+              </div>
+              <div className="rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8">
+                <div className="rz-skeleton h-5 w-48 rounded-full" />
+                <div className="mt-6 space-y-4">
+                  {[0, 1, 2].map((i) => <div key={i} className="rz-skeleton h-12 rounded-2xl" />)}
+                </div>
+              </div>
+            </div>
+            <div className="mt-12 grid gap-8 md:grid-cols-2">
+              {[0, 1].map((i) => <div key={i} className="rz-skeleton h-80 rounded-[2.5rem]" />)}
+            </div>
+          </div>
+        }>
           <StoreClient user={user as any} initialPackages={initialPackages} />
         </Suspense>
       </CartProvider>

@@ -144,7 +144,7 @@ export function HivesClient({ user, initialHives }: HivesClientProps) {
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         
         {/* HERO */}
-        <div className="mb-12 text-center md:text-left md:flex justify-between items-end">
+        <div className="rz-enter mb-12 text-center md:text-left md:flex justify-between items-end">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 mb-4">
               <span className="relative flex h-2 w-2">
@@ -185,7 +185,7 @@ export function HivesClient({ user, initialHives }: HivesClientProps) {
         </div>
 
         {/* MAP SECTION */}
-        <div className="mb-16">
+        <div className="rz-enter rz-enter-1 mb-16">
           <HiveMap 
             hives={hives} 
             onHiveClick={(id) => {
@@ -199,15 +199,16 @@ export function HivesClient({ user, initialHives }: HivesClientProps) {
 
         {/* HIVE GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedHives.map((hive) => {
+          {sortedHives.map((hive, hiveIndex) => {
             const isUserHive = userHiveId === hive.id;
             return (
-              <div 
+              <div
                 id={`hive-${hive.id}`}
                 key={hive.id}
-                className={`relative flex flex-col rounded-[2.5rem] border bg-slate-900/40 backdrop-blur-xl shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] p-6 overflow-hidden ${
+                className={`rz-enter relative flex flex-col rounded-[2.5rem] border bg-slate-900/40 backdrop-blur-xl shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] p-6 overflow-hidden ${
                   isUserHive ? "border-amber-500/50" : "border-white/10"
                 } ${selectedHiveId === hive.id ? "ring-2 ring-cyan-500 ring-offset-2 ring-offset-black" : ""}`}
+                style={{ animationDelay: `${Math.min(hiveIndex, 8) * 70}ms` }}
               >
                 {/* Header & Image */}
                 <div className="relative h-32 -mx-6 -mt-6 mb-4 overflow-hidden rounded-t-[2.5rem] bg-black/40">

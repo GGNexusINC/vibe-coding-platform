@@ -150,7 +150,7 @@ export default function StreamersClient() {
 
       <div className="relative">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+        <div className="rz-enter flex flex-col sm:flex-row sm:items-start justify-between gap-6">
           <div className="max-w-2xl">
             <div className="rz-chip mb-4">📺 Streamers</div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Community Creators</h1>
@@ -307,9 +307,21 @@ export default function StreamersClient() {
 
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {loading ? (
-              <div className="col-span-full py-20 text-center animate-pulse text-slate-500 font-bold italic text-sm">
-                Scanning for active frequencies...
-              </div>
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-[1.5rem] sm:rounded-[2rem] border border-white/8 bg-slate-950/55 p-5 sm:p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="rz-skeleton h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl sm:rounded-2xl" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="rz-skeleton h-4 w-2/3 rounded-full" />
+                      <div className="rz-skeleton h-2.5 w-1/3 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="rz-skeleton h-11 rounded-xl sm:rounded-2xl" />
+                    <div className="rz-skeleton h-11 rounded-xl sm:rounded-2xl" />
+                  </div>
+                </div>
+              ))
             ) : groupedStreamers.length === 0 ? (
               <div className="col-span-full rounded-[2rem] border-2 border-dashed border-white/5 bg-slate-950/40 p-10 sm:p-16 text-center">
                 <div className="text-4xl sm:text-5xl mb-4 opacity-50">📡</div>
@@ -317,8 +329,8 @@ export default function StreamersClient() {
                 <p className="mt-2 text-xs sm:text-sm text-slate-400 max-w-xs mx-auto">No creators approved yet. Use the panel above to be the first.</p>
               </div>
             ) : (
-              groupedStreamers.map((s) => (
-                <div key={s.discordId} className="group relative">
+              groupedStreamers.map((s, streamerIndex) => (
+                <div key={s.discordId} className="rz-enter group relative" style={{ animationDelay: `${Math.min(streamerIndex, 8) * 70}ms` }}>
                   <div className="absolute -inset-0.5 bg-gradient-to-b from-white/10 to-transparent rounded-[1.5rem] sm:rounded-[2rem] opacity-0 group-hover:opacity-100 transition duration-500" />
                   <div className="relative h-full rz-surface rz-panel-border rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 flex flex-col">
                     <div className="flex items-center gap-4 mb-6">

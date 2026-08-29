@@ -40,6 +40,25 @@ export default function SupportClient() {
   );
   const [activeTicket, setActiveTicket] = useState<{id: string, channelId: string} | null>(null);
 
+  // Remember the player's in-game name across visits so they don't retype it every ticket
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("nhg_ingame_name");
+      if (saved) setInGameName(saved);
+    } catch {}
+  }, []);
+
+  const category: "general" | "brawl" | "pve" = isBrawlEvent ? "brawl" : isPveRelated ? "pve" : "general";
+  function setCategory(next: "general" | "brawl" | "pve") {
+    setIsBrawlEvent(next === "brawl");
+    setIsPveRelated(next === "pve");
+  }
+
+  function fillCommonIssue(issue: string) {
+    setSubject(issue);
+    document.getElementById("support-message")?.focus();
+  }
+
   // Fetch real Discord online status
   useEffect(() => {
     async function loadStaffStatus() {
@@ -107,8 +126,9 @@ export default function SupportClient() {
       return;
     }
 
+    try { window.localStorage.setItem("nhg_ingame_name", inGameName); } catch {}
+
     setSubject("");
-    setInGameName("");
     setMessage("");
     setStatus(data?.message || "Ticket submitted!");
     
@@ -129,7 +149,7 @@ export default function SupportClient() {
       </div>
 
       {/* Header */}
-      <div className="mb-6">
+      <div className="rz-enter mb-6">
         <div className="rz-chip mb-4">Help Center</div>
         <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
           Support
@@ -154,7 +174,7 @@ export default function SupportClient() {
       </div>
 
       {/* 🆕 Live Chat Announcement Banner */}
-      <div className="relative mb-8 overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/60 via-violet-950/40 to-cyan-950/60 p-5">
+      <div className="rz-enter rz-enter-1 relative mb-8 overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/60 via-violet-950/40 to-cyan-950/60 p-5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.12),transparent_70%)]" />
         <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-600 shadow-lg shadow-cyan-500/30">
@@ -186,7 +206,7 @@ export default function SupportClient() {
       {/* Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         {/* Left Column - Info Cards */}
-        <div className="space-y-4">
+        <div className="rz-enter rz-enter-2 space-y-4">
 
           {/* Live Chat Feature Card */}
           <div className="rz-surface rz-panel-border rounded-[1.5rem] p-5 border-cyan-500/20">
@@ -234,16 +254,24 @@ export default function SupportClient() {
               </div>
               <div className="text-sm font-semibold text-white">Common Issues</div>
             </div>
-            <ul className="space-y-2">
+            <p className="text-[10px] text-slate-500 -mt-1 mb-2">Tap one to fill in your subject instantly.</p>
+            <ul className="space-y-1.5">
               {[
                 "Package not delivered after purchase",
                 "Wrong UID linked to account",
                 "VIP role not assigned",
                 "Technical issues with the website",
               ].map((issue) => (
-                <li key={issue} className="flex items-start gap-2 text-xs text-slate-400">
-                  <span className="mt-1 h-1 w-1 rounded-full bg-slate-500 shrink-0" />
-                  {issue}
+                <li key={issue}>
+                  <button
+                    type="button"
+                    onClick={() => fillCommonIssue(issue)}
+                    className="group flex w-full items-start gap-2 rounded-xl px-2 py-1.5 text-left text-xs text-slate-400 transition hover:bg-amber-400/8 hover:text-amber-100"
+                  >
+                    <span className="mt-1 h-1 w-1 rounded-full bg-slate-500 shrink-0 group-hover:bg-amber-400" />
+                    {issue}
+                    <span className="ml-auto shrink-0 text-amber-300 opacity-0 transition group-hover:opacity-100">Use →</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -254,7 +282,7 @@ export default function SupportClient() {
         </div>
 
         {/* Right Column - Ticket Form */}
-        <div className="rz-surface rz-panel-border rounded-[2rem] p-6 sm:p-8">
+        <div className="rz-surface rz-panel-border rz-enter rz-enter-3 rounded-[2rem] p-6 sm:p-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#22d3ee,#a855f7)]">
               <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -320,6 +348,7 @@ export default function SupportClient() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">Message</label>
               <textarea
+                id="support-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Describe your issue in detail. Include your in-game UID, Discord username, and any relevant order information."
@@ -331,63 +360,27 @@ export default function SupportClient() {
               <div className="text-[10px] text-slate-600 text-right">{message.length}/2000</div>
             </div>
 
-            {/* Brawl Mode Toggle */}
-            <div 
-              onClick={() => {
-                setIsBrawlEvent(!isBrawlEvent);
-                if (!isBrawlEvent) setIsPveRelated(false);
-              }}
-              className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                isBrawlEvent 
-                  ? "border-orange-500/40 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.1)]" 
-                  : "border-white/10 bg-slate-950/50 hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-                  isBrawlEvent ? "bg-orange-500 text-black" : "bg-white/5 text-slate-400"
-                }`}>
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">Brawl Mode Related?</div>
-                  <div className="text-[11px] text-slate-500">Toggle this if your ticket is about the Once Human Brawl</div>
-                </div>
-              </div>
-              <div className={`relative h-6 w-11 rounded-full transition-colors ${isBrawlEvent ? "bg-orange-500" : "bg-slate-800"}`}>
-                <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isBrawlEvent ? "translate-x-5" : "translate-x-0"}`} />
-              </div>
-            </div>
-
-            {/* PvE Server Related Toggle */}
-            <div 
-              onClick={() => {
-                setIsPveRelated(!isPveRelated);
-                if (!isPveRelated) setIsBrawlEvent(false);
-              }}
-              className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                isPveRelated 
-                  ? "border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
-                  : "border-white/10 bg-slate-950/50 hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-                  isPveRelated ? "bg-emerald-500 text-black" : "bg-white/5 text-slate-400"
-                }`}>
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">PvE Server Related?</div>
-                  <div className="text-[11px] text-slate-500">Toggle this if your ticket is about the Once Human PvE Server</div>
-                </div>
-              </div>
-              <div className={`relative h-6 w-11 rounded-full transition-colors ${isPveRelated ? "bg-emerald-500" : "bg-slate-800"}`}>
-                <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isPveRelated ? "translate-x-5" : "translate-x-0"}`} />
+            {/* Ticket Category — single clear choice instead of two separate toggles */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">What is this about?</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "general" as const, label: "General", icon: "🎫", active: "border-cyan-500/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.1)]" },
+                  { id: "brawl" as const, label: "Brawl Mode", icon: "⚡", active: "border-orange-500/40 bg-orange-500/10 text-orange-100 shadow-[0_0_20px_rgba(249,115,22,0.1)]" },
+                  { id: "pve" as const, label: "PvE Server", icon: "🛡️", active: "border-emerald-500/40 bg-emerald-500/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.1)]" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setCategory(opt.id)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all ${
+                      category === opt.id ? opt.active : "border-white/10 bg-slate-950/50 text-slate-400 hover:border-white/20"
+                    }`}
+                  >
+                    <span className="text-lg">{opt.icon}</span>
+                    <span className="text-xs font-semibold">{opt.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

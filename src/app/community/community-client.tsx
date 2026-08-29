@@ -380,7 +380,7 @@ export default function CommunityClient() {
         <div className="mt-4 sm:mt-5 grid gap-4 sm:gap-5 lg:grid-cols-[220px_1fr_220px] items-start">
 
           {/* ── Left: Text Channels ── */}
-          <div className="space-y-4 order-2 lg:order-1">
+          <div className="rz-enter space-y-4 order-2 lg:order-1">
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 flex items-center gap-2">
                 <span className="text-[#5865F2]">#</span> Text Channels
@@ -406,7 +406,7 @@ export default function CommunityClient() {
           </div>
 
           {/* ── Center: Voice Channels (live) + Discord Messages + Activity Feed ── */}
-          <div className="space-y-4 sm:space-y-5 order-1 lg:order-2">
+          <div className="rz-enter rz-enter-1 space-y-4 sm:space-y-5 order-1 lg:order-2">
 
             {/* Voice Channels */}
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
@@ -421,7 +421,9 @@ export default function CommunityClient() {
               </div>
 
               {!widget && !widgetError && (
-                <div className="text-xs text-slate-500 animate-pulse">Loading voice channels...</div>
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => <div key={i} className="rz-skeleton h-14 rounded-2xl" />)}
+                </div>
               )}
 
               {widgetError && (
@@ -539,7 +541,17 @@ export default function CommunityClient() {
               {/* Message list - fixed height prevents layout shifts */}
               <div className="overflow-y-auto max-h-[420px] min-h-[120px] space-y-2 pr-1">
                 {msgLoading && messages.length === 0 && (
-                  <div className="text-xs text-slate-500 animate-pulse py-4 text-center">Loading messages...</div>
+                  <div className="space-y-2.5 py-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-start gap-2.5 px-2 py-1.5">
+                        <div className="rz-skeleton h-8 w-8 shrink-0 rounded-full" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="rz-skeleton h-3 w-24 rounded-full" />
+                          <div className="rz-skeleton h-3 w-3/4 rounded-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
                 {!msgLoading && noBotYet && (
                   <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-5 text-center">
@@ -581,14 +593,24 @@ export default function CommunityClient() {
           </div>
 
           {/* ── Right: Online members ── */}
-          <div className="space-y-4 order-3 lg:order-3">
+          <div className="rz-enter rz-enter-2 space-y-4 order-3 lg:order-3">
             <div className="rz-surface rz-panel-border rounded-[2rem] p-4 sm:p-5">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-3 sm:mb-4">
                 Members Online — <span className="text-emerald-400">{presenceCount}</span>
               </div>
 
               {!widget && !widgetError && (
-                <div className="text-xs text-slate-500 animate-pulse">Loading...</div>
+                <div className="space-y-2 mb-4">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <div className="rz-skeleton h-8 w-8 rounded-full" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="rz-skeleton h-3 w-20 rounded-full" />
+                        <div className="rz-skeleton h-2.5 w-12 rounded-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
 
               {onlineNotInVoice.length > 0 && (

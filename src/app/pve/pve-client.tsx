@@ -210,7 +210,7 @@ export function PveClient({
 
       <section className="relative mx-auto w-full max-w-5xl px-4 pt-16">
         {/* Banner header */}
-        <div className="text-center max-w-3xl mx-auto mb-10">
+        <div className="rz-enter text-center max-w-3xl mx-auto mb-10">
           <div className="rz-chip border-emerald-500/30 bg-emerald-500/10 text-emerald-300 before:bg-emerald-400">PvE Operations Portal</div>
           <h1 className="mt-6 font-[family:var(--font-brand-display)] text-4xl font-black uppercase tracking-[0.06em] text-white sm:text-5xl">
             Once Human <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">PvE Realm</span>
@@ -294,8 +294,8 @@ export function PveClient({
                 { title: "EXP Rate", value: "2x Boost", desc: "Enjoy a speedier level progression to dive straight into endgame dungeons.", emoji: "⚡" },
                 { title: "Gathering Yield", value: "2x Yield", desc: "Spend less time grinding resources. Stone, wood, and iron gathering speeds are doubled.", emoji: "🪵" },
                 { title: "World Difficulty", value: "Hard Mode", desc: "Dungeons, bosses, and Prime Wars feature increased difficulty for maximum cooperative challenge.", emoji: "💀" }
-              ].map((spec) => (
-                <div key={spec.title} className="rounded-2xl border border-white/5 bg-slate-900/40 p-6 text-left hover:border-emerald-500/20 transition duration-300 relative overflow-hidden group">
+              ].map((spec, specIndex) => (
+                <div key={spec.title} className="rz-enter rounded-2xl border border-white/5 bg-slate-900/40 p-6 text-left hover:border-emerald-500/20 transition duration-300 relative overflow-hidden group" style={{ animationDelay: `${specIndex * 80}ms` }}>
                   <div className="absolute top-0 right-0 w-24 h-24 opacity-10 bg-emerald-500 rounded-full blur-2xl group-hover:opacity-20 transition" />
                   <span className="text-3xl">{spec.emoji}</span>
                   <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mt-4">{spec.title}</h3>
@@ -448,7 +448,17 @@ export function PveClient({
                   <h3 className="text-xs font-black uppercase tracking-[0.25em] text-slate-500 mb-4">PvE Rewards Inventory</h3>
                   
                   {loadingInventory ? (
-                    <div className="text-xs text-emerald-400 animate-pulse py-6 text-center font-mono">LOADING PVE STAGE INVENTORY...</div>
+                    <div className="grid gap-3">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                          <div className="space-y-2">
+                            <div className="rz-skeleton h-3 w-40 rounded-full" />
+                            <div className="rz-skeleton h-2.5 w-56 rounded-full" />
+                          </div>
+                          <div className="rz-skeleton h-5 w-16 rounded-full shrink-0" />
+                        </div>
+                      ))}
+                    </div>
                   ) : pveInventory.length > 0 ? (
                     <div className="grid gap-3">
                       {pveInventory.map((item: any, i: number) => (

@@ -20,6 +20,16 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           <header className={`sticky top-0 z-40 border-b bg-background/80 backdrop-blur-2xl transition-colors ${
             isPve ? "border-emerald-500/20" : "border-line"
           }`}>
+            <div
+              className="h-[2px] w-full"
+              style={{
+                background: isPve
+                  ? "linear-gradient(90deg, #10b981, #06b6d4, #10b981)"
+                  : "linear-gradient(90deg, #f97316, #84cc16, #fbbf24, #06b6d4, #f97316)",
+                backgroundSize: "300% 100%",
+                animation: "borderRotate 8s linear infinite",
+              }}
+            />
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
               <Link href="/" className="flex items-center gap-3">
                 <div className={`relative h-10 w-10 overflow-hidden rounded-2xl border transition-all ${

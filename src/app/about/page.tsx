@@ -53,7 +53,7 @@ export default function AboutPage() {
       <div className="pointer-events-none absolute right-1/4 bottom-8 h-72 w-72 rounded-full bg-lime-500/8 blur-3xl rz-pulse" />
 
       <section className="relative mx-auto w-full max-w-6xl px-4 py-12 space-y-8">
-        <div className="rz-surface rz-panel-border rounded-3xl overflow-hidden">
+        <div className="rz-surface rz-panel-border rz-enter rounded-3xl overflow-hidden">
           <div className="relative h-48 sm:h-64 w-full bg-gradient-to-br from-orange-950/80 via-stone-900 to-black">
             <img
               src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2139460/header.jpg"
@@ -73,7 +73,7 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <div>
+        <div className="rz-enter rz-enter-2">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 mb-4">📸 The Community - Real Moments</div>
           <div className="rz-surface rz-panel-border rounded-2xl overflow-hidden group mb-4">
             <div className="relative h-56 sm:h-72 bg-stone-900">
@@ -108,7 +108,7 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rz-enter rz-enter-3 grid gap-4 lg:grid-cols-2">
           <div className="rz-surface rz-panel-border rounded-2xl p-6">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-orange-400 mb-4">⚡ What We Provide</div>
             <ul className="space-y-3">

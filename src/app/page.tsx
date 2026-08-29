@@ -12,11 +12,15 @@ const translations = {
     description: "Survive together. Build together. NewHopeGGN is a Once Human community server — buy wipe packs, open support tickets, and connect with your squad through Discord.",
     storeBtn: "🛒 Wipe Store",
     staffBtn: "Play Lottery",
+    platformBadge: "🎮 New Platform",
+    platformTitle: "Consoles Have Landed",
+    platformCopy: "Once Human is now live on PlayStation & Xbox. Join PC and Mobile survivors already building, raiding, and surviving together.",
+    platformCta: "Join the Community",
     highlights: [
-      { title: "Once Human Server", copy: "A dedicated Once Human community — wipes, events, and base-building with real players." },
-      { title: "Arena Events", copy: "PvP tournaments with auto-matchmaking. Form teams, get assigned voice channels, and fight! Discord DMs notify you when it's your turn." },
-      { title: "Fast Support", copy: "Open a ticket and staff respond directly through Discord. No waiting around." },
-      { title: "Wipe Packs & VIP", copy: "Buy packs each wipe to get resources and VIP perks tied to the current season." },
+      { icon: "🌍", title: "Once Human Server", copy: "A dedicated Once Human community — wipes, events, and base-building with real players." },
+      { icon: "⚔️", title: "Arena Events", copy: "PvP tournaments with auto-matchmaking. Form teams, get assigned voice channels, and fight! Discord DMs notify you when it's your turn." },
+      { icon: "🎫", title: "Fast Support", copy: "Open a ticket and staff respond directly through Discord. No waiting around." },
+      { icon: "📦", title: "Wipe Packs & VIP", copy: "Buy packs each wipe to get resources and VIP perks tied to the current season." },
     ],
     operationsTitle: "What You Can Do",
     operations: ["Discord sign-in", "Support tickets", "Wipe pack checkout", "VIP role perks"],
@@ -42,10 +46,15 @@ const translations = {
     description: "Sobrevive juntos. Construye juntos. NewHopeGGN es un servidor comunitario de Once Human — compra packs de wipe, abre tickets de soporte y conecta con tu equipo por Discord.",
     storeBtn: "🛒 Tienda Wipe",
     staffBtn: "Jugar Lotería",
+    platformBadge: "🎮 Nueva Plataforma",
+    platformTitle: "Las Consolas Han Llegado",
+    platformCopy: "Once Human ya está disponible en PlayStation y Xbox. Únete a los sobrevivientes de PC y Móvil que ya están construyendo, invadiendo y sobreviviendo juntos.",
+    platformCta: "Únete a la Comunidad",
     highlights: [
-      { title: "Servidor Once Human", copy: "Una comunidad dedicada a Once Human — wipes, eventos y construcción de bases con jugadores reales." },
-      { title: "Soporte Rápido", copy: "Abre un ticket y el staff responde directamente por Discord. Sin esperas." },
-      { title: "Packs Wipe & VIP", copy: "Compra packs cada wipe para obtener recursos y beneficios VIP vinculados a la temporada actual." },
+      { icon: "🌍", title: "Servidor Once Human", copy: "Una comunidad dedicada a Once Human — wipes, eventos y construcción de bases con jugadores reales." },
+      { icon: "⚔️", title: "Eventos de Arena", copy: "Torneos PvP con emparejamiento automático. Forma equipos, recibe canales de voz asignados, ¡y pelea! Discord te avisa por DM cuando sea tu turno." },
+      { icon: "🎫", title: "Soporte Rápido", copy: "Abre un ticket y el staff responde directamente por Discord. Sin esperas." },
+      { icon: "📦", title: "Packs Wipe & VIP", copy: "Compra packs cada wipe para obtener recursos y beneficios VIP vinculados a la temporada actual." },
     ],
     operationsTitle: "Qué Puedes Hacer",
     operations: ["Inicio con Discord", "Tickets de soporte", "Checkout de packs", "Beneficios VIP"],
@@ -679,6 +688,7 @@ export default function Home() {
   const [eggClicks, setEggClicks] = useState(0);
   const [eggActive, setEggActive] = useState(false);
   const eggTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showAmbientVideo, setShowAmbientVideo] = useState(false);
 
   const handleChipClick = useCallback(() => {
     setEggClicks(prev => {
@@ -694,6 +704,18 @@ export default function Home() {
   }, []);
 
   const t = translations[lang];
+
+  // Defer the ambient background video so it doesn't compete for bandwidth
+  // with the featured Wipe card video (same clip) during initial page load.
+  useEffect(() => {
+    const win = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    if (win.requestIdleCallback) {
+      const id = win.requestIdleCallback(() => setShowAmbientVideo(true));
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const timer = setTimeout(() => setShowAmbientVideo(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const loadStaff = () => {
@@ -742,15 +764,18 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Background video */}
-      <video
-        src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
-        autoPlay loop muted playsInline
-        preload="metadata"
-        poster="/raidzone-bg.png"
-        className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-15 md:block"
-        onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
-      />
+      {/* Background video — mounted after idle so it doesn't compete with the
+          featured Wipe card video (same clip) for bandwidth on first load */}
+      {showAmbientVideo && (
+        <video
+          src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
+          autoPlay loop muted playsInline
+          preload="metadata"
+          poster="/raidzone-bg.png"
+          className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-15 transition-opacity duration-1000 md:block"
+          onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+        />
+      )}
       <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
       <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "var(--home-overlay)" }} />
@@ -775,8 +800,34 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Cross-Platform Launch Banner */}
+        <div className="rz-enter relative mb-8 overflow-hidden rounded-[1.75rem] border border-cyan-400/25 bg-gradient-to-r from-cyan-500/10 via-slate-950/70 to-orange-500/10 px-6 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.35)] sm:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_30%,rgba(34,211,238,0.15),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(249,115,22,0.12),transparent_45%)]" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
+                {t.platformBadge}
+              </div>
+              <h2 className="mt-3 text-xl font-bold text-white sm:text-2xl">{t.platformTitle}</h2>
+              <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-300">{t.platformCopy}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">🖥️ PC</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">📱 Mobile</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-cyan-200">🎮 Console — New!</span>
+              </div>
+            </div>
+            <a
+              href="/community"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#22d3ee,#0ea5e9)] px-6 text-sm font-bold text-slate-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_24px_rgba(34,211,238,0.35)]"
+            >
+              {t.platformCta} →
+            </a>
+          </div>
+        </div>
+
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rz-surface rz-neon-border rounded-[2rem] p-7 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="rz-surface rz-neon-border rz-enter rz-enter-1 rounded-[2rem] p-7 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <div
               className="rz-chip rz-float cursor-pointer select-none"
               onClick={handleChipClick}
@@ -786,7 +837,7 @@ export default function Home() {
             )}</div>
             {eggActive && <EasterEggOverlay onClose={() => setEggActive(false)} />}
 
-            <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-4xl font-semibold uppercase tracking-[0.06em] text-white sm:text-5xl xl:text-6xl">
+            <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-5xl font-semibold uppercase tracking-[0.02em] text-white sm:text-6xl xl:text-7xl">
               NewHope<span className="text-lime-400 drop-shadow-[0_0_12px_rgba(163,230,53,0.3)]">GGN</span>
               <span className="mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(249,115,22,0.15)]">
                 {t.subtitle}
@@ -812,6 +863,14 @@ export default function Home() {
               </a>
             </div>
 
+            {/* Trust strip — quick-scan reasons to trust the store */}
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-stone-400">
+              <span className="inline-flex items-center gap-1.5"><span className="text-emerald-400">⚡</span> Instant delivery</span>
+              <span className="inline-flex items-center gap-1.5"><span className="text-cyan-400">🔒</span> Secure PayPal checkout</span>
+              <span className="inline-flex items-center gap-1.5"><span className="text-amber-400">🛡️</span> Staff-verified fulfillment</span>
+              <span className="inline-flex items-center gap-1.5"><span className="text-lime-400">🎮</span> PC · Mobile · Console</span>
+            </div>
+
             <div className="mt-4 max-w-2xl rounded-2xl border border-lime-400/20 bg-lime-400/[0.07] px-4 py-3 text-sm leading-6 text-lime-100/80 shadow-[0_0_28px_rgba(132,204,22,0.10)]">
               Play the lottery for a chance to win wipe packs, rare rewards, and staff-verified prize claims.
             </div>
@@ -822,10 +881,10 @@ export default function Home() {
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {t.highlights.map((item) => (
                 <div key={item.title} className="rz-pop-card rounded-[1.5rem] border border-white/8 bg-slate-950/55 p-5 backdrop-blur-md">
-                  <div className="text-base font-semibold text-white flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-lime-400 animate-pulse" />
-                    {item.title}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-400/20 to-cyan-400/10 text-lg ring-1 ring-lime-400/25">
+                    {item.icon}
                   </div>
+                  <div className="mt-3 text-base font-semibold text-white">{item.title}</div>
                   <div className="mt-2 text-sm leading-6 text-slate-400">{item.copy}</div>
                 </div>
               ))}
@@ -834,7 +893,7 @@ export default function Home() {
 
           <div className="grid gap-6">
             {/* 😺𝑾𝒊𝒑𝒆 Video */}
-            <div className="rz-surface rz-panel-border rounded-[2rem] overflow-hidden">
+            <div className="rz-surface rz-panel-border rz-enter rz-enter-2 rounded-[2rem] overflow-hidden">
               <div className="relative w-full aspect-video bg-slate-950">
                 <video
                   src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
@@ -882,7 +941,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-6">
+            <div className="rz-surface rz-panel-border rz-enter rz-enter-3 rounded-[2rem] p-6">
               <div className="rz-chip">{t.operationsTitle}</div>
               <div className="mt-5 grid gap-4">
                 {t.operations.map((item, index) => (
@@ -899,7 +958,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rz-surface rz-panel-border rounded-[2rem] p-6">
+            <div className="rz-surface rz-panel-border rz-enter rz-enter-4 rounded-[2rem] p-6">
               <div className="rz-chip">{t.quickStartTitle}</div>
               <ol className="mt-5 space-y-3 text-sm">
                 {t.steps.map((step, idx) => (
@@ -1116,9 +1175,16 @@ export default function Home() {
           </div>
 
           {staffLoading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400 mr-3" />
-              {t.loadingStaff}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 rounded-[1.25rem] border border-slate-800/60 bg-slate-950/60 p-4">
+                  <div className="rz-skeleton h-12 w-12 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="rz-skeleton h-3.5 w-3/4 rounded-full" />
+                    <div className="rz-skeleton h-2.5 w-1/2 rounded-full" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : staff.length === 0 ? (
             <div className="text-center py-8 text-slate-500">Staff team loading...</div>

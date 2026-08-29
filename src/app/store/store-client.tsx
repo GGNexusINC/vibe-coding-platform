@@ -302,7 +302,7 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
       })()}
 
       <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl group">
+        <div className="rz-enter rz-enter-1 relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl group">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-cyan-500/5" />
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
@@ -337,7 +337,7 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rz-enter rz-enter-2 rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">
             System Requirements
           </div>
@@ -421,7 +421,7 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
       )}
 
       {/* PvP / PvE Store Toggle */}
-      <div className="mt-12 flex justify-center">
+      <div className="rz-enter rz-enter-3 mt-12 flex justify-center">
         <div className="inline-flex rounded-full border border-white/10 bg-slate-900/60 p-1.5 backdrop-blur-xl">
           <button
             onClick={() => setStoreType("pvp")}
@@ -454,7 +454,7 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
         </div>
       ) : (
         <section className="mt-12 grid gap-8 md:grid-cols-2">
-          {activeProducts.map((product) => {
+          {activeProducts.map((product, productIndex) => {
             const isInsurance = product.slug === "insurance";
             const isDisabled = isInsurance && !insuranceStatus.available;
 
@@ -506,11 +506,12 @@ export function StoreClient({ user, initialPackages }: { user: User | null, init
           return (
             <article
               key={product.slug}
-              className={`group relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${borderClasses} ${
+              className={`rz-enter group relative overflow-hidden rounded-[2.5rem] border bg-slate-900/40 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${borderClasses} ${
                 isDisabled ? "opacity-50 pointer-events-none" : ""
               }`}
               style={{
                 ...borderStyles,
+                animationDelay: `${Math.min(productIndex, 6) * 90}ms`,
               }}
             >
               {product.customBgUrl && (

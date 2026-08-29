@@ -105,7 +105,7 @@ export default function DashboardClient({
     <div className="min-h-screen pb-20 pt-24 sm:pt-32">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         {/* Header */}
-        <div className="mb-10">
+        <div className="rz-enter mb-10">
           <div className="rz-chip mb-4 border-indigo-400/30 text-indigo-300 inline-block px-3 py-1 rounded-full border bg-indigo-400/5 text-xs font-black uppercase tracking-wider">
             ⚡ {activeTab === 'bot' ? "Bot Management" : "Player Dashboard"}
           </div>
@@ -204,7 +204,7 @@ export default function DashboardClient({
               {/* Account + UID section */}
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Account card */}
-                <div className="relative rounded-[2rem] p-8 border border-indigo-500/15 bg-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
+                <div className="rz-enter relative rounded-[2rem] p-8 border border-indigo-500/15 bg-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
                   <div className="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
                   
                   <div className="flex items-center gap-5 mb-8">
@@ -252,7 +252,7 @@ export default function DashboardClient({
                 </div>
 
                 {/* UID Card */}
-                <div className="relative rounded-[2rem] p-8 border border-cyan-500/15 bg-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
+                <div className="rz-enter rz-enter-1 relative rounded-[2rem] p-8 border border-cyan-500/15 bg-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
                   <div className="absolute -right-8 -top-8 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-700" />
                   
                   <div className="flex items-center gap-5 mb-8">
@@ -302,11 +302,12 @@ export default function DashboardClient({
                   <span className="w-8 h-px bg-stone-800" /> System Portals
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {primaryQuickLinks.map((item) => (
+                  {primaryQuickLinks.map((item, quickLinkIndex) => (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group relative rounded-3xl border p-6 transition-all duration-300 hover:-translate-y-1 ${item.color}`}
+                      className={`rz-enter group relative rounded-3xl border p-6 transition-all duration-300 hover:-translate-y-1 ${item.color}`}
+                      style={{ animationDelay: `${quickLinkIndex * 60}ms` }}
                     >
                       <div className="text-3xl mb-4 group-hover:scale-110 transition-transform">{item.emoji}</div>
                       <div className="text-base font-black text-white group-hover:text-orange-100">{item.label}</div>

@@ -96,7 +96,7 @@ export default async function RulesPage() {
 
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-      <section className="rz-surface rz-panel-border rounded-[2rem] p-7 sm:p-9">
+      <section className="rz-surface rz-panel-border rz-enter rounded-[2rem] p-7 sm:p-9">
         <div className="rz-chip">⚠️ Server Rules</div>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
           NewHopeGGN <span className="text-orange-400">Once Human</span> Server Rules
@@ -107,14 +107,15 @@ export default async function RulesPage() {
         </p>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          {activeRules.map((rule: any) => (
+          {activeRules.map((rule: any, ruleIndex: number) => (
             <div
               key={rule.id}
-              className={`rounded-[1.5rem] border p-5 transition-all ${
+              className={`rz-enter rounded-[1.5rem] border p-5 transition-all ${
                 rule.highlight
                   ? "border-red-500/40 bg-red-500/10 shadow-[0_0_24px_rgba(239,68,68,0.08)]"
                   : "border-white/8 bg-slate-950/55 hover:border-orange-400/20 hover:bg-orange-400/5"
               }`}
+              style={{ animationDelay: `${Math.min(ruleIndex, 8) * 60}ms` }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{rule.emoji}</span>
