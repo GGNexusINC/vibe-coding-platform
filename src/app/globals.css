@@ -562,6 +562,18 @@ body {
   }
 }
 
+/* Mobile Thermal & Performance Optimization: disable heavy GPU keyframe loops on phones */
+@media (max-width: 768px) {
+  .rz-starfield,
+  .rz-star,
+  .rz-shooting-star,
+  .rz-parallax-galaxy,
+  .rz-drift {
+    display: none !important;
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

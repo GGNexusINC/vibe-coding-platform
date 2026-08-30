@@ -84,9 +84,9 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         {/* Dark Background Base - hidden on home to show home video */}
         <div className={`pointer-events-none absolute inset-0 bg-background ${pathname === "/" ? "opacity-0" : "opacity-100"}`} />
 
-        {/* Global Background Video for all pages EXCEPT Home */}
+        {/* Global Background Video for all pages EXCEPT Home — Desktop only for performance */}
         {pathname !== "/" && (
-          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden h-screen w-screen">
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden h-screen w-screen hidden md:block">
             <video
               src="/AZ2Xd1Tx6lhyVmCtVBpXGQ-AZ2Xd1TxHNndMCl7LDOOBg.mp4"
               autoPlay

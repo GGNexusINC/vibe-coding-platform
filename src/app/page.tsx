@@ -779,9 +779,9 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 rz-bg opacity-30 rz-drift" />
       <div className="pointer-events-none absolute inset-0 rz-grid opacity-20" />
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "var(--home-overlay)" }} />
-      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-1)" }} />
-      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-2)" }} />
-      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full blur-3xl" style={{ backgroundColor: "var(--glow-3)" }} />
+      <div className="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full blur-xl sm:blur-3xl hidden md:block" style={{ backgroundColor: "var(--glow-1)" }} />
+      <div className="pointer-events-none absolute right-[-6rem] top-36 h-96 w-96 rounded-full blur-xl sm:blur-3xl hidden md:block" style={{ backgroundColor: "var(--glow-2)" }} />
+      <div className="pointer-events-none absolute bottom-8 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full blur-xl sm:blur-3xl hidden md:block" style={{ backgroundColor: "var(--glow-3)" }} />
 
       <section className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:py-24">
         {/* Language Toggle */}
@@ -801,7 +801,7 @@ export default function Home() {
         </div>
 
         {/* Cross-Platform Launch Banner */}
-        <div className="rz-enter relative mb-8 overflow-hidden rounded-[1.75rem] border border-cyan-400/25 bg-gradient-to-r from-cyan-500/10 via-slate-950/70 to-orange-500/10 px-6 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.35)] sm:px-8">
+        <div className="rz-enter relative mb-8 overflow-hidden rounded-[1.5rem] sm:rounded-[1.75rem] border border-cyan-400/25 bg-gradient-to-r from-cyan-500/10 via-slate-950/70 to-orange-500/10 p-4 sm:p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_30%,rgba(34,211,238,0.15),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(249,115,22,0.12),transparent_45%)]" />
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -809,25 +809,25 @@ export default function Home() {
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
                 {t.platformBadge}
               </div>
-              <h2 className="mt-3 text-xl font-bold text-white sm:text-2xl">{t.platformTitle}</h2>
-              <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-300">{t.platformCopy}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">🖥️ PC</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">📱 Mobile</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-cyan-200">🎮 Console — New!</span>
+              <h2 className="mt-3 text-lg sm:text-2xl font-bold text-white">{t.platformTitle}</h2>
+              <p className="mt-1.5 max-w-xl text-xs sm:text-sm leading-5 sm:leading-6 text-slate-300">{t.platformCopy}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold text-slate-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 sm:px-3 py-1">🖥️ PC</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 sm:px-3 py-1">📱 Mobile</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 sm:px-3 py-1 text-cyan-200">🎮 Console — New!</span>
               </div>
             </div>
             <a
               href="/community"
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#22d3ee,#0ea5e9)] px-6 text-sm font-bold text-slate-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_24px_rgba(34,211,238,0.35)]"
+              className="inline-flex h-11 w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#22d3ee,#0ea5e9)] px-6 text-sm font-bold text-slate-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_24px_rgba(34,211,238,0.35)]"
             >
               {t.platformCta} →
             </a>
           </div>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rz-surface rz-neon-border rz-enter rz-enter-1 rounded-[2rem] p-7 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="grid gap-6 sm:gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rz-surface rz-neon-border rz-enter rz-enter-1 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <div
               className="rz-chip rz-float cursor-pointer select-none"
               onClick={handleChipClick}
@@ -837,27 +837,27 @@ export default function Home() {
             )}</div>
             {eggActive && <EasterEggOverlay onClose={() => setEggActive(false)} />}
 
-            <h1 className="mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-5xl font-semibold uppercase tracking-[0.02em] text-white sm:text-6xl xl:text-7xl">
+            <h1 className="mt-4 sm:mt-6 max-w-4xl font-[family:var(--font-brand-display)] text-3xl xs:text-4xl sm:text-6xl xl:text-7xl font-semibold uppercase tracking-[0.02em] text-white break-words">
               NewHope<span className="text-lime-400 drop-shadow-[0_0_12px_rgba(163,230,53,0.3)]">GGN</span>
-              <span className="mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(249,115,22,0.15)]">
+              <span className="mt-2 sm:mt-3 block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(249,115,22,0.15)] text-xl xs:text-2xl sm:text-4xl">
                 {t.subtitle}
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+            <p className="mt-4 sm:mt-5 max-w-2xl text-sm sm:text-lg leading-6 sm:leading-8 text-stone-300">
               {t.description}
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/store"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-6 text-sm font-bold text-stone-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_28px_rgba(249,115,22,0.4)]"
+                className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-6 text-sm font-bold text-stone-950 transition hover:scale-[1.02] hover:-translate-y-0.5 shadow-[0_0_28px_rgba(249,115,22,0.4)] text-center"
               >
                 {t.storeBtn}
               </a>
               <a
                 href="/lottery"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-lime-400/30 bg-lime-400/10 px-6 text-sm font-bold text-lime-100 transition hover:scale-[1.02] hover:-translate-y-0.5 hover:bg-lime-400/15 shadow-[0_0_22px_rgba(132,204,22,0.16)]"
+                className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-full border border-lime-400/30 bg-lime-400/10 px-6 text-sm font-bold text-lime-100 transition hover:scale-[1.02] hover:-translate-y-0.5 hover:bg-lime-400/15 shadow-[0_0_22px_rgba(132,204,22,0.16)] text-center"
               >
                 {t.staffBtn}
               </a>
