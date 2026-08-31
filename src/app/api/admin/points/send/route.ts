@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { getAdminSession, isAdminDiscordId } from "@/lib/admin-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { requireEnv } from "@/lib/env";
 
 export async function POST(req: Request) {
-  const user = await getSession();
-  const adminIds = requireEnv("ADMIN_DISCORD_IDS").split(",");
-  if (!user || !adminIds.includes(user.discord_id)) {
+  const adminSession = await getAdminSession();
+  const userSession = await getSession();
+
+  const adminDiscordIds = (process.env.ADMIN_DISCORD_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const actorId = adminSession?.discord_id || userSession?.discord_id || "admin";
+
+  const isAuthorized = Boolean(
+    adminSession ||
+    (userSession?.discord_id && (isAdminDiscordId(userSession.discord_id) || adminDiscordIds.includes(userSession.discord_id)))
+  );
+
+  if (!isAuthorized) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
@@ -51,7 +60,7 @@ export async function POST(req: Request) {
         discord_id: discordId,
         amount: amount,
         reason: `[Admin Adjusted] ${reason}`,
-        metadata: { admin_id: user.discord_id, action: "admin_send_points" }
+        metadata: { admin_id: actorId, action: "admin_send_points" }
       });
 
     if (ledgerErr) {

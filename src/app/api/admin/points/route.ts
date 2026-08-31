@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { getAdminSession, isAdminDiscordId } from "@/lib/admin-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-const ADMIN_IDS = (process.env.ADMIN_DISCORD_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
-
 export async function GET(req: Request) {
-  const user = await getSession();
-  if (!user || !ADMIN_IDS.includes(user.discord_id)) {
+  const adminSession = await getAdminSession();
+  const userSession = await getSession();
+
+  const adminDiscordIds = (process.env.ADMIN_DISCORD_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  const isAuthorized = Boolean(
+    adminSession ||
+    (userSession?.discord_id && (isAdminDiscordId(userSession.discord_id) || adminDiscordIds.includes(userSession.discord_id)))
+  );
+
+  if (!isAuthorized) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
