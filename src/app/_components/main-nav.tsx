@@ -27,7 +27,7 @@ export function MainNav() {
     : navLinks;
 
   return (
-    <nav className={`hidden items-center gap-0.5 rounded-full border bg-black/40 px-1.5 py-1 md:flex max-w-full overflow-x-auto no-scrollbar backdrop-blur-md transition-all shrink ${
+    <nav className={`hidden items-center gap-0.5 rounded-full border bg-black/40 px-1.5 py-1 md:flex max-w-full overflow-x-auto scrollbar-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden backdrop-blur-md transition-all shrink ${
       isPve ? "border-emerald-900/40" : "border-orange-900/40"
     }`}>
       {activeLinks.map(({ href, label, icon }) => {
