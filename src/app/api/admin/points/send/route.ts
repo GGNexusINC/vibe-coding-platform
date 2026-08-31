@@ -22,54 +22,92 @@ export async function POST(req: Request) {
   try {
     const { discordId, amount, reason } = await req.json();
 
-    if (!discordId || typeof amount !== "number" || !reason) {
-      return NextResponse.json({ ok: false, error: "Invalid request payload" }, { status: 400 });
+    if (!discordId || typeof amount !== "number" || amount <= 0 || !reason) {
+      return NextResponse.json({ ok: false, error: "Invalid request payload. Must provide valid target user, amount > 0, and reason." }, { status: 400 });
     }
 
     const sb = createSupabaseAdminClient();
+    let targetDiscordId = String(discordId).trim();
+    let targetUsername: string | null = null;
 
-    // 1. Fetch current points
-    const { data: profile, error: profileErr } = await sb
+    // 1. Fetch current profile by exact discord_id
+    let { data: profile } = await sb
       .from("user_profiles")
-      .select("points")
-      .eq("discord_id", discordId)
-      .single();
+      .select("discord_id, points, username")
+      .eq("discord_id", targetDiscordId)
+      .maybeSingle();
 
-    if (profileErr && profileErr.code !== "PGRST116") {
-      console.error("[admin/points/send] Error fetching profile:", profileErr);
-      return NextResponse.json({ ok: false, error: "Failed to fetch profile" }, { status: 500 });
+    // If not found by exact discord_id, try case-insensitive match on username
+    if (!profile) {
+      const { data: profileByName } = await sb
+        .from("user_profiles")
+        .select("discord_id, points, username")
+        .ilike("username", targetDiscordId)
+        .maybeSingle();
+
+      if (profileByName?.discord_id) {
+        targetDiscordId = profileByName.discord_id;
+        targetUsername = profileByName.username;
+        profile = profileByName;
+      }
+    } else {
+      targetUsername = profile.username || null;
     }
 
     const currentPoints = profile?.points || 0;
     const newPoints = currentPoints + amount;
 
-    // 2. Update or insert profile
+    // 2. Upsert profile with new points balance
     const { error: upsertErr } = await sb
       .from("user_profiles")
-      .upsert({ discord_id: discordId, points: newPoints });
+      .upsert({ discord_id: targetDiscordId, points: newPoints }, { onConflict: "discord_id" });
 
     if (upsertErr) {
-      console.error("[admin/points/send] Error updating points:", upsertErr);
-      return NextResponse.json({ ok: false, error: "Failed to update points" }, { status: 500 });
+      console.error("[admin/points/send] Error updating points in user_profiles:", upsertErr);
+      return NextResponse.json({ ok: false, error: `Failed to update points: ${upsertErr.message}` }, { status: 500 });
     }
 
-    // 3. Record ledger entry
+    // 3. Record in points_ledger
     const { error: ledgerErr } = await sb
       .from("points_ledger")
       .insert({
-        discord_id: discordId,
+        discord_id: targetDiscordId,
         amount: amount,
-        reason: `[Admin Adjusted] ${reason}`,
+        reason: `[Admin Grant] ${reason}`,
         metadata: { admin_id: actorId, action: "admin_send_points" }
       });
 
     if (ledgerErr) {
-      console.error("[admin/points/send] Ledger error (points updated but ledger failed):", ledgerErr);
+      console.warn("[admin/points/send] Ledger entry warning:", ledgerErr);
     }
 
-    return NextResponse.json({ ok: true, newPoints });
+    // 4. Record in package_logs so it appears in Package Logs & Activity Logs
+    try {
+      await sb.from("package_logs").insert({
+        user_id: targetDiscordId,
+        action: "admin_given",
+        item_name: `${amount} Theuri Points`,
+        item_type: "points",
+        details: `Granted ${amount} Theuri Points by admin ${actorId}. Reason: ${reason}. New Balance: ${newPoints} Pts`,
+        action_by: actorId,
+        action_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn("[admin/points/send] Package logs error:", e);
+    }
+
+    console.log(`[admin/points/send] Granted ${amount} pts to ${targetDiscordId} (${targetUsername || "N/A"}). New balance: ${newPoints}`);
+
+    return NextResponse.json({
+      ok: true,
+      targetDiscordId,
+      targetUsername,
+      pointsAdded: amount,
+      previousPoints: currentPoints,
+      newPoints,
+    });
   } catch (err: any) {
     console.error("[admin/points/send] Server error:", err);
-    return NextResponse.json({ ok: false, error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err.message || "Internal server error" }, { status: 500 });
   }
 }

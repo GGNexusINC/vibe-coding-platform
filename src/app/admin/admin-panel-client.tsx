@@ -1177,6 +1177,8 @@ export function AdminPanelClient() {
   const [memberPoints, setMemberPoints] = useState<number | null>(null);
   const [showSendPointsModal, setShowSendPointsModal] = useState(false);
   const [sendPointsDiscordId, setSendPointsDiscordId] = useState("");
+  const [sendPointsUserSearch, setSendPointsUserSearch] = useState("");
+  const [showSendPointsDropdown, setShowSendPointsDropdown] = useState(false);
   const [sendPointsAmount, setSendPointsAmount] = useState<number | string>(500);
   const [sendPointsReason, setSendPointsReason] = useState("");
   const [sendPointsLoading, setSendPointsLoading] = useState(false);
@@ -1775,12 +1777,15 @@ export function AdminPanelClient() {
       if (data.ok) {
         setSendPointsStatus({
           ok: true,
-          msg: `Successfully sent ${amount} points! New balance: ${data.newPoints} Pts`,
+          msg: `Successfully sent ${amount} Theuri points! New balance: ${data.newPoints} Pts`,
         });
+        void loadInventory();
+        void loadPackageLogs();
         setTimeout(() => {
           setShowSendPointsModal(false);
           setSendPointsStatus(null);
           setSendPointsDiscordId("");
+          setSendPointsUserSearch("");
           setSendPointsAmount(500);
           setSendPointsReason("");
         }, 2200);
@@ -5164,16 +5169,69 @@ export function AdminPanelClient() {
 
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                          Target User Discord ID *
+                          Search or Select User *
                         </label>
                         <input
                           type="text"
                           required
-                          placeholder="e.g. 123456789012345678"
-                          value={sendPointsDiscordId}
-                          onChange={(e) => setSendPointsDiscordId(e.target.value)}
+                          placeholder="Type username or Discord ID..."
+                          value={sendPointsUserSearch || sendPointsDiscordId}
+                          onChange={(e) => {
+                            setSendPointsUserSearch(e.target.value);
+                            setSendPointsDiscordId(e.target.value);
+                            setShowSendPointsDropdown(true);
+                          }}
+                          onFocus={() => setShowSendPointsDropdown(true)}
                           className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-amber-400 outline-none font-mono"
                         />
+
+                        {showSendPointsDropdown && sendPointsUserSearch.length >= 1 && (
+                          <div className="relative">
+                            <div className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-slate-800 border border-white/10 shadow-2xl custom-scrollbar">
+                              {(stats?.summary.members || [])
+                                .filter((m: MemberSummary) => {
+                                  const q = sendPointsUserSearch.toLowerCase();
+                                  return (
+                                    m.discordId.includes(q) ||
+                                    m.username?.toLowerCase().includes(q) ||
+                                    m.globalName?.toLowerCase().includes(q)
+                                  );
+                                })
+                                .slice(0, 10)
+                                .map((m: MemberSummary) => {
+                                  const name = m.globalName || m.username;
+                                  return (
+                                    <button
+                                      key={m.discordId}
+                                      type="button"
+                                      onClick={() => {
+                                        setSendPointsDiscordId(m.discordId);
+                                        setSendPointsUserSearch(`${name} (${m.discordId})`);
+                                        setShowSendPointsDropdown(false);
+                                      }}
+                                      className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-slate-700/60 transition border-b border-white/5 last:border-0"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {m.avatarUrl && <img src={m.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />}
+                                        <div>
+                                          <div className="text-xs font-bold text-white">{name}</div>
+                                          <div className="text-[10px] font-mono text-slate-400">{m.discordId}</div>
+                                        </div>
+                                      </div>
+                                      <span className="text-[10px] font-bold text-amber-400">Select →</span>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
+                        {sendPointsDiscordId && (
+                          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-300 font-mono">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            <span>Confirmed Target Discord ID: {sendPointsDiscordId}</span>
+                          </div>
+                        )}
                       </div>
 
                       <div>
