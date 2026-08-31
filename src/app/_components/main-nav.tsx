@@ -27,7 +27,7 @@ export function MainNav() {
     : navLinks;
 
   return (
-    <nav className={`hidden items-center gap-1 rounded-full border bg-black/20 px-2 py-1.5 lg:flex backdrop-blur transition-all ${
+    <nav className={`hidden items-center gap-0.5 rounded-full border bg-black/40 px-1.5 py-1 md:flex max-w-full overflow-x-auto no-scrollbar backdrop-blur-md transition-all shrink ${
       isPve ? "border-emerald-900/40" : "border-orange-900/40"
     }`}>
       {activeLinks.map(({ href, label, icon }) => {
@@ -41,11 +41,11 @@ export function MainNav() {
           <Link
             key={href}
             href={href}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-300 ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
               active
                 ? isPve
-                  ? "scale-[1.03] bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.15)]"
-                  : "scale-[1.03] bg-orange-400/15 text-orange-200 ring-1 ring-orange-400/30 shadow-[0_0_16px_rgba(249,115,22,0.15)]"
+                  ? "scale-[1.02] bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-400/40 shadow-[0_0_16px_rgba(16,185,129,0.2)]"
+                  : "scale-[1.02] bg-orange-400/20 text-orange-200 ring-1 ring-orange-400/40 shadow-[0_0_16px_rgba(249,115,22,0.2)]"
                 : isPve
                   ? "text-stone-300 hover:bg-emerald-400/10 hover:text-emerald-100"
                   : "text-stone-300 hover:bg-orange-400/10 hover:text-orange-100"
@@ -57,7 +57,7 @@ export function MainNav() {
         );
       })}
 
-      <div className="h-4 w-px bg-white/10 mx-1" />
+      <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
     </nav>
   );
 }

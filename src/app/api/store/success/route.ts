@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getDynamicWebhookUrl } from "@/lib/webhooks";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { fulfillPurchasePoints } from "@/lib/store-points";
 
 /**
  * POST /api/store/success
@@ -118,12 +119,25 @@ export async function POST(req: Request) {
         }
       }
 
+      // ── POINTS FULFILLMENT ───────────────────────────────────────────────
+      const pointsGrant = await fulfillPurchasePoints(
+        supabase,
+        userId,
+        txnId,
+        resolvedPackSlug,
+        resolvedAmount,
+        packName || resolvedPackSlug,
+        "paypal_client_fallback"
+      );
+
       await logActivity({
         type: "purchase_success",
         username,
         discordId: userId,
-        details: `PayPal Cart Purchase (client confirmed): ${resolvedPackSlug} ($${resolvedAmount}). Txn: ${txnId}`,
-        metadata: { txnId, orderId, amount: resolvedAmount, packSlug: resolvedPackSlug },
+        details: `PayPal Cart Purchase (client confirmed): ${resolvedPackSlug} ($${resolvedAmount}). Txn: ${txnId}${
+          pointsGrant.pointsEarned > 0 ? ` [Points Awarded: +${pointsGrant.pointsEarned}]` : ""
+        }`,
+        metadata: { txnId, orderId, amount: resolvedAmount, packSlug: resolvedPackSlug, pointsEarned: pointsGrant.pointsEarned },
       }).catch(() => {});
     }
 

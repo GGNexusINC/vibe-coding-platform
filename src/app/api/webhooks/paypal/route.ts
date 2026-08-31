@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDynamicWebhookUrl } from "@/lib/webhooks";
 import { sendDiscordWebhook } from "@/lib/discord";
+import { calculatePurchasePoints, fulfillPurchasePoints } from "@/lib/store-points";
 
 /**
  * PayPal Webhook Handler
@@ -149,7 +150,7 @@ export async function POST(req: Request) {
     }
 
 
-    // 1. Log to Discord immediately if we have a URL
+    // 1. Calculate points and log to Discord immediately if we have a URL
     let basePoints = Math.floor(parseFloat(amount) * 100);
     let pointsEarned = basePoints;
     let hiveBonus = 0;
@@ -158,18 +159,15 @@ export async function POST(req: Request) {
     try {
       if (userId && userId !== "guest") {
         const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
-        const { listHives } = await import("@/lib/hive-store");
         const sb = createSupabaseAdminClient();
-        const hives = await listHives(sb);
-        const userHive = hives.find(h => h.members.some(m => m.discord_id === userId));
-        if (userHive) {
-          hiveBonus = Math.floor(basePoints * 0.15);
-          pointsEarned = basePoints + hiveBonus;
-          hiveName = userHive.name;
-        }
+        const ptsInfo = await calculatePurchasePoints(sb, userId, packSlug || "", amount);
+        basePoints = ptsInfo.basePoints;
+        pointsEarned = ptsInfo.totalPoints;
+        hiveBonus = ptsInfo.hiveBonus;
+        hiveName = ptsInfo.hiveName;
       }
     } catch (e) {
-      console.error("[paypal-webhook] Failed to check hive bonus:", e);
+      console.error("[paypal-webhook] Failed to calculate points:", e);
     }
 
     if (salesWebhookUrl) {
@@ -232,46 +230,18 @@ export async function POST(req: Request) {
         const supabase = createSupabaseAdminClient();
         
         // ── POINTS FULFILLMENT ───────────────────────────────────────────────
-        if (pointsEarned > 0) {
-          try {
-            // Check idempotency for points using transactionId
-            const { data: existingLedger } = await supabase
-              .from("points_ledger")
-              .select("id")
-              .eq("discord_id", userId)
-              .contains("metadata", { transaction_id: transactionId })
-              .maybeSingle();
-
-            if (!existingLedger?.id) {
-              // Fetch current points
-              const { data: profile } = await supabase
-                .from("user_profiles")
-                .select("points")
-                .eq("discord_id", userId)
-                .maybeSingle();
-              
-              const currentPoints = profile?.points || 0;
-              const newPoints = currentPoints + pointsEarned;
-              
-              // Update user points
-              await supabase
-                .from("user_profiles")
-                .update({ points: newPoints })
-                .eq("discord_id", userId);
-              
-              // Record in ledger
-              await supabase
-                .from("points_ledger")
-                .insert({
-                  discord_id: userId,
-                  amount: pointsEarned,
-                  reason: `Earned from purchase: ${packName}`,
-                  metadata: { transaction_id: transactionId, source: "paypal_webhook" }
-                });
-            }
-          } catch (e) {
-            console.warn("[paypal-webhook] Points fulfillment failed:", e);
-          }
+        try {
+          await fulfillPurchasePoints(
+            supabase,
+            userId,
+            transactionId,
+            packSlug || "",
+            amount,
+            packName,
+            "paypal_webhook"
+          );
+        } catch (e) {
+          console.warn("[paypal-webhook] Points fulfillment failed:", e);
         }
         
         // ── MULTI-ITEM PARSING ───────────────────────────────────────────────

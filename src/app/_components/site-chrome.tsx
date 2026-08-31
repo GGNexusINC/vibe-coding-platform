@@ -30,7 +30,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 animation: "borderRotate 8s linear infinite",
               }}
             />
-            <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 lg:px-8 py-2.5">
               <Link href="/" className="flex items-center gap-3">
                 <div className={`relative h-10 w-10 overflow-hidden rounded-2xl border transition-all ${
                   isPve

@@ -1176,9 +1176,11 @@ export function AdminPanelClient() {
 
   const [memberPoints, setMemberPoints] = useState<number | null>(null);
   const [showSendPointsModal, setShowSendPointsModal] = useState(false);
-  const [sendPointsAmount, setSendPointsAmount] = useState<number>(0);
+  const [sendPointsDiscordId, setSendPointsDiscordId] = useState("");
+  const [sendPointsAmount, setSendPointsAmount] = useState<number | string>(500);
   const [sendPointsReason, setSendPointsReason] = useState("");
   const [sendPointsLoading, setSendPointsLoading] = useState(false);
+  const [sendPointsStatus, setSendPointsStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     setMemberPoints(null);
@@ -1741,6 +1743,54 @@ export function AdminPanelClient() {
       await loadPackageLogs();
     } else {
       alert(data?.error || "Failed to give package");
+    }
+  }
+
+  async function handleSendPoints(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!sendPointsDiscordId.trim()) {
+      setSendPointsStatus({ ok: false, msg: "Please specify a Discord ID." });
+      return;
+    }
+    const amount = Number(sendPointsAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setSendPointsStatus({ ok: false, msg: "Please enter a valid points amount." });
+      return;
+    }
+
+    setSendPointsLoading(true);
+    setSendPointsStatus(null);
+    try {
+      const res = await fetch("/api/admin/points/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discordId: sendPointsDiscordId.trim(),
+          amount,
+          reason: sendPointsReason.trim() || "Admin Grant via Inventory Tab",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        setSendPointsStatus({
+          ok: true,
+          msg: `Successfully sent ${amount} points! New balance: ${data.newPoints} Pts`,
+        });
+        setTimeout(() => {
+          setShowSendPointsModal(false);
+          setSendPointsStatus(null);
+          setSendPointsDiscordId("");
+          setSendPointsAmount(500);
+          setSendPointsReason("");
+        }, 2200);
+      } else {
+        setSendPointsStatus({ ok: false, msg: data.error || "Failed to send points." });
+      }
+    } catch (err) {
+      setSendPointsStatus({ ok: false, msg: "Network error sending points." });
+    } finally {
+      setSendPointsLoading(false);
     }
   }
 
@@ -2401,7 +2451,7 @@ export function AdminPanelClient() {
           {/* ══════════════════════════════════════════════
               DESKTOP SIDEBAR
           ══════════════════════════════════════════════ */}
-          <aside className={`hidden md:flex w-60 shrink-0 flex-col border-r transition-colors duration-500 ${
+          <aside className={`hidden md:flex w-60 shrink-0 flex-col border-r h-screen sticky top-0 overflow-y-auto custom-scrollbar transition-colors duration-500 ${
             mayhemMode 
               ? "border-rose-900/40 bg-gradient-to-b from-[#1a0000] to-[#0a0000]" 
               : "border-white/6 bg-gradient-to-b from-slate-950 to-[#090c14]"
@@ -4425,7 +4475,16 @@ export function AdminPanelClient() {
                   <h2 className="text-2xl font-bold text-white">User Inventory</h2>
                   <p className="text-sm text-slate-400">Track purchased items, insurance claims, and pack usage.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      setSendPointsDiscordId("");
+                      setShowSendPointsModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-slate-950 text-sm font-black shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    ✨ Send Points
+                  </button>
                   <button
                     onClick={() => setShowGivePackageModal(true)}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition"
@@ -4600,6 +4659,16 @@ export function AdminPanelClient() {
                               {new Date(item.purchase_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                             </div>
                             <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  setSendPointsDiscordId(item.user_id);
+                                  setShowSendPointsModal(true);
+                                }}
+                                className="px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 text-[10px] font-bold transition flex items-center gap-1"
+                                title="Send Points to this user"
+                              >
+                                ✨ Pts
+                              </button>
                               {item.status === "available" && (
                                 <>
                                   <button
@@ -5053,6 +5122,117 @@ export function AdminPanelClient() {
                           className="flex-1 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
                         >
                           {givePackageLoading ? "Giving..." : "Give Item"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Send Points Modal */}
+              {showSendPointsModal && (
+                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
+                  <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-slate-900 p-5 sm:p-6 shadow-2xl my-auto animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-black text-white flex items-center gap-2">
+                        <span>✨</span> Grant / Send Theuri Points
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSendPointsModal(false);
+                          setSendPointsStatus(null);
+                        }}
+                        className="text-slate-400 hover:text-white transition text-lg"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSendPoints} className="space-y-4">
+                      {sendPointsStatus && (
+                        <div
+                          className={`rounded-xl border p-3 text-xs font-semibold ${
+                            sendPointsStatus.ok
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                          }`}
+                        >
+                          {sendPointsStatus.msg}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                          Target User Discord ID *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 123456789012345678"
+                          value={sendPointsDiscordId}
+                          onChange={(e) => setSendPointsDiscordId(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-amber-400 outline-none font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                          Points Amount *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          max="100000"
+                          value={sendPointsAmount}
+                          onChange={(e) => setSendPointsAmount(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-amber-400 outline-none font-mono font-bold"
+                        />
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {[100, 500, 1000, 2500, 5000].map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => setSendPointsAmount(amt)}
+                              className="px-2.5 py-1 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-300 text-xs font-bold hover:bg-amber-500/20 transition"
+                            >
+                              +{amt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                          Reason / Note
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Store purchase compensation, Event reward"
+                          value={sendPointsReason}
+                          onChange={(e) => setSendPointsReason(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/10 text-white text-sm focus:border-amber-400 outline-none"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSendPointsModal(false);
+                            setSendPointsStatus(null);
+                          }}
+                          className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-slate-400 text-sm font-bold hover:bg-white/10 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={sendPointsLoading}
+                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-slate-950 text-sm font-black shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50"
+                        >
+                          {sendPointsLoading ? "Sending..." : "✨ Send Points Now"}
                         </button>
                       </div>
                     </form>

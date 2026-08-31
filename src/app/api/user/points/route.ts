@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { reconcileUserStorePoints } from "@/lib/store-points";
 
 export async function GET() {
   const user = await getSession();
@@ -10,6 +11,11 @@ export async function GET() {
 
   try {
     const supabase = createSupabaseAdminClient();
+
+    // Auto-reconcile any past store purchases that were not credited
+    await reconcileUserStorePoints(supabase, user.discord_id).catch((e) =>
+      console.warn("[user/points] Reconciliation failed:", e)
+    );
 
     // Fetch points balance
     const { data: profile } = await supabase
