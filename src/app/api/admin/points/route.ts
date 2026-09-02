@@ -41,10 +41,26 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(10);
 
+    // Full ledger sum (all rows, not just the last 10) to check the stored balance
+    // actually reconciles with every transaction ever logged for this user.
+    const { data: allLedgerAmounts } = await supabase
+      .from("points_ledger")
+      .select("amount")
+      .eq("discord_id", discordId);
+
+    const currentPoints = profile?.points ?? 0;
+    const ledgerSum = (allLedgerAmounts ?? []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    const ledgerEntryCount = allLedgerAmounts?.length ?? 0;
+
     return NextResponse.json({
       ok: true,
-      points: profile?.points ?? 0,
+      points: currentPoints,
       history: history ?? [],
+      ledgerSum,
+      ledgerEntryCount,
+      // Non-zero means the profile's stored balance doesn't match the sum of its own transaction
+      // history — a red flag worth investigating (manual DB edit, missing ledger entry, bug, etc).
+      ledgerDiff: currentPoints - ledgerSum,
     });
   } catch (err: any) {
     console.error("[admin/points] Error:", err);

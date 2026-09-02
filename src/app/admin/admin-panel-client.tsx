@@ -553,6 +553,70 @@ function getMemberName(member: MemberSummary) {
   return member.globalName || member.username;
 }
 
+function auditItemTypeMeta(itemType: string): { label: string; icon: string; badgeClass: string } {
+  switch (itemType) {
+    case "pack":
+      return { label: "Bought", icon: "💳", badgeClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" };
+    case "reward":
+      return { label: "Reward Claimed", icon: "🏆", badgeClass: "bg-amber-500/10 border-amber-500/20 text-amber-400" };
+    case "insurance":
+      return { label: "Insurance", icon: "🛡️", badgeClass: "bg-violet-500/10 border-violet-500/20 text-violet-400" };
+    case "points":
+      return { label: "Points Grant", icon: "✨", badgeClass: "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" };
+    default:
+      return { label: itemType || "Item", icon: "📦", badgeClass: "bg-slate-500/10 border-white/10 text-slate-400" };
+  }
+}
+
+// Reads an inventory item's metadata to figure out how trustworthy its "I bought/won this" claim is.
+// verified   = system-recorded proof (PayPal txn, points ledger deduction, minigame RNG result)
+// staff      = a human admin typed it in manually — worth a second look if disputed
+// unknown    = no origin trail at all — treat with suspicion
+function auditItemOrigin(item: any): { trust: "verified" | "staff" | "unknown"; label: string; detail: string } {
+  const md = item?.metadata || {};
+
+  if (item.item_type === "pack") {
+    if (md.transaction_id || md.order_id) {
+      const parts = [
+        md.price != null ? `$${md.price}` : null,
+        md.payer_email || null,
+        md.transaction_id ? `Txn ${md.transaction_id}` : md.order_id ? `Order ${md.order_id}` : null,
+        md.referred_by ? `ref: ${md.referred_by}` : null,
+      ].filter(Boolean);
+      return { trust: "verified", label: "Verified PayPal Purchase", detail: parts.join(" · ") || "Payment webhook recorded this purchase." };
+    }
+    if (md.given_by_name || md.given_by) {
+      return { trust: "staff", label: "Staff-Granted (no payment)", detail: `Given by ${md.given_by_name || md.given_by}${md.reason ? ` — "${md.reason}"` : ""}` };
+    }
+    return { trust: "unknown", label: "No payment record found", detail: "No transaction ID, order ID, or admin grant on file for this item." };
+  }
+
+  if (item.item_type === "reward") {
+    if (md.source === "points_redeem" || md.points_cost != null) {
+      return { trust: "verified", label: "Verified Points Redemption", detail: `Spent ${md.points_cost ?? "?"} pts${md.redeemed_at ? ` on ${new Date(md.redeemed_at).toLocaleString()}` : ""} — should match a debit in the points ledger.` };
+    }
+    if (md.reward_source === "lottery" || md.reward_source === "whackamole") {
+      return { trust: "verified", label: `Won via ${md.reward_source === "whackamole" ? "Whack-a-Mole" : "Lottery"}`, detail: `${md.reward_prize ? `Prize: ${md.reward_prize}. ` : ""}${md.reward_score != null ? `Score: ${md.reward_score}. ` : ""}Auto-recorded by the minigame — not admin-entered.` };
+    }
+    if (md.given_by_name || md.given_by) {
+      return { trust: "staff", label: "Staff-Granted Reward", detail: `Given by ${md.given_by_name || md.given_by}${md.reason ? ` — "${md.reason}"` : ""}` };
+    }
+    return { trust: "unknown", label: "No origin recorded", detail: "This reward has no redemption, minigame win, or admin-grant trail." };
+  }
+
+  if (item.item_type === "insurance") {
+    if (md.given_by_name || md.given_by) {
+      return { trust: "staff", label: "Staff-Granted Insurance", detail: `Given by ${md.given_by_name || md.given_by}${md.reason ? ` — "${md.reason}"` : ""}` };
+    }
+    return { trust: "verified", label: "Insurance Policy", detail: md.reason || "Standard insurance grant." };
+  }
+
+  if (md.given_by_name || md.given_by) {
+    return { trust: "staff", label: "Staff-Granted", detail: `Given by ${md.given_by_name || md.given_by}${md.reason ? ` — "${md.reason}"` : ""}` };
+  }
+  return { trust: "unknown", label: "No origin recorded", detail: "No purchase, redemption, or admin-grant metadata on this item." };
+}
+
 function formatActiveTime(days: number, minutes?: number): string {
   if (!days && !minutes) return "—";
   const totalMins = (minutes ?? 0);
@@ -1113,6 +1177,14 @@ export function AdminPanelClient() {
   const [inventorySummary, setInventorySummary] = useState({ total: 0, available: 0, used: 0, saved: 0, insurance_count: 0 });
   const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
 
+  // Per-user inventory audit modal (click a user's name in Inventory tab)
+  const [auditUserId, setAuditUserId] = useState<string | null>(null);
+  const [auditUserPoints, setAuditUserPoints] = useState<number | null>(null);
+  const [auditUserPointsLoading, setAuditUserPointsLoading] = useState(false);
+  const [auditLedgerSum, setAuditLedgerSum] = useState<number | null>(null);
+  const [auditLedgerDiff, setAuditLedgerDiff] = useState<number | null>(null);
+  const [auditLedgerEntryCount, setAuditLedgerEntryCount] = useState<number | null>(null);
+
   // Package logs state
   const [packageLogs, setPackageLogs] = useState<any[]>([]);
   const [packageLogsLoading, setPackageLogsLoading] = useState(false);
@@ -1204,6 +1276,47 @@ export function AdminPanelClient() {
     });
     return map;
   }, [stats?.summary.members]);
+
+  useEffect(() => {
+    if (!auditUserId) {
+      setAuditUserPoints(null);
+      setAuditLedgerSum(null);
+      setAuditLedgerDiff(null);
+      setAuditLedgerEntryCount(null);
+      return;
+    }
+    setAuditUserPointsLoading(true);
+    fetch(`/api/admin/points?id=${auditUserId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) {
+          setAuditUserPoints(d.points ?? 0);
+          setAuditLedgerSum(typeof d.ledgerSum === "number" ? d.ledgerSum : null);
+          setAuditLedgerDiff(typeof d.ledgerDiff === "number" ? d.ledgerDiff : null);
+          setAuditLedgerEntryCount(typeof d.ledgerEntryCount === "number" ? d.ledgerEntryCount : null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAuditUserPointsLoading(false));
+  }, [auditUserId]);
+
+  const auditMember = auditUserId ? inventoryMemberMap.get(auditUserId) : undefined;
+
+  const auditItems = useMemo(() => {
+    if (!auditUserId) return [];
+    return inventoryItems
+      .filter((i) => i.user_id === auditUserId)
+      .sort((a, b) => new Date(b.purchase_date || b.created_at).getTime() - new Date(a.purchase_date || a.created_at).getTime());
+  }, [inventoryItems, auditUserId]);
+
+  const auditSummary = useMemo(() => ({
+    bought: auditItems.filter((i) => i.item_type === "pack").length,
+    rewards: auditItems.filter((i) => i.item_type === "reward").length,
+    insurance: auditItems.filter((i) => i.item_type === "insurance").length,
+    available: auditItems.filter((i) => i.status === "available").length,
+    saved: auditItems.filter((i) => i.status === "saved").length,
+    used: auditItems.filter((i) => i.status === "used").length,
+  }), [auditItems]);
 
   const botSnapshot = stats?.botStatus?.snapshot ?? null;
   const botEvents = stats?.botEvents ?? [];
@@ -4533,7 +4646,7 @@ export function AdminPanelClient() {
               <div className="flex flex-wrap gap-3">
                 <input
                   type="text"
-                  placeholder="Search by user ID..."
+                  placeholder="Search by username or user ID..."
                   value={inventorySearch}
                   onChange={(e) => setInventorySearch(e.target.value)}
                   className="px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:border-cyan-500/50 outline-none"
@@ -4588,7 +4701,13 @@ export function AdminPanelClient() {
                       })
                       .filter((item) => {
                         if (!inventorySearch) return true;
-                        return item.user_id?.toLowerCase().includes(inventorySearch.toLowerCase());
+                        const q = inventorySearch.toLowerCase();
+                        const m = inventoryMemberMap.get(item.user_id);
+                        return (
+                          item.user_id?.toLowerCase().includes(q) ||
+                          m?.username?.toLowerCase().includes(q) ||
+                          m?.globalName?.toLowerCase().includes(q)
+                        );
                       })
                       .map((item) => {
                         const isSelected = selectedInventoryIds.includes(item.id);
@@ -4608,7 +4727,11 @@ export function AdminPanelClient() {
                                 className="h-4 w-4 rounded border-white/10 bg-slate-800 text-cyan-500 focus:ring-0 focus:ring-offset-0"
                               />
                             </div>
-                            <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className="flex items-center gap-3 min-w-0 -m-1 p-1 rounded-lg hover:bg-cyan-500/10 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setAuditUserId(item.user_id); }}
+                              title="View everything this user has bought and claimed"
+                            >
                               {(() => {
                                 const m = inventoryMemberMap.get(item.user_id);
                                 return (
@@ -4622,7 +4745,7 @@ export function AdminPanelClient() {
                                       {m?.activeNow && <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-slate-900 bg-emerald-400" />}
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="text-white font-bold truncate group-hover:text-cyan-200 transition-colors">
+                                      <div className="text-white font-bold truncate underline decoration-dotted decoration-slate-600 underline-offset-2 group-hover:text-cyan-200 hover:decoration-cyan-300 transition-colors">
                                         {m?.globalName || m?.username || "Unknown User"}
                                       </div>
                                       <div className="font-mono text-[9px] text-slate-500 truncate">
@@ -6009,6 +6132,173 @@ export function AdminPanelClient() {
 
             </div>{/* /p-4 */}
           </main>
+        </div>
+      )}
+
+      {/* ════ USER INVENTORY AUDIT MODAL ════ */}
+      {auditUserId && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setAuditUserId(null); }}>
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/8 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60">
+            <div className="h-0.5 w-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-emerald-400 flex-shrink-0" />
+
+            {/* Header */}
+            <div className="p-5 border-b border-white/6 flex items-start justify-between gap-4 flex-shrink-0">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="h-14 w-14 rounded-2xl border border-white/10 bg-slate-800 overflow-hidden flex-shrink-0 relative">
+                  {auditMember?.avatarUrl ? (
+                    <img src={auditMember.avatarUrl} className="h-full w-full object-cover" alt="" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-lg text-slate-500 font-black">?</div>
+                  )}
+                  {auditMember?.activeNow && <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-slate-900 bg-emerald-400" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-lg font-black text-white truncate">{auditMember?.globalName || auditMember?.username || "Unknown User"}</span>
+                    {auditMember?.isAdmin && <span className="rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">Admin</span>}
+                    {auditMember?.activeNow && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">● Live</span>}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                    <span className="font-mono truncate">{auditUserId}</span>
+                    <button
+                      type="button"
+                      onClick={() => { try { void navigator.clipboard.writeText(auditUserId || ""); } catch {} }}
+                      className="hover:text-cyan-400 transition flex-shrink-0"
+                      title="Copy Discord ID"
+                    >
+                      📋
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button type="button" onClick={() => setAuditUserId(null)} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/5 hover:text-white transition flex-shrink-0">✕</button>
+            </div>
+
+            {/* Points + summary strip */}
+            <div className="px-5 py-4 border-b border-white/6 grid grid-cols-3 sm:grid-cols-7 gap-2 flex-shrink-0">
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-3">
+                <div className="text-lg font-black text-cyan-300">{auditUserPointsLoading ? "…" : (auditUserPoints ?? "—")}</div>
+                <div className="text-[9px] text-cyan-500/70 uppercase tracking-wider">Points Now</div>
+              </div>
+              <div className="rounded-xl border border-white/6 bg-slate-900/50 p-3">
+                <div className="text-lg font-black text-white">{auditItems.length}</div>
+                <div className="text-[9px] text-slate-500 uppercase tracking-wider">Total Items</div>
+              </div>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                <div className="text-lg font-black text-emerald-400">{auditSummary.bought}</div>
+                <div className="text-[9px] text-emerald-500/70 uppercase tracking-wider">Bought</div>
+              </div>
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+                <div className="text-lg font-black text-amber-400">{auditSummary.rewards}</div>
+                <div className="text-[9px] text-amber-500/70 uppercase tracking-wider">Rewards</div>
+              </div>
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3">
+                <div className="text-lg font-black text-violet-400">{auditSummary.insurance}</div>
+                <div className="text-[9px] text-violet-500/70 uppercase tracking-wider">Insurance</div>
+              </div>
+              <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-3">
+                <div className="text-lg font-black text-emerald-300">{auditSummary.available}</div>
+                <div className="text-[9px] text-slate-500 uppercase tracking-wider">Available</div>
+              </div>
+              <div className="rounded-xl border border-slate-500/20 bg-slate-500/10 p-3">
+                <div className="text-lg font-black text-slate-400">{auditSummary.used}</div>
+                <div className="text-[9px] text-slate-500/70 uppercase tracking-wider">Used</div>
+              </div>
+            </div>
+
+            {/* Points balance vs. ledger sum — flags a stored balance that doesn't match its own transaction history */}
+            {!auditUserPointsLoading && auditLedgerDiff !== null && (
+              <div className={`mx-5 mt-4 rounded-xl border px-4 py-3 text-xs flex items-start gap-3 flex-shrink-0 ${
+                auditLedgerDiff === 0
+                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+              }`}>
+                <span className="text-base leading-none flex-shrink-0">{auditLedgerDiff === 0 ? "✅" : "🚨"}</span>
+                <div className="min-w-0">
+                  <div className="font-bold">
+                    {auditLedgerDiff === 0
+                      ? "Points balance reconciles with the ledger"
+                      : `Points balance mismatch: ${auditLedgerDiff > 0 ? "+" : ""}${auditLedgerDiff} pts unexplained`}
+                  </div>
+                  <div className="text-slate-400/90 mt-0.5">
+                    Stored balance <span className="font-mono text-white">{auditUserPoints ?? "—"}</span> vs. sum of {auditLedgerEntryCount ?? 0} ledger transaction{auditLedgerEntryCount === 1 ? "" : "s"} (<span className="font-mono text-white">{auditLedgerSum ?? "—"}</span>).
+                    {auditLedgerDiff !== 0 && " This balance was likely changed outside the normal earn/spend flow — worth investigating before trusting what this user claims to have."}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Item list — every buy/claim, each with a trust verdict */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-white/5">
+              {auditItems.length === 0 ? (
+                <div className="px-5 py-12 text-center text-slate-500 text-sm">This user has no inventory history — nothing bought, redeemed, or claimed.</div>
+              ) : (
+                auditItems.map((item) => {
+                  const typeMeta = auditItemTypeMeta(item.item_type);
+                  const origin = auditItemOrigin(item);
+                  return (
+                    <div key={item.id} className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <span className="text-2xl leading-none">{typeMeta.icon}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-white font-bold">{item.item_name}</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${typeMeta.badgeClass}`}>{typeMeta.label}</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                item.status === "available" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                                item.status === "used" ? "bg-slate-500/10 border-white/10 text-slate-500" :
+                                item.status === "saved" ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+                                "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                              }`}>{item.status}</span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-500">
+                              {new Date(item.purchase_date || item.created_at).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              {item.wipe_cycle ? ` · ${item.wipe_cycle}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          {item.status === "available" && (
+                            <>
+                              <button onClick={() => void handleInventoryAction([item.id], "mark_used")} className="px-2 py-1 rounded-lg bg-white/5 border border-white/8 text-[10px] font-bold text-slate-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-400 transition">Mark Used</button>
+                              <button onClick={() => void handleInventoryAction([item.id], "mark_saved")} className="px-2 py-1 rounded-lg bg-white/5 border border-white/8 text-[10px] font-bold text-slate-400 hover:bg-amber-500/20 hover:border-amber-500/30 hover:text-amber-400 transition">Save</button>
+                            </>
+                          )}
+                          <button onClick={() => void handleInventoryAction([item.id], "delete")} className="px-2 py-1 rounded-lg bg-white/5 border border-white/8 text-[10px] font-bold text-slate-400 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400 transition">Delete</button>
+                        </div>
+                      </div>
+
+                      {/* The verdict: is this claim actually backed by a payment, ledger entry, or minigame result? */}
+                      <div className={`mt-2 rounded-lg border px-3 py-2 text-[11px] flex items-start gap-2 ${
+                        origin.trust === "verified" ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300" :
+                        origin.trust === "staff" ? "border-amber-500/20 bg-amber-500/5 text-amber-300" :
+                        "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                      }`}>
+                        <span className="flex-shrink-0">{origin.trust === "verified" ? "✅" : origin.trust === "staff" ? "🧑‍💼" : "⚠️"}</span>
+                        <div className="min-w-0">
+                          <div className="font-bold">{origin.label}</div>
+                          <div className="text-slate-400/90 mt-0.5 break-words">{origin.detail}</div>
+                          {item.item_type === "reward" && item.metadata?.reward_claim_expires_at && (
+                            <div className="text-slate-500 mt-0.5">Claim window ends: {new Date(item.metadata.reward_claim_expires_at).toLocaleString()}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-white/6 flex items-center justify-between gap-3 flex-shrink-0 flex-wrap">
+              <span className="text-[11px] text-slate-500 max-w-md">Everything this account has bought, redeemed, or been given, with a verdict on whether it's backed by a real record. Use this before trusting a "you gave me X" claim.</span>
+              <div className="flex gap-2">
+                <button onClick={() => { setSendPointsDiscordId(auditUserId || ""); setShowSendPointsModal(true); }} className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition border border-amber-500/20">✨ Send Points</button>
+                <button onClick={() => setAuditUserId(null)} className="px-3 py-1.5 rounded-xl bg-white/5 text-slate-300 text-xs font-bold hover:bg-white/10 transition border border-white/10">Close</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
